@@ -1,0 +1,9 @@
+**/.git
+**/.github
+**/bin
+**/obj
+**/.env
+**/.env.*
+!**/.env.example
+README.md
+docs

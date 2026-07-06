@@ -1,0 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace OVCMOVE._2026.Plugin.Models
+{
+    internal class PluginExample
+    {
+    }
+}

@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/plugin/">
+    <Project Path="plugin/OVCMOVE.2026.Plugin/OVCMOVE.2026.Plugin.csproj" Id="59f23049-6f9e-482b-a311-9f309725ad32" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OVCMOVE.Api/OVCMOVE.Api.csproj" />
+    <Project Path="src/OVCMOVE.Application/OVCMOVE.Application.csproj" />
+    <Project Path="src/OVCMOVE.Domain/OVCMOVE.Domain.csproj" />
+    <Project Path="src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/OVCMOVE.Test.Application/OVCMOVE.Test.Application.csproj" Id="363ae9ef-e621-4d9e-9420-0f427c2dff01" />
+  </Folder>
+</Solution>

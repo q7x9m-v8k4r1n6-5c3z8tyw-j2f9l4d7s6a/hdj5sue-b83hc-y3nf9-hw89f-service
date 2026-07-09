@@ -7,11 +7,29 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsEnvironment("Local"))
 {
-    const string envFilePath = "./.env";
-    if (File.Exists(envFilePath))
+    var envFilePath = FindEnvFile(builder.Environment.ContentRootPath);
+    if (envFilePath is not null)
     {
         Env.Load(envFilePath);
     }
+}
+
+static string? FindEnvFile(string startPath)
+{
+    var directory = new DirectoryInfo(startPath);
+
+    while (directory is not null)
+    {
+        var envFilePath = Path.Combine(directory.FullName, ".env");
+        if (File.Exists(envFilePath))
+        {
+            return envFilePath;
+        }
+
+        directory = directory.Parent;
+    }
+
+    return null;
 }
 
 builder.Configuration

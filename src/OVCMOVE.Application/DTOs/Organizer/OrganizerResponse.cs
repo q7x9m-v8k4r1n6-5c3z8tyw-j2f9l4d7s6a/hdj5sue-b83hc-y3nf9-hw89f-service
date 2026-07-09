@@ -4,7 +4,8 @@ public class OrganizerResponse
 {
     public Guid Id { get; set; }
     public string Email { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public OVCMOVE.Domain.Enums.OrganizerStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }

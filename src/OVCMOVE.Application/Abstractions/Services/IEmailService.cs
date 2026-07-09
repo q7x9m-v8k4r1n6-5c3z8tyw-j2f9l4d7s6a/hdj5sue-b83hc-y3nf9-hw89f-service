@@ -1,7 +1,6 @@
-﻿namespace OVCMOVE.Application.Abstractions.Services
+﻿namespace OVCMOVE.Application.Abstractions.Services;
+
+public interface IEmailService
 {
-    public interface IEmailService
-    {
-        Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body);
-    }
+    Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
 }

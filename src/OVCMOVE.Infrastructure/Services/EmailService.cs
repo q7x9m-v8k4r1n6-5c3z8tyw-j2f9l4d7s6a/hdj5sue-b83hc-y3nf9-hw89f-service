@@ -16,7 +16,7 @@ public class EmailService : IEmailService
             ?? throw new InvalidOperationException("Email service configuration is not configured.");
     }
 
-    public async Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body)
+    public async Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_emailConfig.Email) ||
             string.IsNullOrWhiteSpace(_emailConfig.Password))
@@ -40,6 +40,6 @@ public class EmailService : IEmailService
 
         mail.To.Add(toEmail);
 
-        await client.SendMailAsync(mail);
+        await client.SendMailAsync(mail, cancellationToken);
     }
 }

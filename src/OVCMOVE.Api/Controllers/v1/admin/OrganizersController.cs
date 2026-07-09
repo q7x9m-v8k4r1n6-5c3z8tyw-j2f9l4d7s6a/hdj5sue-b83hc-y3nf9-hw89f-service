@@ -1,57 +1,44 @@
-using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using AutoMapper;
+using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Controllers.v1;
 using OVCMOVE.Application.DTOs.Organizer;
 using OVCMOVE.Application.Organizers.Commands;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1.Admin;
 
-[ApiController]
 [Route("api/v1/admin/organizers")] 
-public class OrganizersController : ControllerBase
+public class OrganizersController : BaseController<OrganizersController>
 {
-    private readonly IMediator _mediator;
-
-    public OrganizersController(IMediator mediator)
+    public OrganizersController(ILogger<OrganizersController> logger, IMediator mediator, IMapper mapper)
+        : base(logger, mediator, mapper)
     {
-        _mediator = mediator;
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateOrganizer([FromBody] CreateOrganizerRequest request)
+    public async Task<IActionResult> CreateOrganizer([FromBody] CreateOrganizerRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var command = new CreateOrganizerCommand
-            {
-                Email = request.Email,
-                FullName = request.FullName,
-                Password = request.Password
-            };
+            var command = _mapper.Map<CreateOrganizerCommand>(request);
+            var result = await _mediator.Send(command, cancellationToken);
 
-            var result = await _mediator.Send(command);
-
-            return CreatedAtAction(nameof(CreateOrganizer), new { id = result.Id }, result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ex.Message switch
-            {
-                "Email đã được đăng ký." => Conflict(new { message = ex.Message }),
-                "Connection string 'DbConfig:SQLServer:ConnectionString' is not configured." => StatusCode(500, new { message = ex.Message }),
-                "Email service configuration is not configured." => StatusCode(500, new { message = ex.Message }),
-                "Email service credentials are not configured." => StatusCode(500, new { message = ex.Message }),
-                _ => BadRequest(new { message = ex.Message })
-            };
-        }
-        catch (SqlException ex)
-        {
-            return StatusCode(500, new { message = ex.Message });
+            return CreatedAtAction(
+                nameof(CreateOrganizer),
+                new { id = result.Id },
+                new ApiResponseModel<OrganizerResponse>
+                {
+                    StatusCode = APIContansts.StatusCode.Success,
+                    Message = APIContansts.StatusMessage.Success,
+                    Data = result
+                });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = ex.Message });
+            _logger.LogError(ex, "Error occurred while creating organizer.");
+            return Ok(new InternalServerErrorModel(ex.Message));
         }
     }
 }

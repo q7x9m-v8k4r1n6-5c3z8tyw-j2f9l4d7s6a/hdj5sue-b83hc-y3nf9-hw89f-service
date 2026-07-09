@@ -35,7 +35,6 @@ public static class DependencyInjection
         #endregion
 
         #region ==================== Services ====================
-        services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IEmailService, EmailService>();
 
         #endregion

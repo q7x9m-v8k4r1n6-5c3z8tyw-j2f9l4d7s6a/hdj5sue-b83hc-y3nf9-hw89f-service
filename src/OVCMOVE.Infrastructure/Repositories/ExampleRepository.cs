@@ -17,7 +17,8 @@ public class ExampleRepository : BaseRepository<ExampleRepository>, IExampleRepo
     public async Task<ExampleResultModel.GetAllExamplesByFilterResultModel> GetAllByFilterAsync(CancellationToken cancellationToken = default)
     {
         var items = (await _dapperHelper.QueryAsync<ExampleResultModel.ExampleItemResultModel>(
-            ExampleQueryHelper.GetAllExampleByFilterQuery()))
+            ExampleQueryHelper.GetAllExampleByFilterQuery(),
+            cancellationToken: cancellationToken))
             .ToArray();
 
         return new ExampleResultModel.GetAllExamplesByFilterResultModel

@@ -1,51 +1,48 @@
-using Dapper;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
-using OVCMOVE.Infrastructure.Options;
+using OVCMOVE.Infrastructure.Common;
+using OVCMOVE.Infrastructure.Helpers;
+using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class OrganizerRepository : OVCMOVE.Application.Abstractions.Repositories.IOrganizerRepository
+public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganizerRepository
 {
-    private readonly string _connectionString;
-
-    public OrganizerRepository(IOptions<DbConfigOptions> dbConfigOptions)
+    public OrganizerRepository(ILogger<OrganizerRepository> logger, IDapperHelper dapperHelper)
+        : base(logger, dapperHelper)
     {
-        var connectionString = dbConfigOptions.Value.SQLServer?.ConnectionString;
-        if (string.IsNullOrWhiteSpace(connectionString))
+    }
+
+    public async Task<Organizer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            throw new InvalidOperationException("Connection string 'DbConfig:SQLServer:ConnectionString' is not configured.");
+            return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
+                OrganizerQueryHelper.GetByEmailQuery(),
+                new { Email = email },
+                cancellationToken: cancellationToken);
         }
-
-        _connectionString = connectionString;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while getting organizer by email {Email}.", email);
+            throw;
+        }
     }
 
-    public async Task<Organizer?> GetByEmailAsync(string email)
+    public async Task AddAsync(Organizer organizer, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(_connectionString);
-        const string sql = @"
-            SELECT
-                Id,
-                Name,
-                Username,
-                Email,
-                PasswordHash,
-                IsActive,
-                CreatedAt
-            FROM Organizers
-            WHERE Email = @Email";
-
-        return await connection.QueryFirstOrDefaultAsync<Organizer>(sql, new { Email = email });
-    }
-
-    public async Task AddAsync(Organizer organizer)
-    {
-        using var connection = new SqlConnection(_connectionString);
-        const string sql = @"
-            INSERT INTO Organizers (Id, Name, Username, PasswordHash, Email, IsActive, CreatedAt)
-            VALUES (@Id, @Name, @Username, @PasswordHash, @Email, @IsActive, @CreatedAt)";
-
-        await connection.ExecuteAsync(sql, organizer);
+        try
+        {
+            await _dapperHelper.ExecuteAsync(
+                OrganizerQueryHelper.AddOrganizerQuery(),
+                organizer,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while adding organizer with email {Email}.", organizer.Email);
+            throw;
+        }
     }
 }

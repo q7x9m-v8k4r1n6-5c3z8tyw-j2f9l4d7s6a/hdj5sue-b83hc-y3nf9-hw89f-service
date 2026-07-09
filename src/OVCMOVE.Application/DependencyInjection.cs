@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Mapping;
 
 namespace OVCMOVE.Application;
 
@@ -11,8 +12,9 @@ public static class DependencyInjection
             configuration.RegisterServicesFromAssembly(AssemblyReference.Assembly);
         });
 
-        services.AddAutoMapper(AssemblyReference.Assembly);
+        services.AddAutoMapper(typeof(OrganizerProfile));
 
         return services;
     }
 }
+

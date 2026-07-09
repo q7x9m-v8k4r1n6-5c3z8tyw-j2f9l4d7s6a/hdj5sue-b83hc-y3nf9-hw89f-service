@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Options;
 using OVCMOVE.Infrastructure.Persistance.SqlServer;
 using OVCMOVE.Infrastructure.Repositories;
+using OVCMOVE.Infrastructure.Services;
 
 namespace OVCMOVE.Infrastructure;
 
@@ -28,7 +30,14 @@ public static class DependencyInjection
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+        services.AddScoped<IOrganizerRepository, OrganizerRepository>();
         
+        #endregion
+
+        #region ==================== Services ====================
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IEmailService, EmailService>();
+
         #endregion
 
         return services;

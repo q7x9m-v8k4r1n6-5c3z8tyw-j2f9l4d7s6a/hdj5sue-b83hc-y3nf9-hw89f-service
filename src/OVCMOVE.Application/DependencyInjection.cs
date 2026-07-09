@@ -12,8 +12,7 @@ public static class DependencyInjection
             configuration.RegisterServicesFromAssembly(AssemblyReference.Assembly);
         });
 
-        services.AddAutoMapper(typeof(OrganizerProfile));
-
+        services.AddAutoMapper(AssemblyReference.Assembly);
         return services;
     }
 }

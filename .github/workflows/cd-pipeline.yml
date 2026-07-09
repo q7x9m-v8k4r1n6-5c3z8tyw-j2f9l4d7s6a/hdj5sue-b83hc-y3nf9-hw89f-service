@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ feature/ci-cd-setup ]
   workflow_dispatch:
 
 env:

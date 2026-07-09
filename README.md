@@ -48,18 +48,20 @@ curl http://localhost:5000/api/health
 GitHub Actions nằm trong `.github/workflows`.
 
 - `ci-pipeline.yml`: chạy khi push lên `develop` hoặc mở pull request vào `main`/`develop`; thực hiện Build và Test.
-- `cd-pipeline.yml`: chạy khi push lên `main`; build Docker image, push lên Docker Hub và Deploy lên Oracle VM qua SSH.
+- `cd-pipeline.yml`: chạy khi push lên `main` hoặc chạy thủ công bằng `workflow_dispatch`; build Docker image và push lên Docker Hub.
 
-Các repository secrets cần cấu hình trên GitHub:
+Các repository secrets cần cấu hình trên GitHub để push Docker Hub:
 
-- `DOCKER_USERNAME`
-- `DOCKER_PASSWORD`
-- `ORACLE_VM_IP`
-- `ORACLE_VM_USER`
-- `ORACLE_VM_SSH_KEY`
+- `DOCKERHUB_USERNAME`: Docker Hub username hoặc organization name.
+- `DOCKERHUB_TOKEN`: Docker Hub access token có quyền push image.
 
-Trên Oracle VM, thư mục `/app/ovcmove` cần có `docker-compose.yml` và file `.env` production với các biến `OVCMOVE_...` giống `.env.example`.
-Workflow CD sẽ export `DOCKER_IMAGE` để `docker compose` dùng đúng image vừa pull từ Docker Hub.
+Workflow sẽ push các tag:
+
+- `<DOCKERHUB_USERNAME>/ovcmove-backend:latest`
+- `<DOCKERHUB_USERNAME>/ovcmove-backend:<git-sha>`
+
+Khi deploy trên Azure VM, file `.env` production vẫn cần các biến `OVCMOVE_...` giống `.env.example`.
+Chạy compose với image từ Docker Hub bằng cách set `DOCKER_IMAGE=<DOCKERHUB_USERNAME>/ovcmove-backend:latest`.
 
 ## Cấu hình và bảo mật
 

@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore OVCMOVE.slnx
+
+      - name: Build
+        run: dotnet build OVCMOVE.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test OVCMOVE.slnx --no-build -c Release --verbosity normal

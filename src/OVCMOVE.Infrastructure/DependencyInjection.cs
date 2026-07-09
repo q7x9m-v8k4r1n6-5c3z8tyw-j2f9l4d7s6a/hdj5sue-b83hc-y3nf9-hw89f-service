@@ -21,6 +21,9 @@ public static class DependencyInjection
         services.Configure<ExternalServicesConfigOptions>(
             configuration.GetSection(ExternalServicesConfigOptions.SectionName));
 
+        services.Configure<JwtConfigOptions>(
+            configuration.GetSection(JwtConfigOptions.SectionName));
+
         #endregion
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();

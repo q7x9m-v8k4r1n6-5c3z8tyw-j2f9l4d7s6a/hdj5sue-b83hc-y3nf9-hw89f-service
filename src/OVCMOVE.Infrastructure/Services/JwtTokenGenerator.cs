@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Options;
@@ -19,13 +20,17 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _jwtOptions = jwtOptions.Value;
     }
 
+    public int RefreshTokenExpirationDays => _jwtOptions.RefreshTokenExpirationDays;
+
+    public int AccessTokenExpirationMinutes => _jwtOptions.AccessTokenExpirationMinutes;
+
     public string GenerateAccessToken(UserEntity user)
     {
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new Claim("role", user.Role.ToString())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));

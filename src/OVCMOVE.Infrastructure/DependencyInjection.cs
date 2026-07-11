@@ -34,11 +34,20 @@ public static class DependencyInjection
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         
         #endregion
 
         #region ==================== Services ====================
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+
+        #endregion
+
+        #region ==================== BackgroundJobs ====================
+        services.AddHostedService<BackgroundJobs.CleanupOldTokenService>();
 
         #endregion
 

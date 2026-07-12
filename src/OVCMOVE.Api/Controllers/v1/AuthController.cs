@@ -122,26 +122,4 @@ public class AuthController : BaseController<AuthController>
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }
-
-    // GET host:port/api/v1/Auth/test-rbac
-    [HttpGet("test-rbac")]
-    [Authorize(Roles = "Organizer")] // CẮM BIỂN CẤM: Bắt buộc phải có Token, và Role phải là Team hoặc Organizer
-    public IActionResult TestRbac()
-    {
-        // Nhờ có trạm gác giải mã, ta có thể lấy thông tin trực tiếp từ Object "User" của C#
-        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-
-        return Ok(new ApiResponseModel<object>
-        {
-            StatusCode = APIContansts.StatusCode.Success,
-            Message = "Chúc mừng! Bạn đã lọt qua chốt chặn RBAC an toàn.",
-            Data = new 
-            { 
-                Email = userEmail, 
-                Role = userRole,
-                Note = "Chỉ những người có Token xịn mới nhìn thấy dòng này."
-            }
-        });
-    }
 }

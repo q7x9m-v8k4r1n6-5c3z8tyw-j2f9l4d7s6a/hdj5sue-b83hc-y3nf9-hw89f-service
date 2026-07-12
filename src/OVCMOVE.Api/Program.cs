@@ -24,13 +24,28 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowAnyOrigin();
+    });
+});
 builder.Services.AddSwaggerDocumentation();
 
 var app = builder.Build();
 
 app.UseSwaggerDocumentation();
 
-app.UseHttpsRedirection();
+app.UseCors("Frontend");
+
+if (!app.Environment.IsEnvironment("Local"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

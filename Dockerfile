@@ -15,11 +15,11 @@ RUN dotnet restore "src/OVCMOVE.Api/OVCMOVE.Api.csproj"
 # Copy toàn bộ source
 COPY . .
 WORKDIR "/src/src/OVCMOVE.Api"
-RUN dotnet build "OVCMOVE.Api.csproj" -c Release -o /app/build
+RUN dotnet build "OVCMOVE.Api.csproj" -c Release --no-restore
 
 # ===== Publish Stage =====
 FROM build AS publish
-RUN dotnet publish "OVCMOVE.Api.csproj" -c Release -o /app/publish
+RUN dotnet publish "OVCMOVE.Api.csproj" -c Release --no-build -o /app/publish
 
 # ===== Runtime Stage =====
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

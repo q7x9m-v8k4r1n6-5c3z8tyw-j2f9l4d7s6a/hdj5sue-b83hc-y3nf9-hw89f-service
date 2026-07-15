@@ -4,10 +4,7 @@ on:
   workflow_run:
     workflows: [ CI ]
     types: [ completed ]
-    branches: [ feature/ci-cd-setup ]
-  push:
-    branches: [ feature/ci-cd-setup ]
-  workflow_dispatch:
+    branches: [ main ]
 
 env:
   IMAGE_NAME: ovcmove-backend
@@ -15,10 +12,10 @@ env:
 
 jobs:
   publish-docker-image:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
-      COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,11 +41,11 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHA }}
 
   deploy-to-azure:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     needs: publish-docker-image
     env:
-      COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

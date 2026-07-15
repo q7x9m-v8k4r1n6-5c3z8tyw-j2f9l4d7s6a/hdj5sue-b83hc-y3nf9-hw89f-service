@@ -2,12 +2,13 @@ using DotNetEnv;
 using OVCMOVE.Api.Extensions;
 using OVCMOVE.Application;
 using OVCMOVE.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsEnvironment("Local"))
 {
-    var envFilePath = FindEnvFile(builder.Environment.ContentRootPath);
-    if (envFilePath is not null)
+    const string envFilePath = "./.env";
+    if (File.Exists(envFilePath))
     {
         Env.Load(envFilePath);
     }
@@ -21,6 +22,7 @@ builder.Services.AddMapping();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
 builder.Services.AddControllers();
 builder.Services.AddSwaggerDocumentation();
 
@@ -35,21 +37,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-static string? FindEnvFile(string startPath)
-{
-    var directory = new DirectoryInfo(startPath);
-
-    while (directory is not null)
-    {
-        var envFilePath = Path.Combine(directory.FullName, ".env");
-        if (File.Exists(envFilePath))
-        {
-            return envFilePath;
-        }
-
-        directory = directory.Parent;
-    }
-
-    return null;
-}

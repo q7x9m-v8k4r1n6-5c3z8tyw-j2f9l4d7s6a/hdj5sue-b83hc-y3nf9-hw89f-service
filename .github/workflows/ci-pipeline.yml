@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ feature/ci-cd-setup ]
   pull_request:
-    branches: [ main ]
+    branches: [ feature/ci-cd-setup ]
 
 env:
   DOTNET_VERSION: '10.0.x'

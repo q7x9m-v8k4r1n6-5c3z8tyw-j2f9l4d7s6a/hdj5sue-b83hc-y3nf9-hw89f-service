@@ -52,26 +52,6 @@ jobs:
         with:
           ref: ${{ env.COMMIT_SHA }}
 
-      - name: Set environment variables for compose
-        env:
-          DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHA }}
-          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
-          EMAIL_SERVICE_EMAIL: ${{ secrets.EMAIL_SERVICE_EMAIL }}
-          EMAIL_SERVICE_PASSWORD: ${{ secrets.EMAIL_SERVICE_PASSWORD }}
-        run: |
-          {
-            echo "DOCKER_IMAGE=$DOCKER_IMAGE"
-            echo "OVCMOVE_DbConfig__SQLServer__ConnectionString<<OVCMOVE_DB_EOF"
-            printf '%s\n' "$DB_CONNECTION_STRING"
-            echo "OVCMOVE_DB_EOF"
-            echo "OVCMOVE_ExternalServicesConfig__EmailService__Email<<OVCMOVE_EMAIL_EOF"
-            printf '%s\n' "$EMAIL_SERVICE_EMAIL"
-            echo "OVCMOVE_EMAIL_EOF"
-            echo "OVCMOVE_ExternalServicesConfig__EmailService__Password<<OVCMOVE_EMAIL_PASSWORD_EOF"
-            printf '%s\n' "$EMAIL_SERVICE_PASSWORD"
-            echo "OVCMOVE_EMAIL_PASSWORD_EOF"
-          } >> "$GITHUB_ENV"
-
       - name: Prepare Azure app directory
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -105,13 +85,15 @@ jobs:
           envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,OVCMOVE_DbConfig__SQLServer__ConnectionString,OVCMOVE_ExternalServicesConfig__EmailService__Email,OVCMOVE_ExternalServicesConfig__EmailService__Password
           script: |
             cd ${{ env.AZURE_APP_DIR }}
-            {
-              printf 'DOCKER_IMAGE=%s\n' "$DOCKER_IMAGE"
-              printf 'OVCMOVE_DbConfig__SQLServer__ConnectionString=%s\n' "$OVCMOVE_DbConfig__SQLServer__ConnectionString"
-              printf 'OVCMOVE_ExternalServicesConfig__EmailService__Email=%s\n' "$OVCMOVE_ExternalServicesConfig__EmailService__Email"
-              printf 'OVCMOVE_ExternalServicesConfig__EmailService__Password=%s\n' "$OVCMOVE_ExternalServicesConfig__EmailService__Password"
-            } > .env
-            printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            cat > .env <<EOF
+            DOCKER_IMAGE=$DOCKER_IMAGE
+            OVCMOVE_DbConfig__SQLServer__ConnectionString=$OVCMOVE_DbConfig__SQLServer__ConnectionString
+            OVCMOVE_ExternalServicesConfig__EmailService__Email=$OVCMOVE_ExternalServicesConfig__EmailService__Email
+            OVCMOVE_ExternalServicesConfig__EmailService__Password=$OVCMOVE_ExternalServicesConfig__EmailService__Password
+            EOF
+            docker login --username "$DOCKERHUB_USERNAME" --password-stdin <<EOF
+            $DOCKERHUB_TOKEN
+            EOF
             docker pull "$DOCKER_IMAGE"
             docker compose --env-file .env up -d
             docker image prune -f

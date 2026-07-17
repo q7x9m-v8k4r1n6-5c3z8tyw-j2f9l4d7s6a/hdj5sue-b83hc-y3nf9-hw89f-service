@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
-using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Options;
 using OVCMOVE.Infrastructure.Persistance.SqlServer;
@@ -29,7 +27,6 @@ public static class DependencyInjection
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
         services.AddScoped<IDapperHelper, DapperHelper>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
@@ -44,7 +41,6 @@ public static class DependencyInjection
 
         #region ==================== Services ====================
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
 
         #endregion
 

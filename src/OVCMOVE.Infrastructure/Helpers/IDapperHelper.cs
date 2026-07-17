@@ -1,5 +1,4 @@
 using System.Data;
-using System.Threading;
 using Dapper;
 
 namespace OVCMOVE.Infrastructure.Helpers;
@@ -11,38 +10,33 @@ public interface IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null,
-        CancellationToken cancellationToken = default);
+        CommandType? commandType = null);
 
     Task<T?> QueryFirstOrDefaultAsync<T>(
         string sql,
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null,
-        CancellationToken cancellationToken = default);
+        CommandType? commandType = null);
 
     Task<T> QuerySingleAsync<T>(
         string sql,
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null,
-        CancellationToken cancellationToken = default);
+        CommandType? commandType = null);
 
     Task<int> ExecuteAsync(
         string sql,
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null,
-        CancellationToken cancellationToken = default);
+        CommandType? commandType = null);
 
     Task<T?> ExecuteScalarAsync<T>(
         string sql,
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null,
-        CancellationToken cancellationToken = default);
+        CommandType? commandType = null);
 }

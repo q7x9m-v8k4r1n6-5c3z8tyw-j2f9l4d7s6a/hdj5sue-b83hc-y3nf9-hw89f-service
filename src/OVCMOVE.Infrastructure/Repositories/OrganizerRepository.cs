@@ -20,8 +20,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         {
             return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
                 OrganizerQueries.GetByEmailQuery(),
-                new { Email = email },
-                cancellationToken: cancellationToken);
+                new { Email = email });
         }
         catch (Exception ex)
         {
@@ -36,8 +35,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         {
             await _dapperHelper.ExecuteAsync(
                 OrganizerQueries.AddOrganizerQuery(),
-                organizer,
-                cancellationToken: cancellationToken);
+                organizer);
         }
         catch (Exception ex)
         {
@@ -51,8 +49,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         try
         {
             var result = await _dapperHelper.QueryAsync<Organizer>(
-                OrganizerQueries.GetAllOrganizersQuery(),
-                cancellationToken: cancellationToken);
+                OrganizerQueries.GetAllOrganizersQuery());
 
             return result.ToList();
         }
@@ -70,8 +67,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
             var parameters = new { Keyword = $"%{keyword}%" };
             var result = await _dapperHelper.QueryAsync<Organizer>(
                 OrganizerQueries.SearchOrganizerQuery(),
-                parameters,
-                cancellationToken: cancellationToken);
+                parameters);
 
             return result.ToList();
         }

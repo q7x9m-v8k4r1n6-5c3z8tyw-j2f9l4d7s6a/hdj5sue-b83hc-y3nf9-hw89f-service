@@ -9,7 +9,7 @@ using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1.Admin;
 
-[Route("api/v1/admin/organizers")] 
+[Route("api/v1/admin/organizers")]
 public class OrganizersController : BaseController<OrganizersController>
 {
     public OrganizersController(ILogger<OrganizersController> logger, IMediator mediator, IMapper mapper)

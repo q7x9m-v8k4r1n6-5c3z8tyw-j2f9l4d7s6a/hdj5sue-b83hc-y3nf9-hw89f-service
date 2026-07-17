@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OVCMOVE.Application.Mapping;
 
 namespace OVCMOVE.Application;
 
@@ -13,7 +12,7 @@ public static class DependencyInjection
         });
 
         services.AddAutoMapper(AssemblyReference.Assembly);
+
         return services;
     }
 }
-

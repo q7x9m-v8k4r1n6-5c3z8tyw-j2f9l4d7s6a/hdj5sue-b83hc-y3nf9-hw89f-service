@@ -10,7 +10,10 @@ public static class OrganizerQueries
                 DisplayName,
                 Email,
                 Role,
-                Status,
+                CASE Status
+                    WHEN 1 THEN 'active'
+                    ELSE 'inactive'
+                END AS Status,
                 CreatedAt
             FROM [dbo].[Organizers]
             WHERE Email = @Email";
@@ -20,7 +23,16 @@ public static class OrganizerQueries
     {
         return @"
             INSERT INTO [dbo].[Organizers] (Id, DisplayName, Email, Role, Status, CreatedAt)
-            VALUES (@Id, @DisplayName, @Email, @Role, @Status, @CreatedAt)";
+            VALUES (
+                @Id,
+                @DisplayName,
+                @Email,
+                @Role,
+                CASE
+                    WHEN LOWER(@Status) = 'active' THEN 1
+                    ELSE 0
+                END,
+                @CreatedAt)";
     }
 
     public static string GetAllOrganizersQuery()
@@ -31,7 +43,10 @@ public static class OrganizerQueries
                 DisplayName,
                 Email,
                 Role,
-                Status
+                CASE Status
+                    WHEN 1 THEN 'active'
+                    ELSE 'inactive'
+                END AS Status
             FROM [dbo].[Organizers]
             ORDER BY DisplayName";
     }
@@ -44,7 +59,10 @@ public static class OrganizerQueries
                 DisplayName,
                 Email,
                 Role,
-                Status
+                CASE Status
+                    WHEN 1 THEN 'active'
+                    ELSE 'inactive'
+                END AS Status
             FROM [dbo].[Organizers]
             WHERE DisplayName LIKE @Keyword
                OR Email LIKE @Keyword

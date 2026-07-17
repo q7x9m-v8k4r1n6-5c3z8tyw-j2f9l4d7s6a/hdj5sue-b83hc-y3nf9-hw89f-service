@@ -25,15 +25,12 @@ public class OrganizersController : BaseController<OrganizersController>
             var command = _mapper.Map<CreateOrganizerCommand>(request);
             var result = await _mediator.Send(command, cancellationToken);
 
-            return CreatedAtAction(
-                nameof(CreateOrganizer),
-                new { id = result.Id },
-                new ApiResponseModel<OrganizerResponse>
-                {
-                    StatusCode = APIContansts.StatusCode.Success,
-                    Message = APIContansts.StatusMessage.Success,
-                    Data = result
-                });
+            return Ok(new ApiResponseModel<OrganizerResponse>
+            {
+                StatusCode = APIContansts.StatusCode.Success,
+                Message = APIContansts.StatusMessage.Success,
+                Data = result
+            });
         }
         catch (Exception ex)
         {

@@ -6,6 +6,6 @@ public class OrganizerResponse
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
-    public OVCMOVE.Domain.Enums.OrganizerStatus Status { get; set; }
+    public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }

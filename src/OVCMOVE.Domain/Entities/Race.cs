@@ -6,7 +6,7 @@ namespace OVCMOVE.Domain.Entities;
 /// <summary>
 /// Domain entity: luu thong tin cot loi cua mot Race trong he thong.
 /// </summary>
-public class Race : BaseEntity<Guid>
+public class Race : BaseEntity
 {
     public string RaceName { get; set; } = string.Empty;
     public DateTime TimeStart { get; set; }

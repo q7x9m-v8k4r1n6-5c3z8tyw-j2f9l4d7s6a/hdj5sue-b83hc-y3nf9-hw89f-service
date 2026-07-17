@@ -4,7 +4,7 @@ using System;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class Organizer : BaseEntity<Guid>
+public class Organizer : BaseEntity
 {
     public string DisplayName { get; set; } 
     public string Email { get; set; } 

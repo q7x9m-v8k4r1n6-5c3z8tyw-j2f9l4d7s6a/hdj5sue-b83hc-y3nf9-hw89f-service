@@ -1,5 +1,7 @@
 using DotNetEnv;
+
 using OVCMOVE.Api.Extensions;
+using OVCMOVE.Api.Middleware;
 using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Infrastructure;
@@ -8,12 +10,19 @@ using OVCMOVE.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (builder.Environment.IsEnvironment("Local"))
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
 {
-    const string envFilePath = "./.env";
-    if (File.Exists(envFilePath))
+    // TraversePath() sẽ tự động quét file .env từ thư mục hiện tại hất ngược lên các thư mục cha
+    // Vì vậy dù bạn để .env ở thư mục Api, hay thư mục sln ngoài cùng, nó đều tìm thấy.
+    var envFiles = Env.TraversePath().Load();
+
+    if (envFiles.Any())
     {
-        Env.Load(envFilePath);
+        Console.WriteLine("✅ THÀNH CÔNG: Đã nạp biến môi trường từ file .env");
+    }
+    else
+    {
+        Console.WriteLine("⚠️ CẢNH BÁO: KHÔNG TÌM THẤY file .env nào! Hệ thống sẽ dùng cấu hình mặc định.");
     }
 }
 
@@ -22,37 +31,23 @@ builder.Configuration
     .AddEnvironmentVariables(prefix: "OVCMOVE_");
 
 builder.Services.AddMapping();
-
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-
+builder.Services.AddInfrastructure(builder.Configuration); 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerDocumentation();
-
-builder.Services.AddCors(options =>
-{
-    var allowedOrigins = builder.Configuration
-        .GetSection("Cors:AllowedOrigins")
-        .Get<string[]>() ?? Array.Empty<string>();
-
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
-
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
 
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddCustomCors();
+    
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwaggerDocumentation();
 
 app.UseHttpsRedirection();
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 

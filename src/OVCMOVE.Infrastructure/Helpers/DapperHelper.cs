@@ -22,11 +22,12 @@ public class DapperHelper : IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null)
+        CommandType? commandType = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = await OpenConnectionAsync();
-
-        return await connection.QueryAsync<T>(sql, param, transaction, commandTimeout, commandType);
+        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+        return await connection.QueryAsync<T>(command);
     }
 
     public async Task<T?> QueryFirstOrDefaultAsync<T>(
@@ -34,11 +35,12 @@ public class DapperHelper : IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null)
+        CommandType? commandType = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = await OpenConnectionAsync();
-
-        return await connection.QueryFirstOrDefaultAsync<T>(sql, param, transaction, commandTimeout, commandType);
+        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+        return await connection.QueryFirstOrDefaultAsync<T>(command);
     }
 
     public async Task<T> QuerySingleAsync<T>(
@@ -46,11 +48,12 @@ public class DapperHelper : IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null)
+        CommandType? commandType = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = await OpenConnectionAsync();
-
-        return await connection.QuerySingleAsync<T>(sql, param, transaction, commandTimeout, commandType);
+        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+        return await connection.QuerySingleAsync<T>(command);
     }
 
     public async Task<int> ExecuteAsync(
@@ -58,11 +61,12 @@ public class DapperHelper : IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null)
+        CommandType? commandType = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = await OpenConnectionAsync();
-
-        return await connection.ExecuteAsync(sql, param, transaction, commandTimeout, commandType);
+        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+        return await connection.ExecuteAsync(command);
     }
 
     public async Task<T?> ExecuteScalarAsync<T>(
@@ -70,11 +74,12 @@ public class DapperHelper : IDapperHelper
         object? param = null,
         IDbTransaction? transaction = null,
         int? commandTimeout = null,
-        CommandType? commandType = null)
+        CommandType? commandType = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = await OpenConnectionAsync();
-
-        return await connection.ExecuteScalarAsync<T>(sql, param, transaction, commandTimeout, commandType);
+        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+        return await connection.ExecuteScalarAsync<T>(command);
     }
 
     private async Task<IDbConnection> OpenConnectionAsync()

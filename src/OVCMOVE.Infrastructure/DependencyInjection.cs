@@ -28,6 +28,7 @@ public static class DependencyInjection
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+        services.AddScoped<IOrganizerRepository, OrganizerRepository>();
         
         #endregion
 

@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
+
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common; 
 
@@ -11,7 +13,8 @@ public class LogoutCommandHandler : BaseCommandHandler<LogoutCommandHandler>, IR
 
     public LogoutCommandHandler(
         IRefreshTokenRepository refreshTokenRepository,
-        ILogger<LogoutCommandHandler> logger) : base(logger) 
+        IMapper mapper,
+        ILogger<LogoutCommandHandler> logger) : base(logger, mapper) 
     {
         _refreshTokenRepository = refreshTokenRepository;
     }

@@ -2,7 +2,7 @@ using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class RefreshTokenEntity : BaseEntity<Guid>
+public class RefreshTokenEntity : BaseEntity
 {
     public Guid UserId { get; set; } 
     

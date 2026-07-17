@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
+
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -21,7 +23,8 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
         IUserRepository userRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenGenerator jwtTokenGenerator,
-        ILogger<GoogleLoginCommandHandler> logger) : base(logger) 
+        IMapper mapper,
+        ILogger<GoogleLoginCommandHandler> logger) : base(logger,mapper) 
     {
         _googleAuthService = googleAuthService;
         _userRepository = userRepository;

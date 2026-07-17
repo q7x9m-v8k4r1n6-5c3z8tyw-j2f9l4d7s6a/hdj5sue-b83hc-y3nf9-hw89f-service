@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
+
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -18,7 +20,8 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
         IUserRepository userRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenGenerator jwtTokenGenerator,
-        ILogger<RefreshTokenCommandHandler> logger) : base(logger)
+        IMapper mapper,
+        ILogger<RefreshTokenCommandHandler> logger) : base(logger, mapper)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;

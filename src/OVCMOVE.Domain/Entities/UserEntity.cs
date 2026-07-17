@@ -3,7 +3,7 @@ using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class UserEntity : BaseEntity<Guid> 
+public class UserEntity : BaseEntity
 {
     public string? Username { get; set; } 
     

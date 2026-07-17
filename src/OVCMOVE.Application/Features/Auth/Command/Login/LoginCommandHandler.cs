@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
+
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -17,7 +19,8 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
         IUserRepository userRepository, 
         IRefreshTokenRepository refreshTokenRepository, 
         IJwtTokenGenerator jwtTokenGenerator,
-        ILogger<LoginCommandHandler> logger) : base(logger) 
+        IMapper mapper,
+        ILogger<LoginCommandHandler> logger) : base(logger, mapper) 
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;

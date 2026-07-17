@@ -28,6 +28,10 @@ public static class DependencyInjection
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+        services.AddScoped<IRaceRepository, RaceRepository>();
+        services.AddScoped<IBoothRepository, BoothRepository>();
+        services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
+        services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
         
         #endregion
 

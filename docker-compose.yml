@@ -1,0 +1,15 @@
+services:
+  backend:
+    image: ${DOCKER_IMAGE:-ovcmove-backend:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ovcmove-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OVCMOVE_DbConfig__SQLServer__ConnectionString=${OVCMOVE_DbConfig__SQLServer__ConnectionString}
+      - OVCMOVE_ExternalServicesConfig__EmailService__Email=${OVCMOVE_ExternalServicesConfig__EmailService__Email}
+      - OVCMOVE_ExternalServicesConfig__EmailService__Password=${OVCMOVE_ExternalServicesConfig__EmailService__Password}
+    ports:
+      - "5000:80"
+    restart: unless-stopped

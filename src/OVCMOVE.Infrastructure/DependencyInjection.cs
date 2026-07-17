@@ -31,6 +31,7 @@ public static class DependencyInjection
             configuration.GetSection(GoogleAuthConfigOptions.SectionName));
 
         #endregion
+        services.Configure<DbConfigOptions>(configuration.GetSection(DbConfigOptions.SectionName));
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
         services.AddScoped<IDapperHelper, DapperHelper>();
@@ -51,8 +52,17 @@ public static class DependencyInjection
 
         #region ==================== BackgroundJobs ====================
         services.AddHostedService<BackgroundJobs.CleanupOldTokenService>();
-
         #endregion
+
+        services.AddScoped<IRaceRepository, RaceRepository>();
+        services.AddScoped<IBoothRepository, BoothRepository>();
+        services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
+        services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
+        services.AddScoped<IOrganizerRepository, OrganizerRepository>();
+        
+
+
 
         return services;
     }

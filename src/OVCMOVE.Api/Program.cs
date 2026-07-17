@@ -3,7 +3,10 @@ using DotNetEnv;
 using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Middleware;
 using OVCMOVE.Application;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Infrastructure;
+using OVCMOVE.Infrastructure.Common;
+using OVCMOVE.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +35,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration); 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerDocumentation();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
+
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCustomCors();
     
@@ -43,9 +49,6 @@ app.UseSwaggerDocumentation();
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowFrontend");
-
-app.UseAuthentication();   
 app.UseAuthorization();
 
 app.MapControllers();

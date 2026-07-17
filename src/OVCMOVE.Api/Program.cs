@@ -39,7 +39,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddCustomCors();
+builder.Services.AddCustomCors(builder.Configuration);
     
 var app = builder.Build();
 
@@ -49,6 +49,8 @@ app.UseSwaggerDocumentation();
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowFrontend");
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();

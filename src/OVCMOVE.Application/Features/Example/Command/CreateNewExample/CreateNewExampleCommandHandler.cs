@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
@@ -12,7 +13,7 @@ namespace OVCMOVE.Application.Features.Example.Command.CreateNewExample
     {
         private readonly IExampleRepository _exampleRepository;
 
-        public CreateNewExampleCommandHandler(ILogger<CreateNewExampleCommandHandler> logger, IExampleRepository exampleRepository) : base(logger)
+        public CreateNewExampleCommandHandler(ILogger<CreateNewExampleCommandHandler> logger, IExampleRepository exampleRepository, IMapper mapper) : base(logger, mapper)
         {
             _exampleRepository = exampleRepository;
         }

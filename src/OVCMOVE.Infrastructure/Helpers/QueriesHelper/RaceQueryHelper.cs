@@ -1,4 +1,4 @@
-namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+﻿namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 public static class RaceQueries
 {

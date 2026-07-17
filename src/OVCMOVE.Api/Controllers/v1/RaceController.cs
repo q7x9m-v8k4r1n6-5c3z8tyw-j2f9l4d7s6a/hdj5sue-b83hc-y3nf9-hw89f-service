@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
@@ -25,7 +25,7 @@ public class RaceController : BaseController<RaceController>
         try
         {
             var result = await _mediator.Send(new GetAllRacesQuery(), cancellationToken);
-            return Ok(new ApiResponseModel<IReadOnlyCollection<RaceListItemResultModel>>(
+            return Ok(new ApiResponseModel<RaceListItemResultModel>(
                 APIContansts.StatusCode.Success,
                 APIContansts.StatusMessage.Success,
                 data: result));

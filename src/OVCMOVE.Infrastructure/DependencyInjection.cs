@@ -22,6 +22,7 @@ public static class DependencyInjection
             configuration.GetSection(ExternalServicesConfigOptions.SectionName));
 
         #endregion
+        services.Configure<DbConfigOptions>(configuration.GetSection(DbConfigOptions.SectionName));
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
         services.AddScoped<IDapperHelper, DapperHelper>();
@@ -32,8 +33,11 @@ public static class DependencyInjection
         services.AddScoped<IBoothRepository, BoothRepository>();
         services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
         services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
-        
+        services.AddScoped<ITeamRepository, TeamRepository>();
+        services.AddScoped<IOrganizerRepository, OrganizerRepository>();
         #endregion
+
+
 
         return services;
     }

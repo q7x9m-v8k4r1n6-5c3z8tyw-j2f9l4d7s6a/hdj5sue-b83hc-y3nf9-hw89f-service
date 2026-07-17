@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
@@ -24,11 +24,11 @@ public class RaceRepository : BaseRepository<RaceRepository>, IRaceRepository
         return affectedRows >= 1 ? race.Id : null;
     }
 
-    public async Task<IReadOnlyCollection<RaceListItemResultModel>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<RaceItemResultModel>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var races = await _dapperHelper.QueryAsync<RaceListItemResultModel>(RaceQueries.GetAllRacesQuery());
+        var races = await _dapperHelper.QueryAsync<RaceItemResultModel>(RaceQueries.GetAllRacesQuery());
         return races.ToArray();
     }
 

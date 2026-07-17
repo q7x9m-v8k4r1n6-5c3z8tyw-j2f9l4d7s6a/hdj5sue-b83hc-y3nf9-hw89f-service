@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
+
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
+using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -13,35 +15,43 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
     {
     }
 
-    public async Task<RefreshTokenEntity?> GetByTokenAsync(string token)
+    public async Task<RefreshTokenEntity?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        const string sql = "SELECT * FROM RefreshTokens WHERE Token = @Token";
-        return await _dapperHelper.QueryFirstOrDefaultAsync<RefreshTokenEntity>(sql, new { Token = token });
+        var sql = RefreshTokenQueryHelper.GetByTokenQuery();
+        var refreshToken =  await _dapperHelper.QueryFirstOrDefaultAsync<RefreshTokenEntity>(
+            sql, 
+            new { Token = token }, 
+            cancellationToken: cancellationToken);
+
+        return refreshToken;
     }
 
-    public async Task<Guid> CreateAsync(RefreshTokenEntity refreshToken)
+    public async Task<Guid> CreateAsync(RefreshTokenEntity refreshToken, CancellationToken cancellationToken = default)
     {
-        const string sql = @"
-            INSERT INTO RefreshTokens (UserId, Token, ExpiryDate, IsRevoked)
-            OUTPUT INSERTED.Id
-            VALUES (@UserId, @Token, @ExpiryDate, @IsRevoked)";
+        var sql = RefreshTokenQueryHelper.CreateQuery();
             
-        var insertedId = await _dapperHelper.ExecuteScalarAsync<Guid>(sql, new 
-        { 
-            UserId = refreshToken.UserId, 
-            Token = refreshToken.Token, 
-            ExpiryDate = refreshToken.ExpiryDate, 
-            IsRevoked = refreshToken.IsRevoked 
-        });
+        var insertedId = await _dapperHelper.ExecuteScalarAsync<Guid>(
+            sql,
+            new 
+            { 
+                UserId = refreshToken.UserId, 
+                Token = refreshToken.Token, 
+                ExpiryDate = refreshToken.ExpiryDate, 
+                IsRevoked = refreshToken.IsRevoked 
+            }, 
+            cancellationToken: cancellationToken);
 
         return insertedId;
     }
 
-    public async Task<bool> RevokeAsync(Guid id)
+    public async Task<bool> RevokeAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        const string sql = "UPDATE RefreshTokens SET IsRevoked = 1 WHERE Id = @Id";
+        var sql = RefreshTokenQueryHelper.RevokeQuery();
         
-        var rowsAffected = await _dapperHelper.ExecuteAsync(sql, new { Id = id });
+        var rowsAffected = await _dapperHelper.ExecuteAsync(
+            sql, 
+            new { Id = id }, 
+            cancellationToken: cancellationToken);
         
         bool result = rowsAffected > 0;
         return result;
@@ -49,11 +59,12 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
 
     public async Task<int> CleanupOldTokensAsync(int daysToKeep)
     {
-        var sql = @"
-            DELETE FROM RefreshTokens 
-            WHERE ExpiryDate < DATEADD(day, -@DaysToKeep, GETUTCDATE())";
+        var sql = RefreshTokenQueryHelper.CleanupOldTokensQuery();
 
-        return await _dapperHelper.ExecuteAsync(sql, new { DaysToKeep = daysToKeep });
+        var numberOfChangedRow = await _dapperHelper.ExecuteAsync(
+            sql, 
+            new { DaysToKeep = daysToKeep });
+
+        return numberOfChangedRow;
     }
-
 }

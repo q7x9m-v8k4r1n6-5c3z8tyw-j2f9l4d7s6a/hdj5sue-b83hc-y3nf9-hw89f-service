@@ -7,5 +7,5 @@ public abstract class BaseEntity<TId>
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? ModifiedBy { get; set; }
-    public DateTime ModifiedAt { get; set; }
+    public DateTime ModifiedAt { get; set; } // thiểu isDelete của Đạt Lê
 }

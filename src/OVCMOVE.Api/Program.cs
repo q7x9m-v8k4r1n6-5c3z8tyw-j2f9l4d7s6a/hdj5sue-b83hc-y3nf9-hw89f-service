@@ -1,20 +1,25 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using DotNetEnv;
 
 using OVCMOVE.Api.Extensions;
+using OVCMOVE.Api.Middleware;
 using OVCMOVE.Application;
 using OVCMOVE.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (builder.Environment.IsEnvironment("Local"))
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
 {
-    const string envFilePath = "./.env";
-    if (File.Exists(envFilePath))
+    // TraversePath() sẽ tự động quét file .env từ thư mục hiện tại hất ngược lên các thư mục cha
+    // Vì vậy dù bạn để .env ở thư mục Api, hay thư mục sln ngoài cùng, nó đều tìm thấy.
+    var envFiles = Env.TraversePath().Load();
+
+    if (envFiles.Any())
     {
-        Env.Load(envFilePath);
+        Console.WriteLine("✅ THÀNH CÔNG: Đã nạp biến môi trường từ file .env");
+    }
+    else
+    {
+        Console.WriteLine("⚠️ CẢNH BÁO: KHÔNG TÌM THẤY file .env nào! Hệ thống sẽ dùng cấu hình mặc định.");
     }
 }
 
@@ -23,47 +28,16 @@ builder.Configuration
     .AddEnvironmentVariables(prefix: "OVCMOVE_");
 
 builder.Services.AddMapping();
-
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-
+builder.Services.AddInfrastructure(builder.Configuration); 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerDocumentation();
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.MapInboundClaims = false;
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true, 
-            ValidateIssuerSigningKey = true, 
-            ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
-            ValidAudience = builder.Configuration["JwtConfig:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtConfig:SecretKey"] ?? throw new InvalidOperationException("Thiếu SecretKey"))),
-
-            RoleClaimType = "role"
-        };
-    });
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "https://move.oispvolunteerclub.com"
-              )
-              .AllowAnyHeader()   
-              .AllowAnyMethod()   
-              .AllowCredentials();
-    });
-});
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddCustomCors();
     
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwaggerDocumentation();
 

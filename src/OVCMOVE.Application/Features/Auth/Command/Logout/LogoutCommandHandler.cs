@@ -18,16 +18,27 @@ public class LogoutCommandHandler : BaseCommandHandler<LogoutCommandHandler>, IR
 
     public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
-        var tokenEntity = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken);
-
-        if (tokenEntity == null || tokenEntity.IsRevoked)
+        try 
         {
-            _logger.LogWarning("⚠️ Cảnh báo: ai đó đã Logout bằng một Token không tồn tại hoặc đã bị hủy! Token: {Token}", request.RefreshToken);
-            return true; 
-        }
+            var tokenEntity = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
 
-        var isSuccess = await _refreshTokenRepository.RevokeAsync(tokenEntity.Id);
-        
-        return isSuccess;
+            if (tokenEntity == null || tokenEntity.IsRevoked)
+            {
+                string userIdStr = tokenEntity != null ? tokenEntity.UserId.ToString() : "Không xác định (Token giả mạo/Không tồn tại)";
+                
+                _logger.LogWarning("⚠️ Cảnh báo: Có hành vi Logout bất thường! UserId: {UserId}, Token: {Token}", userIdStr, request.RefreshToken);
+                
+                return true; 
+            }
+
+            var isSuccess = await _refreshTokenRepository.RevokeAsync(tokenEntity.Id, cancellationToken);
+            
+            return isSuccess;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi hệ thống khi xử lý LogoutCommand cho Token: {Token}", request.RefreshToken);
+            throw; 
+        }
     }
 }

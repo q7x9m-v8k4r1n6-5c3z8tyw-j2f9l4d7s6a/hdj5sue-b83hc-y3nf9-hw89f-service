@@ -27,6 +27,9 @@ public static class DependencyInjection
         services.Configure<JwtConfigOptions>(
             configuration.GetSection(JwtConfigOptions.SectionName));
 
+        services.Configure<GoogleAuthConfigOptions>(
+            configuration.GetSection(GoogleAuthConfigOptions.SectionName));
+
         #endregion
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();

@@ -1,7 +1,8 @@
 using Google.Apis.Auth;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Infrastructure.Options;
 
 namespace OVCMOVE.Infrastructure.Services;
 
@@ -10,11 +11,11 @@ public class GoogleAuthService : IGoogleAuthService
     private readonly string _clientId;
     private readonly ILogger<GoogleAuthService> _logger;
 
-    public GoogleAuthService(IConfiguration configuration, ILogger<GoogleAuthService> logger)
+    public GoogleAuthService(IOptions<GoogleAuthConfigOptions> googleAuthOption, ILogger<GoogleAuthService> logger)
     {
         _logger = logger;
-        _clientId = configuration["GoogleAuth:ClientId"] 
-            ?? throw new ArgumentNullException("Thiếu cấu hình GoogleAuth:ClientId");
+        _clientId = googleAuthOption.Value.ClientId
+            ?? throw new ArgumentNullException("Thiếu cấu hình GoogleAuth:ClientId"); 
     }
 
     public async Task<string> ValidateGoogleTokenAndGetEmailAsync(string idToken)

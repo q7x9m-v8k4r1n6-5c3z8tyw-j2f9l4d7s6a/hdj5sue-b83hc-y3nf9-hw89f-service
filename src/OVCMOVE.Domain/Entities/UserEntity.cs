@@ -1,5 +1,5 @@
 using OVCMOVE.Domain.Common;
-using OVCMOVE.Domain.Enums;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Domain.Entities;
 
@@ -11,9 +11,9 @@ public class UserEntity : BaseEntity<Guid>
     
     public string Email { get; set; } = string.Empty; 
     
-    public UserRole Role { get; set; } 
+    public string Role { get; set; } 
     
-    public string? NickName { get; set; }
+    public string? DisplayName { get; set; }
     
-    public UserStatus Status { get; set; } = UserStatus.Active; 
+    public string Status { get; set; } = UserConstant.Status.Active; 
 }

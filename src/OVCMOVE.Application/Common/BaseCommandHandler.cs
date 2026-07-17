@@ -7,7 +7,7 @@ namespace OVCMOVE.Application.Common
 {
     public class BaseCommandHandler<T>
     {
-        public readonly ILogger<T> _logger;
+        protected readonly ILogger<T> _logger;
 
         public BaseCommandHandler(ILogger<T> logger)
         {

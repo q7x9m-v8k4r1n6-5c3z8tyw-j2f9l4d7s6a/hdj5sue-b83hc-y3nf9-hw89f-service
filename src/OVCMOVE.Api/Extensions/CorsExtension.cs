@@ -2,21 +2,17 @@ namespace OVCMOVE.Api.Extensions;
 
 public static class CorsExtension
 {
-    /// <summary>
-    /// Adds CORS policy services to the service collection.
-    /// </summary>
-    /// <param name="services">The service collection to add the CORS services to.</param>
-    /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddCustomCors(this IServiceCollection services)
+    public static IServiceCollection AddCustomCors(this IServiceCollection services, IConfiguration configuration)
     {
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+        var cleanedOrigins = allowedOrigins.Select(origin => origin.TrimEnd('/')).ToArray();
+
         services.AddCors(options =>
         {
             options.AddPolicy("AllowFrontend", policy =>
             {
-                policy.WithOrigins(
-                        "http://localhost:5173",
-                        "https://move.oispvolunteerclub.com"
-                      )
+                policy.WithOrigins(cleanedOrigins)
                       .AllowAnyHeader()   
                       .AllowAnyMethod()   
                       .AllowCredentials();

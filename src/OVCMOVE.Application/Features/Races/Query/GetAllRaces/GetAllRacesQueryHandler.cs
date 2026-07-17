@@ -24,8 +24,8 @@ public class GetAllRacesQueryHandler :
         var racesFromDb = await _raceRepository.GetAllAsync(cancellationToken);
         return new RaceListItemResultModel
         {
-            TotalCount = racesFromDb.Count, // Đếm tổng số lượng phần tử
-            Items = racesFromDb            // Đổ mảng dữ liệu vào khay Items
+            TotalCount = racesFromDb.Count, 
+            Items = racesFromDb            
         };
     }
 }

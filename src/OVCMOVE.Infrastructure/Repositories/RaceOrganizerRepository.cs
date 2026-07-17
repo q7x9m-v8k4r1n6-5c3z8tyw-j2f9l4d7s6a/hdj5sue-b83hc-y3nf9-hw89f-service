@@ -1,9 +1,10 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 

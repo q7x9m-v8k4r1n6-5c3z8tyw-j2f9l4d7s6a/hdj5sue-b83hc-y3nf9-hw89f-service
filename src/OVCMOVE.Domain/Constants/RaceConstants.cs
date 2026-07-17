@@ -1,4 +1,4 @@
-namespace OVCMOVE.Domain.Constants;
+﻿namespace OVCMOVE.Domain.Constants;
 
 public static class RaceConstants
 {
@@ -8,5 +8,15 @@ public static class RaceConstants
         public const string Ongoing = "ongoing";
         public const string Completed = "completed";
         public const string Cancelled = "cancelled";
+    }
+    public static class TeamStatus
+    {
+        public const string Active = "active";
+        public const string Inactive = "inactive";
+    }
+    public static class OrganizerStatus
+    {
+        public const string Active = "active";
+        public const string Inactive = "inactive";
     }
 }

@@ -8,7 +8,7 @@ namespace OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 
 public class GetAllRacesQueryHandler :
     BaseQueryHandler<GetAllRacesQueryHandler>,
-    IRequestHandler<GetAllRacesQuery, IReadOnlyCollection<RaceListItemResultModel>>
+    IRequestHandler<GetAllRacesQuery, RaceListItemResultModel>
 {
     private readonly IRaceRepository _raceRepository;
 
@@ -17,8 +17,15 @@ public class GetAllRacesQueryHandler :
         _raceRepository = raceRepository;
     }
 
-    public Task<IReadOnlyCollection<RaceListItemResultModel>> Handle(GetAllRacesQuery request, CancellationToken cancellationToken)
+    public async Task<RaceListItemResultModel> Handle(GetAllRacesQuery request, CancellationToken cancellationToken)
     {
-        return _raceRepository.GetAllAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var racesFromDb = await _raceRepository.GetAllAsync(cancellationToken);
+        return new RaceListItemResultModel
+        {
+            TotalCount = racesFromDb.Count, // Đếm tổng số lượng phần tử
+            Items = racesFromDb            // Đổ mảng dữ liệu vào khay Items
+        };
     }
 }

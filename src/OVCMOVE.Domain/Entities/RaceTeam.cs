@@ -1,3 +1,4 @@
+﻿
 using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;

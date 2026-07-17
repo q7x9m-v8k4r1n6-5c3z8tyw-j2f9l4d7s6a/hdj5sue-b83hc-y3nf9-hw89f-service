@@ -1,8 +1,14 @@
-using OVCMOVE.Application.DTOs.Race;
+﻿using OVCMOVE.Application.DTOs.Race;
 
 namespace OVCMOVE.Application.DTOs.ResultModels;
 
 public class RaceListItemResultModel
+{
+    public int TotalCount { get; init; }
+    public IReadOnlyCollection<RaceItemResultModel> Items { get; init; } = Array.Empty<RaceItemResultModel>();
+}
+
+public class RaceItemResultModel
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
@@ -14,7 +20,7 @@ public class RaceListItemResultModel
     public string? CoverUrl { get; init; }
 }
 
-public class RaceDetailResultModel : RaceListItemResultModel
+public class RaceDetailResultModel : RaceItemResultModel
 {
     public bool IsToggledLeaderboard { get; init; }
     public bool IsHiddenPoint { get; init; }

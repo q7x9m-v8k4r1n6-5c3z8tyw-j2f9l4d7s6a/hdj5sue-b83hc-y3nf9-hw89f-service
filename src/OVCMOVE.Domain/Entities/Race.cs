@@ -14,7 +14,9 @@ public class Race : BaseEntity<Guid>
     public string Place { get; set; } = string.Empty;
     public string Status { get; set; } = RaceConstants.RaceStatus.Upcoming;
     public string? CoverUrl { get; set; }
+
+    #region setting
     public bool IsToggledLeaderboard { get; set; }
     public bool IsHiddenPoint { get; set; }
-    public bool IsDeleted { get; set; }
+    #endregion
 }

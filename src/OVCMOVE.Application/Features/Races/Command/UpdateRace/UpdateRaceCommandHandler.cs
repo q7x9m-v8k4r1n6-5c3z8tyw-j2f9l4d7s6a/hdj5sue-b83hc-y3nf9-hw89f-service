@@ -1,3 +1,4 @@
+using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
@@ -18,10 +19,11 @@ public class UpdateRaceCommandHandler :
 
     public UpdateRaceCommandHandler(
         ILogger<UpdateRaceCommandHandler> logger,
+        IMapper mapper,
         IRaceRepository raceRepository,
         IBoothRepository boothRepository,
         IRaceTeamRepository raceTeamRepository,
-        IRaceOrganizerRepository raceOrganizerRepository) : base(logger)
+        IRaceOrganizerRepository raceOrganizerRepository) : base(logger, mapper)
     {
         _raceRepository = raceRepository;
         _boothRepository = boothRepository;

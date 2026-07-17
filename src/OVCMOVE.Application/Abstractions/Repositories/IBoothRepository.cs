@@ -1,4 +1,4 @@
-using OVCMOVE.Domain.Entities;
+﻿using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
 

@@ -4,6 +4,7 @@
 **/obj
 **/.env
 **/.env.*
+**/.vscode
 !**/.env.example
 README.md
 docs

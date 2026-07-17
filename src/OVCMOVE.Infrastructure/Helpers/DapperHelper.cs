@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using Dapper;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Infrastructure.Persistance.SqlServer;
 
 namespace OVCMOVE.Infrastructure.Helpers;
@@ -9,10 +10,12 @@ namespace OVCMOVE.Infrastructure.Helpers;
 public class DapperHelper : IDapperHelper
 {
     private readonly ISqlServerFactory _sqlServerFactory;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public DapperHelper(ISqlServerFactory sqlServerFactory)
+    public DapperHelper(ISqlServerFactory sqlServerFactory, IUnitOfWork unitOfWork)
     {
         _sqlServerFactory = sqlServerFactory;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<IEnumerable<T>> QueryAsync<T>(

@@ -12,16 +12,14 @@ namespace OVCMOVE.Application.Organizers.Commands;
 public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>, IRequestHandler<CreateOrganizerCommand, OrganizerResponse>
 {
     private readonly IOrganizerRepository _organizerRepo;
-    private readonly IMapper _mapper;
 
     public CreateOrganizerHandler(
         ILogger<CreateOrganizerHandler> logger,
         IOrganizerRepository organizerRepo,
         IMapper mapper)
-        : base(logger)
+        : base(logger, mapper)
     {
         _organizerRepo = organizerRepo;
-        _mapper = mapper;
     }
 
     public async Task<OrganizerResponse> Handle(CreateOrganizerCommand request, CancellationToken cancellationToken)

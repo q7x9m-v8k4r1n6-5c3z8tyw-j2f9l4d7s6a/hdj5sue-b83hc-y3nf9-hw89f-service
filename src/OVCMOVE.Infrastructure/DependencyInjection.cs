@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Options;
 using OVCMOVE.Infrastructure.Persistance.SqlServer;
@@ -19,7 +21,7 @@ public static class DependencyInjection
         #region =================== Options ====================
         services.Configure<DbConfigOptions>(
             configuration.GetSection(DbConfigOptions.SectionName));
-        
+
         services.Configure<ExternalServicesConfigOptions>(
             configuration.GetSection(ExternalServicesConfigOptions.SectionName));
 
@@ -27,15 +29,22 @@ public static class DependencyInjection
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
         services.AddScoped<IDapperHelper, DapperHelper>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+        services.AddScoped<IRaceRepository, RaceRepository>();
+        services.AddScoped<IBoothRepository, BoothRepository>();
+        services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
+        services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IOrganizerRepository, OrganizerRepository>();
-        
+
         #endregion
 
         #region ==================== Services ====================
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
 
         #endregion
 

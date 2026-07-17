@@ -19,7 +19,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         try
         {
             return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
-                OrganizerQueryHelper.GetByEmailQuery(),
+                OrganizerQueries.GetByEmailQuery(),
                 new { Email = email },
                 cancellationToken: cancellationToken);
         }
@@ -35,13 +35,49 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         try
         {
             await _dapperHelper.ExecuteAsync(
-                OrganizerQueryHelper.AddOrganizerQuery(),
+                OrganizerQueries.AddOrganizerQuery(),
                 organizer,
                 cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while adding organizer with email {Email}.", organizer.Email);
+            throw;
+        }
+    }
+
+    public async Task<List<Organizer>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.GetAllOrganizersQuery(),
+                cancellationToken: cancellationToken);
+
+            return result.ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while getting all organizers.");
+            throw;
+        }
+    }
+
+    public async Task<List<Organizer>> SearchAsync(string keyword, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var parameters = new { Keyword = $"%{keyword}%" };
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.SearchOrganizerQuery(),
+                parameters,
+                cancellationToken: cancellationToken);
+
+            return result.ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while searching organizers with keyword {Keyword}.", keyword);
             throw;
         }
     }

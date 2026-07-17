@@ -17,10 +17,9 @@ public static class DependencyInjection
         #region =================== Options ====================
         services.Configure<DbConfigOptions>(
             configuration.GetSection(DbConfigOptions.SectionName));
-        
+
         services.Configure<ExternalServicesConfigOptions>(
             configuration.GetSection(ExternalServicesConfigOptions.SectionName));
-
         #endregion
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
@@ -28,8 +27,12 @@ public static class DependencyInjection
 
         #region ==================== Repositories ====================
         services.AddScoped<IExampleRepository, ExampleRepository>();
+        services.AddScoped<IRaceRepository, RaceRepository>();
+        services.AddScoped<IBoothRepository, BoothRepository>();
+        services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
+        services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IOrganizerRepository, OrganizerRepository>();
-        
         #endregion
 
         return services;

@@ -1,3 +1,4 @@
+using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
@@ -14,8 +15,9 @@ public class ChangeOrganizerStatusCommandHandler :
 
     public ChangeOrganizerStatusCommandHandler(
         ILogger<ChangeOrganizerStatusCommandHandler> logger,
+        IMapper mapper,
         IOrganizerRepository organizerRepository)
-        : base(logger)
+        : base(logger, mapper)
     {
         _organizerRepository = organizerRepository;
     }

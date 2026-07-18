@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
@@ -15,19 +15,53 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
     {
     }
 
+    public async Task<Organizer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
+                OrganizerQueries.GetByEmailQuery(),
+                new { Email = email },
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while getting organizer by email {Email}.", email);
+            throw;
+        }
+    }
+
+    public async Task AddAsync(Organizer organizer, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dapperHelper.ExecuteAsync(
+                OrganizerQueries.AddOrganizerQuery(),
+                organizer,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while adding organizer with email {Email}.", organizer.Email);
+            throw;
+        }
+    }
+
     public async Task<List<Organizer>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var sqlQuery = OrganizerQueries.GetAllOrganizersQuery();
-            var result = await _dapperHelper.QueryAsync<Organizer>(sqlQuery);
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.GetAllOrganizersQuery(),
+                cancellationToken: cancellationToken);
+
             return result.ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error when getting all organizers");
+            _logger.LogError(ex, "Error occurred while getting all organizers.");
             throw;
         }
     }
@@ -38,76 +72,67 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var sqlQuery = OrganizerQueries.SearchOrganizerQuery();
             var parameters = new { Keyword = $"%{keyword}%" };
-            var result = await _dapperHelper.QueryAsync<Organizer>(sqlQuery, parameters);
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.SearchOrganizerQuery(),
+                parameters,
+                cancellationToken: cancellationToken);
+
             return result.ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error when searching organizer");
+            _logger.LogError(ex, "Error occurred while searching organizers with keyword {Keyword}.", keyword);
             throw;
         }
     }
 
-    public async Task<OrganizerResultModel.ChangeOrganizerStatusResultModel> ChangeStatusAsync(
-        int organizerId,
-        bool isActive,
+    public async Task<bool> ChangeStatusAsync(
+        Guid organizerId,
+        string status,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var organizer = await _dapperHelper.QueryFirstOrDefaultAsync<OrganizerStatusRecord>(
-            OrganizerQueryHelper.GetOrganizerStatusByIdQuery(),
-            new { OrganizerId = organizerId });
-
-        if (organizer is null)
+        try
         {
-            return new OrganizerResultModel.ChangeOrganizerStatusResultModel
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var organizer = await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
+                OrganizerQueries.GetOrganizerByIdQuery(),
+                new { OrganizerId = organizerId },
+                cancellationToken: cancellationToken);
+
+            if (organizer is null)
             {
-                OrganizerId = organizerId,
-                IsActive = isActive,
-                IsSuccess = false,
-                Message = "Organizer account was not found."
-            };
+                return false;
+            }
+
+            await _dapperHelper.ExecuteAsync(
+                OrganizerQueries.UpdateOrganizerStatusQuery(),
+                new { OrganizerId = organizerId, Status = status },
+                cancellationToken: cancellationToken);
+
+            await _dapperHelper.ExecuteAsync(
+                OrganizerQueries.UpdateOrganizerUserStatusQuery(),
+                new
+                {
+                    OrganizerId = organizerId,
+                    OrganizerRole = UserConstant.Role.Organizer,
+                    UserStatus = status == OrganizerConstants.OrganizerStatus.Active
+                        ? UserConstant.Status.Active
+                        : UserConstant.Status.Deactive
+                },
+                cancellationToken: cancellationToken);
+
+            return true;
         }
-
-        if (organizer.IsActive == isActive)
+        catch (Exception ex)
         {
-            return new OrganizerResultModel.ChangeOrganizerStatusResultModel
-            {
-                OrganizerId = organizerId,
-                IsActive = organizer.IsActive,
-                IsSuccess = false,
-                Message = isActive
-                    ? "Organizer account is already active."
-                    : "Organizer account is already deactivated."
-            };
+            _logger.LogError(
+                ex,
+                "Error occurred while changing organizer {OrganizerId} status to {Status}.",
+                organizerId,
+                status);
+            throw;
         }
-
-        await _dapperHelper.ExecuteAsync(
-            OrganizerQueryHelper.UpdateOrganizerStatusQuery(),
-            new
-            {
-                OrganizerId = organizerId,
-                IsActive = isActive
-            });
-
-        return new OrganizerResultModel.ChangeOrganizerStatusResultModel
-        {
-            OrganizerId = organizerId,
-            IsActive = isActive,
-            IsSuccess = true,
-            Message = isActive
-                ? "Organizer account has been activated successfully."
-                : "Organizer account has been deactivated successfully."
-        };
-    }
-
-    private sealed class OrganizerStatusRecord
-    {
-        public int Id { get; init; }
-
-        public bool IsActive { get; init; }
     }
 }

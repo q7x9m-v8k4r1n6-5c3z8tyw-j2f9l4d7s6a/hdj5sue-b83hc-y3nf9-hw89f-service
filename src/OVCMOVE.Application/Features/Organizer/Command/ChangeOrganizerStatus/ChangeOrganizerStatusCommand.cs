@@ -1,11 +1,10 @@
 using MediatR;
-using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Application.Features.Organizer.Command.ChangeOrganizerStatus;
 
-public class ChangeOrganizerStatusCommand : IRequest<OrganizerResultModel.ChangeOrganizerStatusResultModel>
+public class ChangeOrganizerStatusCommand : IRequest<bool>
 {
-    public int OrganizerId { get; init; }
+    public Guid OrganizerId { get; init; }
 
-    public bool IsActive { get; init; }
+    public string Status { get; init; } = string.Empty;
 }

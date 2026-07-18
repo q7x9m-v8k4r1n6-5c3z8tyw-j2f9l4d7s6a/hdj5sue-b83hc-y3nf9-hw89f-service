@@ -3,13 +3,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Application.Features.Organizer.Command.ChangeOrganizerStatus;
 
 public class ChangeOrganizerStatusCommandHandler :
     BaseCommandHandler<ChangeOrganizerStatusCommandHandler>,
-    IRequestHandler<ChangeOrganizerStatusCommand, OrganizerResultModel.ChangeOrganizerStatusResultModel>
+    IRequestHandler<ChangeOrganizerStatusCommand, bool>
 {
     private readonly IOrganizerRepository _organizerRepository;
 
@@ -22,7 +21,7 @@ public class ChangeOrganizerStatusCommandHandler :
         _organizerRepository = organizerRepository;
     }
 
-    public async Task<OrganizerResultModel.ChangeOrganizerStatusResultModel> Handle(
+    public async Task<bool> Handle(
         ChangeOrganizerStatusCommand request,
         CancellationToken cancellationToken)
     {
@@ -30,12 +29,12 @@ public class ChangeOrganizerStatusCommandHandler :
         {
             return await _organizerRepository.ChangeStatusAsync(
                 request.OrganizerId,
-                request.IsActive,
+                request.Status,
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error occurred while handling ChangeOrganizerStatusCommand: {Message}", ex.Message);
+            _logger.LogError(ex, "Error occurred while handling ChangeOrganizerStatusCommand.");
             throw;
         }
     }

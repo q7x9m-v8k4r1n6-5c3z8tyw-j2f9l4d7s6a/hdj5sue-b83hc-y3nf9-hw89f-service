@@ -4,7 +4,7 @@ using System;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class Team : BaseEntity<Guid>
+public class Team : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public string LeaderEmail { get; set; }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
+﻿
 namespace OVCMOVE.Domain.Constants
 {
     public static class APIContansts

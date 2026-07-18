@@ -6,7 +6,7 @@ namespace OVCMOVE.Domain.Entities;
 /// <summary>
 /// Domain entity: tram/checkpoint thuoc ve mot Race.
 /// </summary>
-public class Booth : BaseEntity<Guid>
+public class Booth : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public string Place { get; set; } = string.Empty;

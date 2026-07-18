@@ -6,7 +6,7 @@ namespace OVCMOVE.Domain.Entities;
 /// <summary>
 /// Domain entity: quan he giua Race va Organizer/BTC.
 /// </summary>
-public class RaceOrganizer : BaseEntity<Guid>
+public class RaceOrganizer : BaseEntity
 {
     public Guid RaceID { get; set; }
     public Guid OrganizerID { get; set; }

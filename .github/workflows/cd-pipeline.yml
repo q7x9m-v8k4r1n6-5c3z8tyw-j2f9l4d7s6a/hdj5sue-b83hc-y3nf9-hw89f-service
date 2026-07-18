@@ -78,11 +78,17 @@ jobs:
           OVCMOVE_DbConfig__SQLServer__ConnectionString: ${{ secrets.DB_CONNECTION_STRING }}
           OVCMOVE_ExternalServicesConfig__EmailService__Email: ${{ secrets.EMAIL_SERVICE_EMAIL }}
           OVCMOVE_ExternalServicesConfig__EmailService__Password: ${{ secrets.EMAIL_SERVICE_PASSWORD }}
+          OVCMOVE_JwtConfig__SecretKey: ${{ secrets.JWT_SECRET_KEY }}
+          OVCMOVE_JwtConfig__Issuer: ${{ secrets.JWT_ISSUER }}
+          OVCMOVE_JwtConfig__Audience: ${{ secrets.JWT_AUDIENCE }}
+          OVCMOVE_JwtConfig__AccessTokenExpirationMinutes: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_MINUTES }}
+          OVCMOVE_JwtConfig__RefreshTokenExpirationDays: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_DAYS }}
+          OVCMOVE_GoogleAuthConfig__ClientId: ${{ secrets.GOOGLE_CLIENT_ID }}
         with:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           password: ${{ secrets.AZURE_VM_PASSWORD }}
-          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,OVCMOVE_DbConfig__SQLServer__ConnectionString,OVCMOVE_ExternalServicesConfig__EmailService__Email,OVCMOVE_ExternalServicesConfig__EmailService__Password
+          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,OVCMOVE_DbConfig__SQLServer__ConnectionString,OVCMOVE_ExternalServicesConfig__EmailService__Email,OVCMOVE_ExternalServicesConfig__EmailService__Password,OVCMOVE_JwtConfig__SecretKey,OVCMOVE_JwtConfig__Issuer,OVCMOVE_JwtConfig__Audience,OVCMOVE_JwtConfig__AccessTokenExpirationMinutes,OVCMOVE_JwtConfig__RefreshTokenExpirationDays,OVCMOVE_GoogleAuthConfig__ClientId
           script: |
             cd ${{ env.AZURE_APP_DIR }}
             cat > .env <<EOF
@@ -90,6 +96,12 @@ jobs:
             OVCMOVE_DbConfig__SQLServer__ConnectionString=$OVCMOVE_DbConfig__SQLServer__ConnectionString
             OVCMOVE_ExternalServicesConfig__EmailService__Email=$OVCMOVE_ExternalServicesConfig__EmailService__Email
             OVCMOVE_ExternalServicesConfig__EmailService__Password=$OVCMOVE_ExternalServicesConfig__EmailService__Password
+            OVCMOVE_JwtConfig__SecretKey=$OVCMOVE_JwtConfig__SecretKey
+            OVCMOVE_JwtConfig__Issuer=$OVCMOVE_JwtConfig__Issuer
+            OVCMOVE_JwtConfig__Audience=$OVCMOVE_JwtConfig__Audience
+            OVCMOVE_JwtConfig__AccessTokenExpirationMinutes=$OVCMOVE_JwtConfig__AccessTokenExpirationMinutes
+            OVCMOVE_JwtConfig__RefreshTokenExpirationDays=$OVCMOVE_JwtConfig__RefreshTokenExpirationDays
+            OVCMOVE_GoogleAuthConfig__ClientId=$OVCMOVE_GoogleAuthConfig__ClientId
             EOF
             docker login --username "$DOCKERHUB_USERNAME" --password-stdin <<EOF
             $DOCKERHUB_TOKEN

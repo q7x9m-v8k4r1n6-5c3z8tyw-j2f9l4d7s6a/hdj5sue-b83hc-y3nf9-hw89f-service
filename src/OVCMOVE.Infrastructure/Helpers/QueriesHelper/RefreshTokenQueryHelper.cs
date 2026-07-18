@@ -6,14 +6,14 @@ public static class RefreshTokenQueryHelper
     {
         return @"
             SELECT * 
-            FROM RefreshTokens 
+            FROM [dbo].[RefreshTokens]
             WHERE Token = @Token";
     }
 
     public static string CreateQuery()
     {
         return @"
-            INSERT INTO RefreshTokens (UserId, Token, ExpiryDate, IsRevoked)
+            INSERT INTO [dbo].[RefreshTokens] (UserId, Token, ExpiryDate, IsRevoked)
             OUTPUT INSERTED.Id
             VALUES (@UserId, @Token, @ExpiryDate, @IsRevoked)";
     }
@@ -21,7 +21,7 @@ public static class RefreshTokenQueryHelper
     public static string RevokeQuery()
     {
         return @"
-            UPDATE RefreshTokens 
+            UPDATE [dbo].[RefreshTokens]
             SET IsRevoked = 1 
             WHERE Id = @Id";
     }
@@ -29,7 +29,10 @@ public static class RefreshTokenQueryHelper
     public static string CleanupOldTokensQuery()
     {
         return @"
-            DELETE FROM RefreshTokens 
+            IF OBJECT_ID(N'[dbo].[RefreshTokens]', N'U') IS NULL
+                RETURN;
+
+            DELETE FROM [dbo].[RefreshTokens]
             WHERE ExpiryDate < DATEADD(day, -@DaysToKeep, GETUTCDATE())";
     }
 }

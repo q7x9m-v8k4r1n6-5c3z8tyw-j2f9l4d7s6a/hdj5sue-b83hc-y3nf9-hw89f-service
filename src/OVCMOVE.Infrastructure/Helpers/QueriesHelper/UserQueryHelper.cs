@@ -6,7 +6,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM Users 
+            FROM [dbo].[Users]
             WHERE Username = @Username 
               AND Status = @Status";
     }
@@ -15,7 +15,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM Users 
+            FROM [dbo].[Users]
             WHERE Email = @Email 
               AND Status = @Status";
     }
@@ -24,7 +24,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM Users 
+            FROM [dbo].[Users]
             WHERE Id = @Id 
               AND Status = @Status";
     }

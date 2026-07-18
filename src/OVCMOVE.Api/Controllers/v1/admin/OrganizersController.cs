@@ -23,6 +23,8 @@ public class OrganizersController : BaseController<OrganizersController>
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var command = _mapper.Map<CreateOrganizerCommand>(request);
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -32,6 +34,10 @@ public class OrganizersController : BaseController<OrganizersController>
                 Message = APIContansts.StatusMessage.Success,
                 Data = result
             });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -72,6 +78,8 @@ public class OrganizersController : BaseController<OrganizersController>
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var result = await _mediator.Send(
                 new ChangeOrganizerStatusCommand
                 {
@@ -80,16 +88,25 @@ public class OrganizersController : BaseController<OrganizersController>
                 },
                 cancellationToken);
 
-            return Ok(new ApiResponseModel<bool>
+            if (result is null)
             {
-                StatusCode = result
-                    ? APIContansts.StatusCode.Success
-                    : APIContansts.StatusCode.NotFound,
-                Message = result
-                    ? successMessage
-                    : "Organizer account was not found.",
+                return Ok(new ApiResponseModel<object>
+                {
+                    StatusCode = APIContansts.StatusCode.NotFound,
+                    Message = "Organizer account was not found."
+                });
+            }
+
+            return Ok(new ApiResponseModel<OrganizerStatusResponse>
+            {
+                StatusCode = APIContansts.StatusCode.Success,
+                Message = successMessage,
                 Data = result
             });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

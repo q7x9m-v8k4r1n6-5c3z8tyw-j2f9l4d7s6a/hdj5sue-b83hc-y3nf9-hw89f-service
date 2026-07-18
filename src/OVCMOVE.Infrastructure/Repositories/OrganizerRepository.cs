@@ -19,10 +19,16 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
                 OrganizerQueries.GetByEmailQuery(),
                 new { Email = email },
                 cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -35,10 +41,16 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             await _dapperHelper.ExecuteAsync(
                 OrganizerQueries.AddOrganizerQuery(),
                 organizer,
                 cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -58,6 +70,10 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
                 cancellationToken: cancellationToken);
 
             return result.ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -79,6 +95,10 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
                 cancellationToken: cancellationToken);
 
             return result.ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -124,6 +144,10 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
                 cancellationToken: cancellationToken);
 
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

@@ -3,12 +3,13 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Organizer;
 
 namespace OVCMOVE.Application.Features.Organizer.Command.ChangeOrganizerStatus;
 
 public class ChangeOrganizerStatusCommandHandler :
     BaseCommandHandler<ChangeOrganizerStatusCommandHandler>,
-    IRequestHandler<ChangeOrganizerStatusCommand, bool>
+    IRequestHandler<ChangeOrganizerStatusCommand, OrganizerStatusResponse?>
 {
     private readonly IOrganizerRepository _organizerRepository;
 
@@ -21,16 +22,33 @@ public class ChangeOrganizerStatusCommandHandler :
         _organizerRepository = organizerRepository;
     }
 
-    public async Task<bool> Handle(
+    public async Task<OrganizerStatusResponse?> Handle(
         ChangeOrganizerStatusCommand request,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await _organizerRepository.ChangeStatusAsync(
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await _organizerRepository.ChangeStatusAsync(
                 request.OrganizerId,
                 request.Status,
                 cancellationToken);
+
+            if (!result)
+            {
+                return null;
+            }
+
+            return new OrganizerStatusResponse
+            {
+                OrganizerId = request.OrganizerId,
+                Status = request.Status
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

@@ -10,6 +10,12 @@ services:
       - OVCMOVE_DbConfig__SQLServer__ConnectionString=${OVCMOVE_DbConfig__SQLServer__ConnectionString}
       - OVCMOVE_ExternalServicesConfig__EmailService__Email=${OVCMOVE_ExternalServicesConfig__EmailService__Email}
       - OVCMOVE_ExternalServicesConfig__EmailService__Password=${OVCMOVE_ExternalServicesConfig__EmailService__Password}
+      - OVCMOVE_JwtConfig__SecretKey=${OVCMOVE_JwtConfig__SecretKey}
+      - OVCMOVE_JwtConfig__Issuer=${OVCMOVE_JwtConfig__Issuer}
+      - OVCMOVE_JwtConfig__Audience=${OVCMOVE_JwtConfig__Audience}
+      - OVCMOVE_JwtConfig__AccessTokenExpirationMinutes=${OVCMOVE_JwtConfig__AccessTokenExpirationMinutes}
+      - OVCMOVE_JwtConfig__RefreshTokenExpirationDays=${OVCMOVE_JwtConfig__RefreshTokenExpirationDays}
+      - OVCMOVE_GoogleAuthConfig__ClientId=${OVCMOVE_GoogleAuthConfig__ClientId}
     ports:
       - "5000:80"
     restart: unless-stopped

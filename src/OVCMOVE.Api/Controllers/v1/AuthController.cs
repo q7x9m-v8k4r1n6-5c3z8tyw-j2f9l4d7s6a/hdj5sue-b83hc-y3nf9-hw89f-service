@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Hosting; 
+using Microsoft.Extensions.Hosting; 
 
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.Features.Auth.Command.Login;
@@ -20,17 +22,19 @@ namespace OVCMOVE.Api.Controllers.v1;
 public class AuthController : BaseController<AuthController>
 {
     private const string RefreshTokenCookieName = "refreshToken";
-
     private readonly JwtConfigOptions _jwtOptions;
+    private readonly IWebHostEnvironment _env;
 
     public AuthController(
         ILogger<AuthController> logger, 
         IMediator mediator, 
         IMapper mapper,
-        IOptions<JwtConfigOptions> jwtOptions)
+        IOptions<JwtConfigOptions> jwtOptions,
+        IWebHostEnvironment env)
         : base(logger, mediator, mapper)
     {
         _jwtOptions = jwtOptions.Value;
+        _env = env;
     }
 
     
@@ -155,12 +159,23 @@ public class AuthController : BaseController<AuthController>
     // ==========================================
     private void SetRefreshTokenCookie(string refreshToken)
     {
+        // Kiểm tra xem hệ thống có đang chạy ở chế độ Development (Local) không
+        bool isDevelopment = _env.IsDevelopment();
+
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = true, // yêu cầu https
-            SameSite = SameSiteMode.None, // CORS
-            Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays)
+            Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
+            
+            // 👇 CẤU HÌNH ĐỘNG THEO MÔI TRƯỜNG
+            // Nếu là Dev (Local): Secure = false
+            // Nếu là Prod (Main): Secure = true
+            Secure = !isDevelopment, 
+
+            // Giải thích SameSite: 
+            // - Local (Secure=false) bắt buộc phải đi kèm Lax, nếu để None trình duyệt sẽ chặn.
+            // - Prod (Secure=true) đi kèm None để cho phép frontend gọi chéo domain xuống API.
+            SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None
         };
 
         Response.Cookies.Append(RefreshTokenCookieName, refreshToken, cookieOptions);

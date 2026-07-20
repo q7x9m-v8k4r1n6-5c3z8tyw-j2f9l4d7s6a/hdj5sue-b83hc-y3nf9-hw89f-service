@@ -70,4 +70,48 @@ public static class OrganizerQueries
                OR Email LIKE @Keyword
             ORDER BY DisplayName";
     }
+
+    public static string GetOrganizerByIdQuery()
+    {
+        return @"
+            SELECT
+                Id,
+                DisplayName,
+                Email,
+                Role,
+                CASE Status
+                    WHEN 1 THEN 'active'
+                    ELSE 'inactive'
+                END AS Status,
+                CreatedAt
+            FROM [dbo].[Organizers]
+            WHERE Id = @OrganizerId
+        ";
+    }
+
+    public static string UpdateOrganizerStatusQuery()
+    {
+        return @"
+            UPDATE [dbo].[Organizers]
+            SET Status = CASE
+                WHEN LOWER(@Status) = 'active' THEN 1
+                ELSE 0
+            END
+            WHERE Id = @OrganizerId
+        ";
+    }
+
+    public static string UpdateOrganizerUserStatusQuery()
+    {
+        return @"
+            UPDATE [dbo].[Users]
+            SET Status = @UserStatus
+            WHERE Role = @OrganizerRole
+              AND Email = (
+                  SELECT Email
+                  FROM [dbo].[Organizers]
+                  WHERE Id = @OrganizerId
+              )
+        ";
+    }
 }

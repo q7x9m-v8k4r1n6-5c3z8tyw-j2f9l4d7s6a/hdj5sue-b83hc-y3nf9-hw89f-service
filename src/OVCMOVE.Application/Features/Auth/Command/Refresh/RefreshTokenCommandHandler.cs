@@ -45,7 +45,7 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
             var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var newRefreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
 
-            var newRefreshTokenEntity = new RefreshTokenEntity
+            var newRefreshTokenEntity = new RefreshToken
             {
                 UserId = user.Id,
                 Token = newRefreshTokenString,

@@ -16,10 +16,10 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
     {
     }
 
-    public async Task<UserEntity?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         var sql = UserQueryHelper.GetByUsernameQuery();
-        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<UserEntity>(
+        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<User>(
             sql,
             new { Username = username, Status = UserConstant.Status.Active },
             cancellationToken: cancellationToken);
@@ -27,10 +27,10 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
         return user;
     }
 
-    public async Task<UserEntity?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var sql = UserQueryHelper.GetByEmailQuery();
-        var user = await _dapperHelper.QueryFirstOrDefaultAsync<UserEntity>(
+        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
             sql,
             new { Email = email, Status = UserConstant.Status.Active },
             cancellationToken: cancellationToken);
@@ -38,10 +38,10 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
         return user;
     }
 
-    public async Task<UserEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var sql = UserQueryHelper.GetByIdQuery();
-        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<UserEntity>(
+        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<User>(
             sql,
             new { Id = id, Status = UserConstant.Status.Active },
             cancellationToken: cancellationToken);

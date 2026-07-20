@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
-using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -14,19 +14,48 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
     {
     }
 
+    public async Task<Organizer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
+                OrganizerQueries.GetByEmailQuery(),
+                new { Email = email });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while getting organizer by email {Email}.", email);
+            throw;
+        }
+    }
+
+    public async Task AddAsync(Organizer organizer, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dapperHelper.ExecuteAsync(
+                OrganizerQueries.AddOrganizerQuery(),
+                organizer);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while adding organizer with email {Email}.", organizer.Email);
+            throw;
+        }
+    }
+
     public async Task<List<Organizer>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.GetAllOrganizersQuery());
 
-            string sqlQuery = OrganizerQueries.GetAllOrganizersQuery();
-            var result = await _dapperHelper.QueryAsync<Organizer>(sqlQuery);
             return result.ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error when getting all organizers");
+            _logger.LogError(ex, "Error occurred while getting all organizers.");
             throw;
         }
     }
@@ -35,16 +64,16 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
     {
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string sqlQuery = OrganizerQueries.SearchOrganizerQuery();
             var parameters = new { Keyword = $"%{keyword}%" };
-            var result = await _dapperHelper.QueryAsync<Organizer>(sqlQuery, parameters);
+            var result = await _dapperHelper.QueryAsync<Organizer>(
+                OrganizerQueries.SearchOrganizerQuery(),
+                parameters);
+
             return result.ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error when searching organizer");
+            _logger.LogError(ex, "Error occurred while searching organizers with keyword {Keyword}.", keyword);
             throw;
         }
     }

@@ -1,8 +1,9 @@
-﻿using AutoMapper;
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
 using OVCMOVE.Application.Features.Organizers.Query.SearchOrganizer;
 using OVCMOVE.Domain.Constants;
@@ -16,17 +17,16 @@ public class OrganizerController : BaseController<OrganizerController>
     {
     }
 
-    // Task View BTC
     [HttpGet]
-    public async Task<IActionResult> GetAllOrganizers([FromQuery] GetAllOrganizersQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllOrganizers(
+        [FromQuery] GetAllOrganizersQuery query,
+        CancellationToken cancellationToken)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Nếu frontend không truyền lên thì mặc định dùng object mặc định (Page=1, PageSize=20)
             query ??= new GetAllOrganizersQuery();
-
             var result = await _mediator.Send(query, cancellationToken);
 
             return Ok(new ApiResponseModel<PagedResult<GetAllOrganizersResultModel>>
@@ -42,9 +42,11 @@ public class OrganizerController : BaseController<OrganizerController>
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }
-    // Thanh tìm kiếm BTC
+
     [HttpGet("search")]
-    public async Task<IActionResult> SearchOrganizers([FromQuery] string query, CancellationToken cancellationToken)
+    public async Task<IActionResult> SearchOrganizers(
+        [FromQuery] string query,
+        CancellationToken cancellationToken)
     {
         try
         {

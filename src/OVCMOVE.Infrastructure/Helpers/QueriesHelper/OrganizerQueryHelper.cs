@@ -46,7 +46,8 @@ public static class OrganizerQueries
                 CASE Status
                     WHEN 1 THEN 'active'
                     ELSE 'inactive'
-                END AS Status
+                END AS Status,
+                CreatedAt 
             FROM [dbo].[Organizers]
             ORDER BY DisplayName";
     }
@@ -62,7 +63,8 @@ public static class OrganizerQueries
                 CASE Status
                     WHEN 1 THEN 'active'
                     ELSE 'inactive'
-                END AS Status
+                END AS Status,
+                CreatedAt 
             FROM [dbo].[Organizers]
             WHERE DisplayName LIKE @Keyword
                OR Email LIKE @Keyword

@@ -43,11 +43,8 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
 
             var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
 
-            if (user == null)
-                throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer."); // TODO: NÉM PHẢI CATCH. NẾU TẠO EXEPTION CHO KẾ THỪA
-             
-            if (user.Role != UserConstant.Role.Organizer)
-                throw new UnauthorizedAccessException("Tài khoản cần phải là Organizer để đăng nhập.");
+            if (user == null || user.Role != UserConstant.Role.Organizer)
+                throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer."); 
 
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();

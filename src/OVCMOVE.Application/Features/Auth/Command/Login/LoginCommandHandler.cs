@@ -33,13 +33,10 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
         {
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
             
-            if (user == null)
-                throw new UnauthorizedAccessException("Tên đăng nhập không tồn tại.");
-
-            // * HÀM NÀY LÀ TẠM THỜI VÀ CHƯA CÓ CƠ CHẾ HASH ĐỂ DỄ TESTING
-            if (user.PasswordHash != request.Password)
-                throw new UnauthorizedAccessException("Mật khẩu không đúng.");
-
+            // * HÀM so sánh pass này LÀ TẠM THỜI VÀ CHƯA CÓ CƠ CHẾ HASH ĐỂ DỄ TESTING
+            if (user == null || user.PasswordHash != request.Password)
+                throw new UnauthorizedAccessException("Tên đăng nhập hoặc mật khẩu không đúng.");
+                
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
 

@@ -1,4 +1,5 @@
 using MediatR;
+using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Application.Features.Auth.Command.Login;
 
@@ -10,4 +11,4 @@ public record LoginResult(
 
 public record LoginCommand(
     string Username,
-    string Password) : IRequest<LoginResult>; 
+    string Password) : IRequest<LoginResultModel>; 

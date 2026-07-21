@@ -6,6 +6,7 @@ using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
 using OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
 using OVCMOVE.Application.Features.Auth.Queries.GetMe;
+using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -20,7 +21,7 @@ public class AuthProfile : Profile
         CreateMap<AuthContract.RefreshTokenRequest, RefreshTokenCommand>();
 
         // --- RESPONSE ---
-        CreateMap<LoginResult, AuthContract.LoginResponse>();
+        CreateMap<LoginResultModel, AuthContract.LoginResponse>();
         CreateMap<GetMeResult, AuthContract.MeResponse>();
     }
 }

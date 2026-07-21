@@ -11,10 +11,7 @@ public static class OrganizerQueries
                 u.DisplayName,
                 u.Email,
                 u.Role,
-                CASE u.Status
-                    WHEN 'Active' THEN 'active'
-                    ELSE 'inactive'
-                END AS Status,
+                u.Status,
                 o.CreatedAt
             FROM [dbo].[Organizers] o
             INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
@@ -40,10 +37,7 @@ public static class OrganizerQueries
                 u.DisplayName,
                 u.Email,
                 u.Role,
-                CASE u.Status
-                    WHEN 'Active' THEN 'active'
-                    ELSE 'inactive'
-                END AS Status
+                u.Status
             FROM [dbo].[Organizers] o
             INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
             ORDER BY u.DisplayName";
@@ -58,10 +52,7 @@ public static class OrganizerQueries
                 u.DisplayName,
                 u.Email,
                 u.Role,
-                CASE u.Status
-                    WHEN 'Active' THEN 'active'
-                    ELSE 'inactive'
-                END AS Status
+                u.Status
             FROM [dbo].[Organizers] o
             INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
             WHERE u.DisplayName LIKE @Keyword
@@ -78,10 +69,7 @@ public static class OrganizerQueries
                 u.DisplayName,
                 u.Email,
                 u.Role,
-                CASE u.Status
-                    WHEN 'Active' THEN 'active'
-                    ELSE 'inactive'
-                END AS Status,
+                u.Status,
                 o.CreatedAt
             FROM [dbo].[Organizers] o
             INNER JOIN [dbo].[Users] u ON u.Id = o.UserId

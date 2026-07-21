@@ -6,7 +6,7 @@ namespace OVCMOVE.Domain.Constants
         public static class Status
         {
             public const string Active = "active";
-            public const string InActive = "inactive";
+            public const string Inactive = "inactive";
         }
 
         public static class Role

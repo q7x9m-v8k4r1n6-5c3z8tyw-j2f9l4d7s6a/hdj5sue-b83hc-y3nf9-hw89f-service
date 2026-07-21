@@ -139,7 +139,7 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
                     OrganizerRole = UserConstant.Role.Organizer,
                     UserStatus = status == OrganizerConstants.OrganizerStatus.Active
                         ? UserConstant.Status.Active
-                        : UserConstant.Status.Deactive
+                        : UserConstant.Status.Inactive
                 },
                 cancellationToken: cancellationToken);
 

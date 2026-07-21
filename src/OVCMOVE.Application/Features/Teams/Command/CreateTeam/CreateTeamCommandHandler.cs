@@ -50,6 +50,11 @@ public class CreateTeamCommandHandler :
                 throw new InvalidOperationException("Team name, leader email and password are required.");
             }
 
+            if (!IsValidUsername(teamName) || teamName != username)
+            {
+                throw new InvalidOperationException("Team username must be lowercase, unsigned and without spaces.");
+            }
+
             if (await _teamRepository.GetByUsernameAsync(username, cancellationToken) is not null ||
                 await _userRepository.GetByUsernameAnyStatusAsync(username, cancellationToken) is not null)
             {
@@ -114,7 +119,7 @@ public class CreateTeamCommandHandler :
                 <p><strong>Team:</strong> {WebUtility.HtmlEncode(team.Name)}</p>
                 <p><strong>Username:</strong> {WebUtility.HtmlEncode(team.Username)}</p>
                 <p><strong>Password:</strong> {WebUtility.HtmlEncode(password)}</p>
-                <p>This account should be signed in on one device only.</p>";
+                <p>Account chi duoc dang nhap tren 1 may.</p>";
 
             await _emailService.SendTeamCredentialsAsync(team.LeaderEmail, subject, body, cancellationToken);
         }
@@ -147,5 +152,12 @@ public class CreateTeamCommandHandler :
         }
 
         return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private static bool IsValidUsername(string username)
+    {
+        return username.All(character =>
+            character is >= 'a' and <= 'z' ||
+            character is >= '0' and <= '9');
     }
 }

@@ -3,4 +3,5 @@
 public interface IEmailService
 {
     Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
+    Task SendTeamCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
 }

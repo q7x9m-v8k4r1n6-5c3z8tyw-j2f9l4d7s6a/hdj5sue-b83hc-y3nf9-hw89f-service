@@ -18,6 +18,16 @@ public class EmailService : IEmailService
 
     public async Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
     {
+        await SendCredentialsAsync(toEmail, subject, body, cancellationToken);
+    }
+
+    public async Task SendTeamCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
+    {
+        await SendCredentialsAsync(toEmail, subject, body, cancellationToken);
+    }
+
+    private async Task SendCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(_emailConfig.Email) ||
             string.IsNullOrWhiteSpace(_emailConfig.Password))
         {

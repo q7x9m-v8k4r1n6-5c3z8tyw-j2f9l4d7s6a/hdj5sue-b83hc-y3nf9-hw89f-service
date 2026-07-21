@@ -38,6 +38,28 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
         return user;
     }
 
+    public async Task<User?> GetByEmailAnyStatusAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var sql = UserQueryHelper.GetByEmailAnyStatusQuery();
+        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+            sql,
+            new { Email = email },
+            cancellationToken: cancellationToken);
+
+        return user;
+    }
+
+    public async Task<User?> GetByUsernameAnyStatusAsync(string username, CancellationToken cancellationToken = default)
+    {
+        var sql = UserQueryHelper.GetByUsernameAnyStatusQuery();
+        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+            sql,
+            new { Username = username },
+            cancellationToken: cancellationToken);
+
+        return user;
+    }
+
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var sql = UserQueryHelper.GetByIdQuery();
@@ -48,4 +70,12 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
 
         return user;
     } 
+
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
+    {
+        await _dapperHelper.ExecuteAsync(
+            UserQueryHelper.AddUserQuery(),
+            user,
+            cancellationToken: cancellationToken);
+    }
 }

@@ -127,11 +127,6 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
             }
 
             await _dapperHelper.ExecuteAsync(
-                OrganizerQueries.UpdateOrganizerStatusQuery(),
-                new { OrganizerId = organizerId, Status = status },
-                cancellationToken: cancellationToken);
-
-            await _dapperHelper.ExecuteAsync(
                 OrganizerQueries.UpdateOrganizerUserStatusQuery(),
                 new
                 {

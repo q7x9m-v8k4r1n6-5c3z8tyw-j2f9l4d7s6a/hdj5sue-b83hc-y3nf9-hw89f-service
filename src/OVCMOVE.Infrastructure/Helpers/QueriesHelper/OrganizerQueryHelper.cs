@@ -6,32 +6,28 @@ public static class OrganizerQueries
     {
         return @"
             SELECT
-                Id,
-                DisplayName,
-                Email,
-                Role,
-                CASE Status
-                    WHEN 1 THEN 'active'
+                o.Id,
+                o.UserId,
+                u.DisplayName,
+                u.Email,
+                u.Role,
+                CASE u.Status
+                    WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status,
-                CreatedAt
-            FROM [dbo].[Organizers]
-            WHERE Email = @Email";
+                o.CreatedAt
+            FROM [dbo].[Organizers] o
+            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            WHERE u.Email = @Email";
     }
 
     public static string AddOrganizerQuery()
     {
         return @"
-            INSERT INTO [dbo].[Organizers] (Id, DisplayName, Email, Role, Status, CreatedAt)
+            INSERT INTO [dbo].[Organizers] (Id, UserId, CreatedAt)
             VALUES (
                 @Id,
-                @DisplayName,
-                @Email,
-                @Role,
-                CASE
-                    WHEN LOWER(@Status) = 'active' THEN 1
-                    ELSE 0
-                END,
+                @UserId,
                 @CreatedAt)";
     }
 
@@ -39,63 +35,57 @@ public static class OrganizerQueries
     {
         return @"
             SELECT
-                Id,
-                DisplayName,
-                Email,
-                Role,
-                CASE Status
-                    WHEN 1 THEN 'active'
+                o.Id,
+                o.UserId,
+                u.DisplayName,
+                u.Email,
+                u.Role,
+                CASE u.Status
+                    WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status
-            FROM [dbo].[Organizers]
-            ORDER BY DisplayName";
+            FROM [dbo].[Organizers] o
+            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            ORDER BY u.DisplayName";
     }
 
     public static string SearchOrganizerQuery()
     {
         return @"
             SELECT
-                Id,
-                DisplayName,
-                Email,
-                Role,
-                CASE Status
-                    WHEN 1 THEN 'active'
+                o.Id,
+                o.UserId,
+                u.DisplayName,
+                u.Email,
+                u.Role,
+                CASE u.Status
+                    WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status
-            FROM [dbo].[Organizers]
-            WHERE DisplayName LIKE @Keyword
-               OR Email LIKE @Keyword
-            ORDER BY DisplayName";
+            FROM [dbo].[Organizers] o
+            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            WHERE u.DisplayName LIKE @Keyword
+               OR u.Email LIKE @Keyword
+            ORDER BY u.DisplayName";
     }
 
     public static string GetOrganizerByIdQuery()
     {
         return @"
             SELECT
-                Id,
-                DisplayName,
-                Email,
-                Role,
-                CASE Status
-                    WHEN 1 THEN 'active'
+                o.Id,
+                o.UserId,
+                u.DisplayName,
+                u.Email,
+                u.Role,
+                CASE u.Status
+                    WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status,
-                CreatedAt
-            FROM [dbo].[Organizers]
-            WHERE Id = @OrganizerId
-        ";
-    }
-
-    public static string UpdateOrganizerStatusQuery()
-    {
-        return @"
-            UPDATE [dbo].[Organizers]
-            SET Status = CASE
-                WHEN LOWER(@Status) = 'active' THEN 1
-                ELSE 0
-            END
-            WHERE Id = @OrganizerId
+                o.CreatedAt
+            FROM [dbo].[Organizers] o
+            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            WHERE o.Id = @OrganizerId
         ";
     }
 
@@ -104,12 +94,12 @@ public static class OrganizerQueries
         return @"
             UPDATE [dbo].[Users]
             SET Status = @UserStatus
-            WHERE Role = @OrganizerRole
-              AND Email = (
-                  SELECT Email
+            WHERE Id = (
+                  SELECT UserId
                   FROM [dbo].[Organizers]
                   WHERE Id = @OrganizerId
               )
+              AND Role = @OrganizerRole
         ";
     }
 }

@@ -6,12 +6,13 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Auth.Command.Login;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
 
-public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHandler>, IRequestHandler<GoogleLoginCommand, LoginResult>
+public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHandler>, IRequestHandler<GoogleLoginCommand, LoginResultModel>
 {
     private readonly IGoogleAuthService _googleAuthService; 
     private readonly IUserRepository _userRepository;       
@@ -32,7 +33,7 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
         _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public async Task<LoginResult> Handle(GoogleLoginCommand request, CancellationToken cancellationToken) 
+    public async Task<LoginResultModel> Handle(GoogleLoginCommand request, CancellationToken cancellationToken) 
     {
         try
         {
@@ -62,7 +63,13 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
 
             var expirationDate = DateTime.UtcNow.AddMinutes(_jwtTokenGenerator.AccessTokenExpirationMinutes);
 
-            return new LoginResult(accessToken, refreshToken, expirationDate, user.Id);
+            return new LoginResultModel
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                AccessTokenExpiration = expirationDate,
+                UserId = user.Id
+            };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)
         {

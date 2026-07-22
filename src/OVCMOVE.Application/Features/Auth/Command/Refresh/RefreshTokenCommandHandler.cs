@@ -6,11 +6,12 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Auth.Command.Login;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Auth.Command.Refresh;
 
-public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommandHandler>, IRequestHandler<RefreshTokenCommand, LoginResult>
+public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommandHandler>, IRequestHandler<RefreshTokenCommand, LoginResultModel>
 {
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -28,7 +29,7 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
         _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public async Task<LoginResult> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
+    public async Task<LoginResultModel> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -58,7 +59,13 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
 
             var expirationDate = DateTime.UtcNow.AddMinutes(_jwtTokenGenerator.AccessTokenExpirationMinutes);
 
-            return new LoginResult(newAccessToken, newRefreshTokenString, expirationDate, user.Id);
+            return new LoginResultModel
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshTokenString,
+                AccessTokenExpiration = expirationDate,
+                UserId = user.Id
+            };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)
         {

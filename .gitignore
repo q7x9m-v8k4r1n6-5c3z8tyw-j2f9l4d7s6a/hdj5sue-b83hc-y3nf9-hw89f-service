@@ -19,3 +19,5 @@ TestResults/
 coverage/
 *.trx
 
+appsettings.Local.json
+appsettings.*.json

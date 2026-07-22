@@ -8,5 +8,6 @@ public interface IJwtTokenGenerator
     int AccessTokenExpirationMinutes {get;}
     string GenerateAccessToken(User user);
     string GenerateRefreshToken();
+    string HashRefreshToken(string refreshToken);
 
 }

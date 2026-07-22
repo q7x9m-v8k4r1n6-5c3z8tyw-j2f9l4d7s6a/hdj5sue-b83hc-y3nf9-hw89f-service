@@ -6,7 +6,7 @@ public static class TeamQueries
     {
         return @"
             SELECT Id, Name, LeaderEmail, Username, Status
-            FROM Team
+            FROM [dbo].[Team] WITH (NOLOCK)
             ORDER BY Name;
         ";
     }
@@ -15,7 +15,7 @@ public static class TeamQueries
     {
         return @"
             SELECT Id, Name, LeaderEmail, Username, Status
-            FROM Team
+            FROM [dbo].[Team] WITH (NOLOCK)
             WHERE Name LIKE @Keyword
                OR Username LIKE @Keyword
             ORDER BY Name;

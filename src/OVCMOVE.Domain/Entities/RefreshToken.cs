@@ -8,8 +8,11 @@ namespace OVCMOVE.Domain.Entities;
 public class RefreshToken : BaseEntity
 {
     public Guid UserId { get; set; } 
-    
-    public string Token { get; set; } = string.Empty;
+    public Guid SessionId { get; set; }
+    public Guid FamilyId { get; set; }
+    public string TokenHash { get; set; } = string.Empty;
+    public Guid? ReplacedByTokenId { get; set; }
+    public DateTime? RevokedAt { get; set; }
     
     public DateTime ExpiryDate { get; set; }
     

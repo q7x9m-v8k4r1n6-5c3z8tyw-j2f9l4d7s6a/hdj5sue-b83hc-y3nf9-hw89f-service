@@ -31,11 +31,13 @@ public class GetAllTeamsQueryHandler :
             // 1. Lấy toàn bộ danh sách từ Repo 
             var allTeams = await _teamRepository.GetAllAsync(cancellationToken);
             var totalItems = allTeams.Count;
+            var page = Math.Max(1, request.Page);
+            var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
             // 2. Cắt mảng lấy đúng 20 items dựa theo số trang 
             var pagedTeams = allTeams
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
 
             var mappedItems = _mapper.Map<List<GetAllTeamsResultModel>>(pagedTeams);
@@ -45,8 +47,8 @@ public class GetAllTeamsQueryHandler :
             {
                 Items = mappedItems,
                 TotalItems = totalItems,
-                PageNumber = request.Page,
-                PageSize = request.PageSize
+                Page = page,
+                PageSize = pageSize
             };
         }
         catch (Exception ex)

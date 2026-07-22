@@ -18,7 +18,7 @@ public class GoogleAuthService : IGoogleAuthService
             ?? throw new ArgumentNullException("Thiếu cấu hình GoogleAuth:ClientId"); 
     }
 
-    public async Task<string> ValidateGoogleTokenAndGetEmailAsync(string idToken)
+    public async Task<GoogleUserProfile?> ValidateGoogleTokenAsync(string idToken)
     {
         try
         {
@@ -29,17 +29,17 @@ public class GoogleAuthService : IGoogleAuthService
 
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
 
-            return payload.Email;
+            return new GoogleUserProfile(payload.Email, payload.Name);
         }
         catch (InvalidJwtException ex)
         {
             _logger.LogWarning("Token Google bị sai hoặc hết hạn: {Message}", ex.Message);
-            return string.Empty;
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogError("Lỗi không xác định khi xác thực Google Token: {Message}", ex.Message);
-            return string.Empty;
+            return null;
         }
     }
 }

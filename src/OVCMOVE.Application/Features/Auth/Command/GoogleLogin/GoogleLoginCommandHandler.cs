@@ -49,7 +49,7 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
-            var newRefreshTokenEntity = new RefreshTokenEntity
+            var newRefreshTokenEntity = new RefreshToken
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,

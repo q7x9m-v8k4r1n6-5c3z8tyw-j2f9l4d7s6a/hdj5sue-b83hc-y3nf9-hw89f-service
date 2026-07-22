@@ -40,7 +40,7 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
 
-            var refreshTokenEntity = new RefreshTokenEntity
+            var refreshTokenEntity = new RefreshToken
             {
                 UserId = user.Id,
                 Token = refreshTokenString,

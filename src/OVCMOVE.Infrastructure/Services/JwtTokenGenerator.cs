@@ -24,7 +24,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public int AccessTokenExpirationMinutes => _jwtOptions.AccessTokenExpirationMinutes;
 
-    public string GenerateAccessToken(UserEntity user)
+    public string GenerateAccessToken(User user)
     {
         var claims = new List<Claim>
         {

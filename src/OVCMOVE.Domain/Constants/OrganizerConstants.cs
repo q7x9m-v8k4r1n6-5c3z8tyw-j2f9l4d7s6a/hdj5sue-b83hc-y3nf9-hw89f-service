@@ -9,7 +9,7 @@ namespace OVCMOVE.Domain.Constants
         public static class OrganizerStatus
         {
             public const string Active = "active";
-            public const string InActive = "inactive";
+            public const string Inactive = "inactive";
         }
     }
 }

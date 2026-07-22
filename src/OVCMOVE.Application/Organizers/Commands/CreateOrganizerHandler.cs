@@ -13,16 +13,19 @@ namespace OVCMOVE.Application.Organizers.Commands;
 public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>, IRequestHandler<CreateOrganizerCommand, OrganizerResponse>
 {
     private readonly IOrganizerRepository _organizerRepo;
+    private readonly IUserRepository _userRepo;
     private readonly IEmailService _emailService;
 
     public CreateOrganizerHandler(
         ILogger<CreateOrganizerHandler> logger,
         IOrganizerRepository organizerRepo,
+        IUserRepository userRepo,
         IEmailService emailService,
         IMapper mapper)
         : base(logger, mapper)
     {
         _organizerRepo = organizerRepo;
+        _userRepo = userRepo;
         _emailService = emailService;
     }
 
@@ -38,12 +41,36 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 throw new InvalidOperationException("Email da duoc dang ky.");
             }
 
+            var user = await _userRepo.GetByEmailAnyStatusAsync(request.Email, cancellationToken);
+            if (user is null)
+            {
+                var now = DateTime.UtcNow;
+                user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    Username = request.Email,
+                    Email = request.Email,
+                    DisplayName = request.Email,
+                    Role = UserConstant.Role.Organizer,
+                    Status = UserConstant.Status.Active,
+                    CreatedAt = now,
+                    ModifiedAt = now
+                };
+
+                await _userRepo.AddAsync(user, cancellationToken);
+            }
+            else if (user.Role != UserConstant.Role.Organizer)
+            {
+                throw new InvalidOperationException("Email da ton tai voi role khac Organizer.");
+            }
+
             var organizer = new Organizer
             {
                 Id = Guid.NewGuid(),
-                DisplayName = request.Email,
-                Email = request.Email,
-                Role = request.Role,
+                UserId = user.Id,
+                DisplayName = user.DisplayName ?? user.Email,
+                Email = user.Email,
+                Role = user.Role,
                 Status = OrganizerConstants.OrganizerStatus.Active,
                 CreatedAt = DateTime.UtcNow
             };

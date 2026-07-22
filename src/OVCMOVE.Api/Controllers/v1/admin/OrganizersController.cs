@@ -53,7 +53,7 @@ public class OrganizersController : BaseController<OrganizersController>
     {
         return await ChangeOrganizerStatusAsync(
             organizerId,
-            OrganizerConstants.OrganizerStatus.InActive,
+            OrganizerConstants.OrganizerStatus.Inactive,
             "Organizer account has been deactivated successfully.",
             cancellationToken);
     }

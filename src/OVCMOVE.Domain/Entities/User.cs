@@ -3,7 +3,10 @@ using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class UserEntity : BaseEntity
+/// <summary>
+/// Domain.Entities: chứa các thông tin của user
+/// </summary>
+public class User : BaseEntity
 {
     public string? Username { get; set; } 
     

@@ -15,10 +15,10 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
     {
     }
 
-    public async Task<RefreshTokenEntity?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
+    public async Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         var sql = RefreshTokenQueryHelper.GetByTokenQuery();
-        var refreshToken =  await _dapperHelper.QueryFirstOrDefaultAsync<RefreshTokenEntity>(
+        var refreshToken =  await _dapperHelper.QueryFirstOrDefaultAsync<RefreshToken>(
             sql, 
             new { Token = token }, 
             cancellationToken: cancellationToken);
@@ -26,7 +26,7 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
         return refreshToken;
     }
 
-    public async Task<Guid> CreateAsync(RefreshTokenEntity refreshToken, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default)
     {
         var sql = RefreshTokenQueryHelper.CreateQuery();
             

@@ -6,7 +6,7 @@ public interface IJwtTokenGenerator
 {
     int RefreshTokenExpirationDays { get; }
     int AccessTokenExpirationMinutes {get;}
-    string GenerateAccessToken(UserEntity user);
+    string GenerateAccessToken(User user);
     string GenerateRefreshToken();
 
 }

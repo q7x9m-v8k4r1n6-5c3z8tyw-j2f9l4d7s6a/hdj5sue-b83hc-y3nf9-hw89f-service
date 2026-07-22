@@ -2,7 +2,10 @@ using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;
 
-public class RefreshTokenEntity : BaseEntity
+/// <summary>
+/// Domain.Entities: các thông tin của refreshtoken dùng cho login-logout
+/// </summary>
+public class RefreshToken : BaseEntity
 {
     public Guid UserId { get; set; } 
     

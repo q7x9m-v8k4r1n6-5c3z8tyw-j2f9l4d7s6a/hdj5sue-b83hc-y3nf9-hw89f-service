@@ -5,15 +5,15 @@ namespace OVCMOVE.Domain.Constants
     {
         public static class Status
         {
-            public const string Active = "Active";
-            public const string Deactive = "Deactive";
+            public const string Active = "active";
+            public const string Inactive = "inactive";
         }
 
         public static class Role
         {
-            public const string Team = "Team";
-            public const string Organizer = "Organizer";
-            public const string Admin = "Admin";
+            public const string Team = "team";
+            public const string Organizer = "organizer";
+            public const string Admin = "admin";
         }
 
     }

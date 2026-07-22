@@ -20,6 +20,14 @@ public static class UserQueryHelper
               AND Status = @Status";
     }
 
+    public static string GetByEmailAnyStatusQuery()
+    {
+        return @"
+            SELECT * 
+            FROM [dbo].[Users]
+            WHERE Email = @Email";
+    }
+
     public static string GetByIdQuery()
     {
         return @"
@@ -27,5 +35,14 @@ public static class UserQueryHelper
             FROM [dbo].[Users]
             WHERE Id = @Id 
               AND Status = @Status";
+    }
+
+    public static string AddUserQuery()
+    {
+        return @"
+            INSERT INTO [dbo].[Users]
+                (Id, Username, PasswordHash, Email, Role, DisplayName, Status, CreatedBy, CreatedAt, ModifiedBy, ModifiedAt, IsDeleted)
+            VALUES
+                (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
     }
 }

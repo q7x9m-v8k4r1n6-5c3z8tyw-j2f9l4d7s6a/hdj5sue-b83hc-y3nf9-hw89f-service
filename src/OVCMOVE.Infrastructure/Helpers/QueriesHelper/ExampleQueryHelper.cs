@@ -8,7 +8,7 @@ public static class ExampleQueryHelper
             SELECT
                 Id,
                 Name
-            FROM ExampleTable
+            FROM ExampleTable WITH (NOLOCK)
             WHERE 1 = 1";
     }
 }

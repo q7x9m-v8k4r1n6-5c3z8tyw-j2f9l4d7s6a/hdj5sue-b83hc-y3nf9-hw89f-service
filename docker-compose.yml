@@ -15,6 +15,9 @@ services:
       - OVCMOVE_JwtConfig__Audience=${OVCMOVE_JwtConfig__Audience}
       - OVCMOVE_JwtConfig__AccessTokenExpirationMinutes=${OVCMOVE_JwtConfig__AccessTokenExpirationMinutes}
       - OVCMOVE_JwtConfig__RefreshTokenExpirationDays=${OVCMOVE_JwtConfig__RefreshTokenExpirationDays}
+      - OVCMOVE_JwtConfig__SigningKeyId=${OVCMOVE_JwtConfig__SigningKeyId}
+      - OVCMOVE_JwtConfig__PreviousSigningKeyId=${OVCMOVE_JwtConfig__PreviousSigningKeyId}
+      - OVCMOVE_JwtConfig__PreviousSecretKey=${OVCMOVE_JwtConfig__PreviousSecretKey}
       - OVCMOVE_GoogleAuthConfig__ClientId=${OVCMOVE_GoogleAuthConfig__ClientId}
     ports:
       - "5000:80"

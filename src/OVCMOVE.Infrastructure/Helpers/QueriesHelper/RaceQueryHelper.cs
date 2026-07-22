@@ -36,7 +36,7 @@ public static class RaceQueries
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
             [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
-        FROM [dbo].[Race]
+        FROM [dbo].[Race] WITH (NOLOCK)
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetAllRacesQuery() => @"
@@ -53,7 +53,7 @@ public static class RaceQueries
                 ELSE 'upcoming'
             END AS [Status],
             [CoverUrl]
-        FROM [dbo].[Race]
+        FROM [dbo].[Race] WITH (NOLOCK)
         WHERE [IsDeleted] = 0
         ORDER BY [CreatedAt] DESC;";
 
@@ -73,22 +73,22 @@ public static class RaceQueries
             [CoverUrl],
             [IsToggledLeaderboard],
             [IsHiddenPoint]
-        FROM [dbo].[Race]
+        FROM [dbo].[Race] WITH (NOLOCK)
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetRaceBoothsQuery() => @"
         SELECT [Name], [Place], [Description], [BoothOrganizerID] AS [OrganizerID]
-        FROM [dbo].[Booth]
+        FROM [dbo].[Booth] WITH (NOLOCK)
         WHERE [RaceID] = @RaceId;";
 
     public static string GetRaceTeamsQuery() => @"
         SELECT [TeamID]
-        FROM [dbo].[RaceTeam]
+        FROM [dbo].[RaceTeam] WITH (NOLOCK)
         WHERE [RaceID] = @RaceId;";
 
     public static string GetRaceOrganizersQuery() => @"
         SELECT [OrganizerID]
-        FROM [dbo].[RaceOrganizer]
+        FROM [dbo].[RaceOrganizer] WITH (NOLOCK)
         WHERE [RaceID] = @RaceId;";
 
     public static string CreateRaceOrganizerQuery() => @"

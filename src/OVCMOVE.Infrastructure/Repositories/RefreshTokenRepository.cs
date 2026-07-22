@@ -15,12 +15,12 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
     {
     }
 
-    public async Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
+    public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.GetByTokenQuery();
+        var sql = RefreshTokenQueryHelper.GetByTokenHashQuery();
         var refreshToken =  await _dapperHelper.QueryFirstOrDefaultAsync<RefreshToken>(
             sql, 
-            new { Token = token }, 
+            new { TokenHash = tokenHash },
             cancellationToken: cancellationToken);
 
         return refreshToken;
@@ -34,14 +34,42 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
             sql,
             new 
             { 
+                Id = refreshToken.Id,
                 UserId = refreshToken.UserId, 
-                Token = refreshToken.Token, 
+                SessionId = refreshToken.SessionId,
+                FamilyId = refreshToken.FamilyId,
+                TokenHash = refreshToken.TokenHash,
                 ExpiryDate = refreshToken.ExpiryDate, 
-                IsRevoked = refreshToken.IsRevoked 
+                IsRevoked = refreshToken.IsRevoked,
+                CreatedAt = refreshToken.CreatedAt
             }, 
             cancellationToken: cancellationToken);
 
         return insertedId;
+    }
+
+    public async Task<bool> TryRotateAsync(string oldTokenHash, RefreshToken newRefreshToken, DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        var sql = RefreshTokenQueryHelper.TryRotateQuery();
+        return await _dapperHelper.ExecuteScalarAsync<bool>(sql, new
+        {
+            OldTokenHash = oldTokenHash,
+            NewTokenId = newRefreshToken.Id,
+            newRefreshToken.UserId,
+            newRefreshToken.SessionId,
+            newRefreshToken.FamilyId,
+            NewTokenHash = newRefreshToken.TokenHash,
+            newRefreshToken.ExpiryDate,
+            UtcNow = utcNow
+        }, cancellationToken: cancellationToken);
+    }
+
+    public async Task RevokeFamilyAsync(Guid familyId, DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        await _dapperHelper.ExecuteAsync(
+            RefreshTokenQueryHelper.RevokeFamilyQuery(),
+            new { FamilyId = familyId, UtcNow = utcNow },
+            cancellationToken: cancellationToken);
     }
 
     public async Task<bool> RevokeAsync(Guid id, CancellationToken cancellationToken = default)

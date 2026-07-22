@@ -6,8 +6,6 @@ namespace OVCMOVE.Domain.Entities;
 
 public class Team : BaseEntity
 {
-    public string Name { get; set; } = string.Empty;
-    public string LeaderEmail { get; set; }
-    public string Username { get; set; }
-    public string Status { get; set; } = RaceConstants.TeamStatus.Active;
+    public Guid UserId { get; set; }
+    public int TotalScore { get; set; } = 0;
 }

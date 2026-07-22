@@ -23,11 +23,24 @@ public class CleanupOldTokenService : BackgroundService
             try
             {
                 using var scope = _serviceProvider.CreateScope();
-                
                 var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
 
-                var deletedCount = await refreshTokenRepository.CleanupOldTokensAsync(14);
-                
+                // Xử lý Retry nếu gặp sự cố Cold Start từ Azure SQL
+                int maxRetries = 3;
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        var deletedCount = await refreshTokenRepository.CleanupOldTokensAsync(14);
+                        _logger.LogInformation("✅ Đã dọn dẹp thành công {Count} token hết hạn.", deletedCount);
+                        break; 
+                    }
+                    catch (Exception ex) when (attempt < maxRetries && !stoppingToken.IsCancellationRequested)
+                    {
+                        _logger.LogWarning(ex, "⚠️ Lần thử {Attempt}/{MaxRetries} dọn dẹp Token thất bại (có thể do DB đang khởi động). Thử lại sau 5 giây...", attempt, maxRetries);
+                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    }
+                }
             }
             catch (Exception ex)
             {

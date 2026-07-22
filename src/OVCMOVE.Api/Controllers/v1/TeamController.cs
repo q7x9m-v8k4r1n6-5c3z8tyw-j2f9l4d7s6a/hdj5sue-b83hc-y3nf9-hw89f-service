@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Contracts; 
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
@@ -17,23 +18,25 @@ public class TeamController : BaseController<TeamController>
     }
 
     // Task View Teams
-    [HttpGet]
-    public async Task<IActionResult> GetAllTeams([FromQuery] GetAllTeamsQuery query, CancellationToken cancellationToken)
+    [HttpGet("view-list")]
+    public async Task<IActionResult> GetAllTeams([FromQuery] TeamContract.GetTeamsRequest request, CancellationToken cancellationToken)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Nếu frontend không truyền lên thì mặc định dùng object đã khởi tạo sẵn Page=1, PageSize=20
-            query ??= new GetAllTeamsQuery();
+      
+            var query = _mapper.Map<GetAllTeamsQuery>(request ?? new TeamContract.GetTeamsRequest());
 
             var result = await _mediator.Send(query, cancellationToken);
 
-            return Ok(new ApiResponseModel<PagedResult<GetAllTeamsResultModel>>
+            var response = _mapper.Map<PagedResult<TeamContract.GetTeamsResponse>>(result);
+
+            return Ok(new ApiResponseModel<PagedResult<TeamContract.GetTeamsResponse>>
             {
                 StatusCode = APIContansts.StatusCode.Success,
                 Message = APIContansts.StatusMessage.Success,
-                Data = result
+                Data = response
             });
         }
         catch (Exception ex)
@@ -42,6 +45,7 @@ public class TeamController : BaseController<TeamController>
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }
+
     // Thanh tìm kiếm Teams
     [HttpGet("search")]
     public async Task<IActionResult> SearchTeams([FromQuery] string query, CancellationToken cancellationToken)
@@ -52,11 +56,13 @@ public class TeamController : BaseController<TeamController>
 
             var result = await _mediator.Send(new SearchTeamQuery(query), cancellationToken);
 
-            return Ok(new ApiResponseModel<List<SearchTeamResultModel>>
+            var response = _mapper.Map<List<TeamContract.SearchTeamResponse>>(result);
+
+            return Ok(new ApiResponseModel<List<TeamContract.SearchTeamResponse>>
             {
                 StatusCode = APIContansts.StatusCode.Success,
                 Message = APIContansts.StatusMessage.Success,
-                Data = result
+                Data = response
             });
         }
         catch (Exception ex)

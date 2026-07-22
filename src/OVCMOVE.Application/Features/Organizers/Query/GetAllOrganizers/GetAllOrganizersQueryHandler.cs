@@ -12,7 +12,7 @@ public class GetAllOrganizersQueryHandler :
     IRequestHandler<GetAllOrganizersQuery, PagedResult<GetAllOrganizersResultModel>>
 {
     private readonly IMapper _mapper;
-    private readonly IOrganizerRepository _organizerRepository; // Tên Repo tương ứng của CLB
+    private readonly IOrganizerRepository _organizerRepository; 
 
     public GetAllOrganizersQueryHandler(
         ILogger<GetAllOrganizersQueryHandler> logger,
@@ -23,7 +23,6 @@ public class GetAllOrganizersQueryHandler :
         _organizerRepository = organizerRepository;
     }
 
-    // Đổi kiểu trả về của hàm Handle thành PagedResult
     public async Task<PagedResult<GetAllOrganizersResultModel>> Handle(GetAllOrganizersQuery request, CancellationToken cancellationToken)
     {
         try

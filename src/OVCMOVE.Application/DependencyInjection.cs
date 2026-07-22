@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace OVCMOVE.Application;
@@ -12,6 +13,7 @@ public static class DependencyInjection
         });
 
         services.AddAutoMapper(AssemblyReference.Assembly);
+        services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
         return services;
     }

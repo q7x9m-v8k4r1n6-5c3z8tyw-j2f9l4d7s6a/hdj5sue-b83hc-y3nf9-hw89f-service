@@ -5,11 +5,12 @@ using AutoMapper;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Auth.Command.Login;
 
-public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IRequestHandler<LoginCommand, LoginResult>
+public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IRequestHandler<LoginCommand, LoginResultModel>
 {
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -27,7 +28,7 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
         _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public async Task<LoginResult> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public async Task<LoginResultModel> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -52,7 +53,13 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
 
             var expirationDate = DateTime.UtcNow.AddMinutes(_jwtTokenGenerator.AccessTokenExpirationMinutes);
 
-            return new LoginResult(accessToken, refreshTokenString, expirationDate, user.Id); 
+            return new LoginResultModel
+            {
+                AccessToken = accessToken,
+                AccessTokenExpiration = expirationDate,
+                RefreshToken = refreshTokenString,
+                UserId = user.Id
+            };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)
         {

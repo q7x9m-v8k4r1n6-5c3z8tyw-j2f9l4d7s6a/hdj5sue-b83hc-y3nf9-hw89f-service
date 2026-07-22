@@ -17,7 +17,7 @@ public class TeamController : BaseController<TeamController>
     }
 
     // Task View Teams
-    [HttpGet]
+    [HttpGet("view-list")]
     public async Task<IActionResult> GetAllTeams([FromQuery] GetAllTeamsQuery query, CancellationToken cancellationToken)
     {
         try

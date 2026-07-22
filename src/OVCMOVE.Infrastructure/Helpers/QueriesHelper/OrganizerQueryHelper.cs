@@ -16,8 +16,8 @@ public static class OrganizerQueries
                     ELSE 'inactive'
                 END AS Status,
                 o.CreatedAt
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE u.Email = @Email";
     }
 
@@ -44,8 +44,8 @@ public static class OrganizerQueries
                     WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             ORDER BY u.DisplayName";
     }
 
@@ -62,8 +62,8 @@ public static class OrganizerQueries
                     WHEN 'Active' THEN 'active'
                     ELSE 'inactive'
                 END AS Status
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE u.DisplayName LIKE @Keyword
                OR u.Email LIKE @Keyword
             ORDER BY u.DisplayName";
@@ -83,8 +83,8 @@ public static class OrganizerQueries
                     ELSE 'inactive'
                 END AS Status,
                 o.CreatedAt
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE o.Id = @OrganizerId
         ";
     }

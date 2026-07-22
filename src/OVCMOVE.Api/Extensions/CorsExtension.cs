@@ -6,7 +6,16 @@ public static class CorsExtension
     {
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
-        var cleanedOrigins = allowedOrigins.Select(origin => origin.TrimEnd('/')).ToArray();
+        var cleanedOrigins = allowedOrigins
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .Select(origin => origin.Trim().TrimEnd('/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (cleanedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException("At least one CORS origin must be configured in Cors:AllowedOrigins.");
+        }
 
         services.AddCors(options =>
         {

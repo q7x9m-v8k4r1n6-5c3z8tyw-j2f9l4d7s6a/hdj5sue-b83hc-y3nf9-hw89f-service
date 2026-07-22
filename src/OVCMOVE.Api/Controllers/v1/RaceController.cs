@@ -8,6 +8,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.UpdateRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -20,12 +21,13 @@ public class RaceController : BaseController<RaceController>
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllRaces(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesQuery query, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(new GetAllRacesQuery(), cancellationToken);
-            return Ok(new ApiResponseModel<RaceListItemResultModel>(
+            query ??= new GetAllRacesQuery();
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(new ApiResponseModel<PagedResult<RaceItemResultModel>>(
                 APIContansts.StatusCode.Success,
                 APIContansts.StatusMessage.Success,
                 data: result));

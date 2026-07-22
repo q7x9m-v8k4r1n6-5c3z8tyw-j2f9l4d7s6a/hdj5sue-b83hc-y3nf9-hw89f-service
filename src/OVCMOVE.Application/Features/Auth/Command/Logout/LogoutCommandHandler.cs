@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common; 
 
 namespace OVCMOVE.Application.Features.Auth.Command.Logout;
@@ -10,26 +11,28 @@ namespace OVCMOVE.Application.Features.Auth.Command.Logout;
 public class LogoutCommandHandler : BaseCommandHandler<LogoutCommandHandler>, IRequestHandler<LogoutCommand, bool>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
     public LogoutCommandHandler(
         IRefreshTokenRepository refreshTokenRepository,
+        IJwtTokenGenerator jwtTokenGenerator,
         IMapper mapper,
         ILogger<LogoutCommandHandler> logger) : base(logger, mapper) 
     {
         _refreshTokenRepository = refreshTokenRepository;
+        _jwtTokenGenerator = jwtTokenGenerator;
     }
 
     public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
         try 
         {
-            var tokenEntity = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
+            var tokenHash = _jwtTokenGenerator.HashRefreshToken(request.RefreshToken);
+            var tokenEntity = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
 
             if (tokenEntity == null || tokenEntity.IsRevoked)
             {
-                string userIdStr = tokenEntity != null ? tokenEntity.UserId.ToString() : "Không xác định (Token giả mạo/Không tồn tại)";
-                
-                _logger.LogWarning("⚠️ Cảnh báo: Có hành vi Logout bất thường! UserId: {UserId}, Token: {Token}", userIdStr, request.RefreshToken);
+                _logger.LogWarning("Logout received for an unknown or previously revoked refresh token.");
                 
                 return true; 
             }
@@ -40,7 +43,7 @@ public class LogoutCommandHandler : BaseCommandHandler<LogoutCommandHandler>, IR
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi hệ thống khi xử lý LogoutCommand cho Token: {Token}", request.RefreshToken);
+            _logger.LogError(ex, "Lỗi hệ thống khi xử lý logout.");
             throw; 
         }
     }

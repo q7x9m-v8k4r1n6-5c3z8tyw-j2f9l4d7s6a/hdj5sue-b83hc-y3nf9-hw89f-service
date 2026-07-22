@@ -6,7 +6,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM [dbo].[Users]
+            FROM [dbo].[Users] WITH (NOLOCK)
             WHERE Username = @Username 
               AND Status = @Status";
     }
@@ -15,7 +15,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM [dbo].[Users]
+            FROM [dbo].[Users] WITH (NOLOCK)
             WHERE Email = @Email 
               AND Status = @Status";
     }
@@ -24,7 +24,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM [dbo].[Users]
+            FROM [dbo].[Users] WITH (NOLOCK)
             WHERE Email = @Email";
     }
 
@@ -32,7 +32,7 @@ public static class UserQueryHelper
     {
         return @"
             SELECT * 
-            FROM [dbo].[Users]
+            FROM [dbo].[Users] WITH (NOLOCK)
             WHERE Id = @Id 
               AND Status = @Status";
     }
@@ -44,5 +44,16 @@ public static class UserQueryHelper
                 (Id, Username, PasswordHash, Email, Role, DisplayName, Status, CreatedBy, CreatedAt, ModifiedBy, ModifiedAt, IsDeleted)
             VALUES
                 (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
+    }
+
+    public static string UpdateDisplayNameQuery()
+    {
+        return @"
+            UPDATE [dbo].[Users]
+            SET DisplayName = @DisplayName,
+                ModifiedAt = SYSUTCDATETIME(),
+                ModifiedBy = 'google-login'
+            WHERE Id = @Id
+              AND (DisplayName IS NULL OR LTRIM(RTRIM(DisplayName)) = '')";
     }
 }

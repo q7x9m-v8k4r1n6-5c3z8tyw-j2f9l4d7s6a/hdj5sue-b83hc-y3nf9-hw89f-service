@@ -10,15 +10,12 @@ public class GetAllTeamsQueryHandler :
     BaseQueryHandler<GetAllTeamsQueryHandler>,
     IRequestHandler<GetAllTeamsQuery, PagedResult<GetAllTeamsResultModel>>
 {
-    private readonly IMapper _mapper;
     private readonly ITeamRepository _teamRepository;
 
     public GetAllTeamsQueryHandler(
         ILogger<GetAllTeamsQueryHandler> logger,
-        IMapper mapper,
         ITeamRepository teamRepository) : base(logger)
     {
-        _mapper = mapper;
         _teamRepository = teamRepository;
     }
 
@@ -28,25 +25,22 @@ public class GetAllTeamsQueryHandler :
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // 1. Lấy toàn bộ danh sách từ Repo 
             var allTeams = await _teamRepository.GetAllAsync(cancellationToken);
             var totalItems = allTeams.Count;
+            var pageIndex = Math.Max(1, request.PageIndex);
+            var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
-            // 2. Cắt mảng lấy đúng 20 items dựa theo số trang 
             var pagedTeams = allTeams
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize)
-                .ToList();
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToList(); 
 
-            var mappedItems = _mapper.Map<List<GetAllTeamsResultModel>>(pagedTeams);
-
-            // 3. Đóng gói vào khuôn PagedResult
             return new PagedResult<GetAllTeamsResultModel>
             {
-                Items = mappedItems,
+                Items = pagedTeams,
                 TotalItems = totalItems,
-                PageNumber = request.Page,
-                PageSize = request.PageSize
+                Page = pageIndex,
+                PageSize = pageSize
             };
         }
         catch (Exception ex)

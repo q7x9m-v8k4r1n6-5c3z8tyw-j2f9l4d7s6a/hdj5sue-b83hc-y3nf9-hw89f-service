@@ -52,13 +52,6 @@ jobs:
         with:
           ref: ${{ env.COMMIT_SHA }}
 
-      # TEMP DEBUG: remove after verifying the repository secret is available.
-      - name: Debug JWT access-token expiration secret
-        env:
-          JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_MINUTES }}
-        run: |
-          echo "JWT_ACCESS_TOKEN_EXPIRATION_MINUTES=$JWT_ACCESS_TOKEN_EXPIRATION_MINUTES"
-
       - name: Prepare Azure app directory
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -98,7 +91,7 @@ jobs:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           password: ${{ secrets.AZURE_VM_PASSWORD }}
-          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,OVCMOVE_DbConfig__SQLServer__ConnectionString,OVCMOVE_ExternalServicesConfig__EmailService__Email,OVCMOVE_ExternalServicesConfig__EmailService__Password,OVCMOVE_JwtConfig__SecretKey,OVCMOVE_JwtConfig__Issuer,OVCMOVE_JwtConfig__Audience,OVCMOVE_JwtConfig__AccessTokenExpirationMinutes,OVCMOVE_JwtConfig__RefreshTokenExpirationDays,OVCMOVE_JwtConfig__SigningKeyId,OVCMOVE_JwtConfig__PreviousSigningKeyId,OVCMOVE_JwtConfig__PreviousSecretKey,OVCMOVE_GoogleAuthConfig__ClientId
+          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DB_CONNECTION_STRING,EMAIL_SERVICE_EMAIL,EMAIL_SERVICE_PASSWORD,JWT_SECRET_KEY,JWT_ISSUER,JWT_AUDIENCE,JWT_ACCESS_TOKEN_EXPIRATION_MINUTES,JWT_REFRESH_TOKEN_EXPIRATION_DAYS,JWT_SIGNING_KEY_ID,JWT_PREVIOUS_SIGNING_KEY_ID,JWT_PREVIOUS_SECRET_KEY,GOOGLE_CLIENT_ID
           script: |
             cd ${{ env.AZURE_APP_DIR }}
             cat > .env <<EOF

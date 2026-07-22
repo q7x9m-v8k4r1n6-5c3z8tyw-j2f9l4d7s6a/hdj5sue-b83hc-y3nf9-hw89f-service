@@ -39,7 +39,8 @@ public class AuthController : BaseController<AuthController>
     [Authorize]
     public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
     {
-        var userIdString = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+        var userIdString = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
             throw new UnauthorizedAccessException("Token không hợp lệ.");

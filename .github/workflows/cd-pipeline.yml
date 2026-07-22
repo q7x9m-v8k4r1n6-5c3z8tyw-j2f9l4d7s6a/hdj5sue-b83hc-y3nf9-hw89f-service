@@ -52,6 +52,13 @@ jobs:
         with:
           ref: ${{ env.COMMIT_SHA }}
 
+      # TEMP DEBUG: remove after verifying the repository secret is available.
+      - name: Debug JWT access-token expiration secret
+        env:
+          JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_MINUTES }}
+        run: |
+          echo "JWT_ACCESS_TOKEN_EXPIRATION_MINUTES=$JWT_ACCESS_TOKEN_EXPIRATION_MINUTES"
+
       - name: Prepare Azure app directory
         uses: appleboy/ssh-action@v1.0.3
         with:

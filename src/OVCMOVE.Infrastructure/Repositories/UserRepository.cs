@@ -86,4 +86,12 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
             user,
             cancellationToken: cancellationToken);
     }
+
+    public async Task UpdateDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default)
+    {
+        await _dapperHelper.ExecuteAsync(
+            UserQueryHelper.UpdateDisplayNameQuery(),
+            new { Id = id, DisplayName = displayName },
+            cancellationToken: cancellationToken);
+    }
 }

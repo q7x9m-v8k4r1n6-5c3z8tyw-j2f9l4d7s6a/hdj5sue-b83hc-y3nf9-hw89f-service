@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Hosting; 
-using Microsoft.Extensions.Hosting; 
 
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.Features.Auth.Command.Login;
@@ -21,37 +19,37 @@ namespace OVCMOVE.Api.Controllers.v1;
 
 public class AuthController : BaseController<AuthController>
 {
-    private const string RefreshTokenCookieName = "refreshToken";
+    private const string ProductionRefreshTokenCookieName = "__Host-refreshToken";
+    private const string LegacyRefreshTokenCookieName = "refreshToken";
     private readonly JwtConfigOptions _jwtOptions;
-    private readonly IWebHostEnvironment _env;
+    private string RefreshTokenCookieName => ProductionRefreshTokenCookieName;
 
     public AuthController(
-        ILogger<AuthController> logger, 
-        IMediator mediator, 
+        ILogger<AuthController> logger,
+        IMediator mediator,
         IMapper mapper,
-        IOptions<JwtConfigOptions> jwtOptions,
-        IWebHostEnvironment env)
+        IOptions<JwtConfigOptions> jwtOptions)
         : base(logger, mediator, mapper)
     {
         _jwtOptions = jwtOptions.Value;
-        _env = env;
     }
 
-    
+
     [HttpGet("me")]
-    [Authorize] 
+    [Authorize]
     public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
     {
-        var userIdString = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        
+        var userIdString = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
             throw new UnauthorizedAccessException("Token không hợp lệ.");
 
         var query = new GetMeQuery(userId);
         var result = await _mediator.Send(query, cancellationToken);
-        
+
         var response = _mapper.Map<AuthContract.MeResponse>(result);
-        
+
         return Ok(new ApiResponseModel<AuthContract.MeResponse>
         {
             StatusCode = APIContansts.StatusCode.Success,
@@ -62,7 +60,7 @@ public class AuthController : BaseController<AuthController>
     }
 
     // POST host:port/api/v1/Auth/login
-    [HttpPost("login")] 
+    [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthContract.LoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -71,14 +69,14 @@ public class AuthController : BaseController<AuthController>
         var result = await _mediator.Send(command, cancellationToken);
 
         SetRefreshTokenCookie(result.RefreshToken);
-        
+
         var response = _mapper.Map<AuthContract.LoginResponse>(result);
-        
+
         return Ok(new ApiResponseModel<AuthContract.LoginResponse>
         {
             StatusCode = APIContansts.StatusCode.Success,
             Message = APIContansts.StatusMessage.Success,
-            Data = response 
+            Data = response
         });
     }
 
@@ -88,17 +86,28 @@ public class AuthController : BaseController<AuthController>
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var refreshToken = Request.Cookies[RefreshTokenCookieName];
+        var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? Request.Cookies[LegacyRefreshTokenCookieName];
 
         if (!string.IsNullOrEmpty(refreshToken))
         {
             // Truyền thẳng token vào Command thay vì dùng Mapper
-            var command = new LogoutCommand(refreshToken); 
+            var command = new LogoutCommand(refreshToken);
             await _mediator.Send(command, cancellationToken);
         }
 
-        Response.Cookies.Delete(RefreshTokenCookieName);
-        
+        // Delete the refresh token cookies from the client
+        var options = new CookieOptions
+        {
+            Path = "/",
+            Secure = true,
+            SameSite = SameSiteMode.Lax
+        };
+
+        Response.Cookies.Delete(ProductionRefreshTokenCookieName, options);
+        Response.Cookies.Delete(LegacyRefreshTokenCookieName, options);
+        Response.Cookies.Delete(LegacyRefreshTokenCookieName);
+
+
         return Ok(new ApiResponseModel<bool>
         {
             StatusCode = APIContansts.StatusCode.Success,
@@ -113,18 +122,18 @@ public class AuthController : BaseController<AuthController>
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var refreshToken = Request.Cookies[RefreshTokenCookieName];
-        
+        var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? Request.Cookies[LegacyRefreshTokenCookieName];
+
         if (string.IsNullOrEmpty(refreshToken))
             throw new UnauthorizedAccessException("Không tìm thấy Refresh Token trong Cookie. Vui lòng đăng nhập lại.");
 
         var command = new RefreshTokenCommand(refreshToken);
         var result = await _mediator.Send(command, cancellationToken);
-        
+
         SetRefreshTokenCookie(result.RefreshToken);
 
         var response = _mapper.Map<AuthContract.LoginResponse>(result);
-        
+
         return Ok(new ApiResponseModel<AuthContract.LoginResponse>
         {
             StatusCode = APIContansts.StatusCode.Success,
@@ -141,11 +150,11 @@ public class AuthController : BaseController<AuthController>
 
         var command = _mapper.Map<GoogleLoginCommand>(request);
         var result = await _mediator.Send(command, cancellationToken);
-        
+
         SetRefreshTokenCookie(result.RefreshToken);
 
         var response = _mapper.Map<AuthContract.LoginResponse>(result);
-        
+
         return Ok(new ApiResponseModel<AuthContract.LoginResponse>
         {
             StatusCode = APIContansts.StatusCode.Success,
@@ -159,26 +168,17 @@ public class AuthController : BaseController<AuthController>
     // ==========================================
     private void SetRefreshTokenCookie(string refreshToken)
     {
-        // Kiểm tra xem hệ thống có đang chạy ở chế độ Development (Local) không
-        bool isDevelopment = _env.IsDevelopment();
-
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Expires = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
-            
-            // 👇 CẤU HÌNH ĐỘNG THEO MÔI TRƯỜNG
-            // Nếu là Dev (Local): Secure = false
-            // Nếu là Prod (Main): Secure = true
-            Secure = !isDevelopment, 
 
-            // Giải thích SameSite: 
-            // - Local (Secure=false) bắt buộc phải đi kèm Lax, nếu để None trình duyệt sẽ chặn.
-            // - Prod (Secure=true) đi kèm None để cho phép frontend gọi chéo domain xuống API.
-            SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            MaxAge = TimeSpan.FromDays(_jwtOptions.RefreshTokenExpirationDays)
         };
 
         Response.Cookies.Append(RefreshTokenCookieName, refreshToken, cookieOptions);
     }
-
 }

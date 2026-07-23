@@ -2,5 +2,7 @@ namespace OVCMOVE.Application.Abstractions.Services;
 
 public interface IGoogleAuthService
 {
-    Task<string> ValidateGoogleTokenAndGetEmailAsync(string idToken);
+    Task<GoogleUserProfile?> ValidateGoogleTokenAsync(string idToken);
 }
+
+public sealed record GoogleUserProfile(string Email, string? DisplayName);

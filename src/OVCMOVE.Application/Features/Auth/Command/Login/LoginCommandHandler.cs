@@ -40,13 +40,19 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
                 
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
+            var now = DateTime.UtcNow;
+            var sessionId = Guid.NewGuid();
 
             var refreshTokenEntity = new RefreshToken
             {
+                Id = Guid.NewGuid(),
                 UserId = user.Id,
-                Token = refreshTokenString,
-                ExpiryDate = DateTime.UtcNow.AddDays(7), 
-                IsRevoked = false
+                SessionId = sessionId,
+                FamilyId = sessionId,
+                TokenHash = _jwtTokenGenerator.HashRefreshToken(refreshTokenString),
+                ExpiryDate = now.AddDays(_jwtTokenGenerator.RefreshTokenExpirationDays),
+                IsRevoked = false,
+                CreatedAt = now
             };
 
             await _refreshTokenRepository.CreateAsync(refreshTokenEntity, cancellationToken);

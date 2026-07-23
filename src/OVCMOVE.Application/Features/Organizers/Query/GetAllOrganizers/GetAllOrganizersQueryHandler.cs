@@ -33,11 +33,13 @@ public class GetAllOrganizersQueryHandler :
             // 1. Lấy toàn bộ danh sách từ Database lên qua Repository
             var allOrganizers = await _organizerRepository.GetAllAsync(cancellationToken);
             var totalItems = allOrganizers.Count;
+            var page = Math.Max(1, request.Page);
+            var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
             // 2. Cắt đúng 20 dòng dựa theo số trang hiện tại (Phân trang logic)
             var pagedOrganizers = allOrganizers
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
 
             var mappedItems = _mapper.Map<List<GetAllOrganizersResultModel>>(pagedOrganizers);
@@ -46,8 +48,8 @@ public class GetAllOrganizersQueryHandler :
             {
                 Items = mappedItems,
                 TotalItems = totalItems,
-                PageNumber = request.Page,
-                PageSize = request.PageSize
+                Page = page,
+                PageSize = pageSize
             };
         }
         catch (Exception ex)

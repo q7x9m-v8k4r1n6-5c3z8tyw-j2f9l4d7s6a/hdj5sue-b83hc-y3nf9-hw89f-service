@@ -5,6 +5,7 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Command;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Races.Command.UpdateRace;
 
@@ -38,10 +39,9 @@ public class UpdateRaceCommandHandler :
         var existingRace = await _raceRepository.GetByIdAsync(request.RaceId, cancellationToken);
         if (existingRace is null) return null;
 
-        // Nghiep vu edit-race: chi Race chua bat dau moi duoc cap nhat.
-        if (existingRace.TimeStart <= DateTime.UtcNow)
+        if (string.Equals(existingRace.Status, RaceConstants.RaceStatus.Completed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Chi co the cap nhat Race o trang thai Upcoming.");
+            throw new InvalidOperationException("Khong the cap nhat Race da ket thuc.");
         }
 
         var updatedRace = RaceCommandMapper.BuildRace(
@@ -54,7 +54,8 @@ public class UpdateRaceCommandHandler :
             request.IsToggledLeaderboard,
             request.IsHiddenPoint,
             existingRace.CreatedAt,
-            existingRace.CreatedBy);
+            existingRace.CreatedBy,
+            request.Status ?? existingRace.Status);
 
         var updated = await _raceRepository.UpdateAsync(updatedRace, cancellationToken);
         if (!updated) return null;

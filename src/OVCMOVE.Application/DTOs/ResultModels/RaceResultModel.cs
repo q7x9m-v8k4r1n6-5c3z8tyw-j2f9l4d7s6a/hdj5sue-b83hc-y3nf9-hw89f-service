@@ -12,6 +12,7 @@ public class RaceItemResultModel
     public string Place { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public string? CoverUrl { get; init; }
+    public DateTime ModifiedAt { get; init; }
 }
 
 public class RaceDetailResultModel : RaceItemResultModel

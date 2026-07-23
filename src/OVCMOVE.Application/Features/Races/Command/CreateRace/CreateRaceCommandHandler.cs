@@ -46,7 +46,8 @@ public class CreateRaceCommandHandler :
             request.IsToggledLeaderboard,
             request.IsHiddenPoint,
             DateTime.UtcNow,
-            "system");
+            "system",
+            request.Status);
 
         var createdRaceId = await _raceRepository.CreateAsync(race, cancellationToken);
         if (createdRaceId is null) return null;

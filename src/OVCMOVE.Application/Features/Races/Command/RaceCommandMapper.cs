@@ -6,6 +6,20 @@ namespace OVCMOVE.Application.Features.Races.Command;
 
 internal static class RaceCommandMapper
 {
+    private static string NormalizeRaceStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return RaceConstants.RaceStatus.Draft;
+
+        return status.Trim().ToLowerInvariant() switch
+        {
+            RaceConstants.RaceStatus.Ready => RaceConstants.RaceStatus.Ready,
+            RaceConstants.RaceStatus.Ongoing => RaceConstants.RaceStatus.Ongoing,
+            RaceConstants.RaceStatus.Paused => RaceConstants.RaceStatus.Paused,
+            RaceConstants.RaceStatus.Completed => RaceConstants.RaceStatus.Completed,
+            _ => RaceConstants.RaceStatus.Draft,
+        };
+    }
+
     /// <summary>
     /// Application helper: tao entity Race tu du lieu command, khong phu thuoc API hay SQL.
     /// </summary>
@@ -19,7 +33,8 @@ internal static class RaceCommandMapper
         bool isToggledLeaderboard,
         bool isHiddenPoint,
         DateTime createdAt,
-        string createdBy)
+        string createdBy,
+        string? status = null)
     {
         var now = DateTime.UtcNow;
 
@@ -33,7 +48,7 @@ internal static class RaceCommandMapper
             CoverUrl = string.IsNullOrWhiteSpace(coverUrl) ? null : coverUrl.Trim(),
             IsToggledLeaderboard = isToggledLeaderboard,
             IsHiddenPoint = isHiddenPoint,
-            Status = RaceConstants.RaceStatus.Upcoming,
+            Status = NormalizeRaceStatus(status),
             CreatedAt = createdAt,
             CreatedBy = createdBy,
             ModifiedAt = now,

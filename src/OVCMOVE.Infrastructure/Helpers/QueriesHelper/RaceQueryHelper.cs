@@ -33,7 +33,8 @@ public static class RaceQueries
 
     public static string GetRaceByIdQuery() => @"
         SELECT
-            [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
+            [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
+            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
             [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         FROM [dbo].[Race] WITH (NOLOCK)
@@ -47,12 +48,9 @@ public static class RaceQueries
             [TimeStart],
             [TimeEnd],
             [Place],
-            CASE
-                WHEN [TimeEnd] < SYSUTCDATETIME() THEN 'completed'
-                WHEN [TimeStart] <= SYSUTCDATETIME() AND [TimeEnd] >= SYSUTCDATETIME() THEN 'ongoing'
-                ELSE 'upcoming'
-            END AS [Status],
-            [CoverUrl]
+            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
+            [CoverUrl],
+            [ModifiedAt]
         FROM [dbo].[Race] WITH (NOLOCK)
         WHERE [IsDeleted] = 0
         ORDER BY [CreatedAt] DESC;";
@@ -65,14 +63,11 @@ public static class RaceQueries
             [TimeStart],
             [TimeEnd],
             [Place],
-            CASE
-                WHEN [TimeEnd] < SYSUTCDATETIME() THEN 'completed'
-                WHEN [TimeStart] <= SYSUTCDATETIME() AND [TimeEnd] >= SYSUTCDATETIME() THEN 'ongoing'
-                ELSE 'upcoming'
-            END AS [Status],
+            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
             [CoverUrl],
             [IsToggledLeaderboard],
-            [IsHiddenPoint]
+            [IsHiddenPoint],
+            [ModifiedAt]
         FROM [dbo].[Race] WITH (NOLOCK)
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 

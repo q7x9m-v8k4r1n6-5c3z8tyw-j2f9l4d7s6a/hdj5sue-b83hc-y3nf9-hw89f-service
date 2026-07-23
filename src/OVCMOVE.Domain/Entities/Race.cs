@@ -12,7 +12,7 @@ public class Race : BaseEntity
     public DateTime TimeStart { get; set; }
     public DateTime TimeEnd { get; set; }
     public string Place { get; set; } = string.Empty;
-    public string Status { get; set; } = RaceConstants.RaceStatus.Upcoming;
+    public string Status { get; set; } = RaceConstants.RaceStatus.Draft;
     public string? CoverUrl { get; set; }
 
     #region setting

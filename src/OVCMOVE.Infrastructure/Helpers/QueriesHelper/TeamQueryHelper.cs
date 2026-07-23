@@ -46,4 +46,17 @@ public static class TeamQueries
               AND (u.DisplayName LIKE @Keyword OR u.Username LIKE @Keyword)
             ORDER BY u.DisplayName;";
     }
+
+    public static string GetTeamLeaderboardQuery()
+    {
+        return @"
+            SELECT 
+                u.DisplayName, 
+                t.TotalScore
+            FROM [dbo].[Teams] t WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON t.UserId = u.Id
+            WHERE (u.Role = 'Team' OR u.Role = 'team') 
+            AND u.Status IN ('1', 'Active', 'active')
+            ORDER BY t.TotalScore DESC;"; 
+    }
 }

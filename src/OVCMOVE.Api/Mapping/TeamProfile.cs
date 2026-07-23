@@ -15,7 +15,7 @@ public class TeamProfile : Profile
 
         CreateMap<GetAllTeamsResultModel, TeamContract.GetTeamsResponse>();
         CreateMap<SearchTeamResultModel, TeamContract.SearchTeamResponse>();
-
+        CreateMap<GetTeamLeaderboardResultModel, TeamContract.GetTeamLeaderboardResponse>();
         CreateMap(typeof(PagedResult<>), typeof(PagedResult<>));
     }
 }

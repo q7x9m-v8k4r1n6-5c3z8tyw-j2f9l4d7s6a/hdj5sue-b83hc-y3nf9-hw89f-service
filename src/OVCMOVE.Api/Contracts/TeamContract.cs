@@ -27,4 +27,10 @@ public class TeamContract
         public string DisplayName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
     }
+
+    public class GetTeamLeaderboardResponse
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public int TotalScore { get; set; }
+    }
 }

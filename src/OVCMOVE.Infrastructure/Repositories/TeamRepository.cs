@@ -2,6 +2,7 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
@@ -32,6 +33,15 @@ public class TeamRepository : BaseRepository<TeamRepository>, ITeamRepository
         var parameters = new { Keyword = $"%{keyword}%" };
 
         var result = await _dapperHelper.QueryAsync<SearchTeamResultModel>(sqlQuery, parameters);
+        return result.ToList();
+    }
+
+    public async Task<List<GetTeamLeaderboardResultModel>> GetLeaderboardAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string sqlQuery = TeamQueries.GetTeamLeaderboardQuery();
+        var result = await _dapperHelper.QueryAsync<GetTeamLeaderboardResultModel>(sqlQuery);
         return result.ToList();
     }
 }

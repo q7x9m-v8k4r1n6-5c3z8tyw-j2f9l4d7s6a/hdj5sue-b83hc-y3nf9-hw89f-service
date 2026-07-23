@@ -9,4 +9,5 @@ public interface ITeamRepository
 {
     Task<List<GetAllTeamsResultModel>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<List<SearchTeamResultModel>> SearchAsync(string keyword, CancellationToken cancellationToken = default);
+    Task<List<GetTeamLeaderboardResultModel>> GetLeaderboardAsync(CancellationToken cancellationToken = default);
 }

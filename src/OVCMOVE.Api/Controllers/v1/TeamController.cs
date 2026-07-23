@@ -6,6 +6,7 @@ using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
+using OVCMOVE.Application.Features.Teams.Query.GetTeamLeaderboard;
 using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -70,5 +71,20 @@ public class TeamController : BaseController<TeamController>
             _logger.LogError("Error occurred while processing SearchTeams: {Message}", ex.Message);
             return Ok(new InternalServerErrorModel(ex.Message));
         }
+    }
+
+    [HttpGet("leaderboard")]
+    public async Task<IActionResult> GetLeaderboard(CancellationToken cancellationToken)
+    {
+        var query = new GetTeamLeaderboardQuery();
+        var result = await _mediator.Send(query, cancellationToken);
+        var response = _mapper.Map<List<TeamContract.GetTeamLeaderboardResponse>>(result);
+
+        return Ok(new ApiResponseModel<List<TeamContract.GetTeamLeaderboardResponse>>
+        {
+            StatusCode = APIContansts.StatusCode.Success,
+            Message = APIContansts.StatusMessage.Success,
+            Data = response
+        });
     }
 }

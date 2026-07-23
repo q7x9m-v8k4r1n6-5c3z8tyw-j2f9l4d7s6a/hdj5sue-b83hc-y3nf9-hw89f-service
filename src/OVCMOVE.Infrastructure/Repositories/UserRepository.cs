@@ -78,4 +78,12 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
             user,
             cancellationToken: cancellationToken);
     }
+
+    public async Task UpdateTeamAccountAsync(User user, CancellationToken cancellationToken = default)
+    {
+        await _dapperHelper.ExecuteAsync(
+            UserQueryHelper.UpdateTeamAccountQuery(),
+            user,
+            cancellationToken: cancellationToken);
+    }
 }

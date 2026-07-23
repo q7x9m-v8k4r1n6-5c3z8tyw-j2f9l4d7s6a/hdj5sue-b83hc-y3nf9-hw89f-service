@@ -10,4 +10,5 @@ public interface IUserRepository
     Task<User?> GetByUsernameAnyStatusAsync(string username, CancellationToken cancellationToken = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
+    Task UpdateTeamAccountAsync(User user, CancellationToken cancellationToken = default);
 }

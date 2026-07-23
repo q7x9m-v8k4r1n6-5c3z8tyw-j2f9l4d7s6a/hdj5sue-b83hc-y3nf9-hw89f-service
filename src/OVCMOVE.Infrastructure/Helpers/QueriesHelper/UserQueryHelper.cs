@@ -53,4 +53,18 @@ public static class UserQueryHelper
             VALUES
                 (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
     }
+
+    public static string UpdateTeamAccountQuery()
+    {
+        return @"
+            UPDATE [dbo].[Users]
+            SET Username = @Username,
+                PasswordHash = @PasswordHash,
+                Email = @Email,
+                DisplayName = @DisplayName,
+                ModifiedBy = @ModifiedBy,
+                ModifiedAt = @ModifiedAt
+            WHERE Id = @Id
+              AND Role = @Role";
+    }
 }

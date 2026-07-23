@@ -14,6 +14,25 @@ public class TeamRepository : BaseRepository<TeamRepository>, ITeamRepository
     {
     }
 
+    public async Task<Team?> GetByIdAsync(Guid teamId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await _dapperHelper.QueryFirstOrDefaultAsync<Team>(
+                TeamQueries.GetByIdQuery(),
+                new { TeamId = teamId },
+                cancellationToken: cancellationToken);
+            return result;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Error when getting team by id {TeamId}", teamId);
+            throw;
+        }
+    }
+
     public async Task<Team?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         try

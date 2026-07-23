@@ -2,6 +2,23 @@
 
 public static class TeamQueries
 {
+    public static string GetByIdQuery()
+    {
+        return @"
+            SELECT
+                t.Id,
+                t.UserId,
+                t.TotalScore,
+                u.DisplayName AS Name,
+                u.Email AS LeaderEmail,
+                u.Username,
+                u.Status
+            FROM [dbo].[Teams] t
+            INNER JOIN [dbo].[Users] u ON u.Id = t.UserId
+            WHERE t.Id = @TeamId;
+        ";
+    }
+
     public static string GetByUsernameQuery()
     {
         return @"

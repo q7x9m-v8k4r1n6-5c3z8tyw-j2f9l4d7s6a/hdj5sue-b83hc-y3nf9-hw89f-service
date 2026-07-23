@@ -5,6 +5,7 @@ using OVCMOVE.Api.Common;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Team;
 using OVCMOVE.Application.Features.Teams.Command.CreateTeam;
+using OVCMOVE.Application.Features.Teams.Command.UpdateTeam;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
 using OVCMOVE.Domain.Constants;
@@ -38,6 +39,43 @@ public class TeamController : BaseController<TeamController>
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error occurred while processing CreateTeam.");
+            return Ok(new InternalServerErrorModel(ex.Message));
+        }
+    }
+
+    [HttpPut("{teamId:guid}")]
+    public async Task<IActionResult> UpdateTeam(
+        Guid teamId,
+        [FromBody] UpdateTeamRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var command = _mapper.Map<UpdateTeamCommand>(request);
+            command.TeamId = teamId;
+
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result is null)
+            {
+                return Ok(new ApiResponseModel<object>
+                {
+                    StatusCode = APIContansts.StatusCode.NotFound,
+                    Message = "Team account was not found."
+                });
+            }
+
+            return Ok(new ApiResponseModel<TeamResponse>
+            {
+                StatusCode = APIContansts.StatusCode.Success,
+                Message = APIContansts.StatusMessage.Success,
+                Data = result
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Error occurred while processing UpdateTeam.");
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }

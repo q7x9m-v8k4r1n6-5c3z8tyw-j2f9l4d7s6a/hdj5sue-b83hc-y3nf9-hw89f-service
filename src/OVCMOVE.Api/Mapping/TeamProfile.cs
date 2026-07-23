@@ -4,6 +4,7 @@ using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
+using OVCMOVE.Application.Features.Teams.Query.GetTeamLeaderboard;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -12,6 +13,7 @@ public class TeamProfile : Profile
     public TeamProfile()
     { 
         CreateMap<TeamContract.GetTeamsRequest, GetAllTeamsQuery>();
+        CreateMap<TeamContract.GetTeamLeaderboardRequest, GetTeamLeaderboardQuery>();
 
         CreateMap<GetAllTeamsResultModel, TeamContract.GetTeamsResponse>();
         CreateMap<SearchTeamResultModel, TeamContract.SearchTeamResponse>();

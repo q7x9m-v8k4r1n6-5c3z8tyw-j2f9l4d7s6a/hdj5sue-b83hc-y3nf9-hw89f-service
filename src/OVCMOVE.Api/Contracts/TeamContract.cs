@@ -1,4 +1,5 @@
-﻿namespace OVCMOVE.Api.Contracts;
+﻿using System.ComponentModel.DataAnnotations;
+namespace OVCMOVE.Api.Contracts;
 
 public class TeamContract
 {
@@ -28,6 +29,11 @@ public class TeamContract
         public string Email { get; set; } = string.Empty;
     }
 
+    public class GetTeamLeaderboardRequest
+    {
+        [Required(ErrorMessage = "Thiếu RaceId để lấy bảng xếp hạng.")]
+        public Guid? RaceId { get; set; }
+    }
     public class GetTeamLeaderboardResponse
     {
         public string DisplayName { get; set; } = string.Empty;

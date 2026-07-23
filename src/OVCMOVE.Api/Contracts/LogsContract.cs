@@ -1,9 +1,12 @@
+using System.ComponentModel.DataAnnotations;
 namespace OVCMOVE.Api.Contracts;
 
 public class LogsContract
 {
     public class BoothScoringLogsRequest
     {
+        [Required(ErrorMessage = "thiếu RaceId để lấy log lịch sử điểm")]
+        public Guid RaceId { get; set; }
         public int? Limit {get; set;}
     }
     public class BoothScoringLogsResponse

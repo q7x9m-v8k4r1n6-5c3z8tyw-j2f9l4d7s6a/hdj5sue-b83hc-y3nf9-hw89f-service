@@ -74,10 +74,9 @@ public class TeamController : BaseController<TeamController>
     }
 
     [HttpGet("leaderboard")]
-    public async Task<IActionResult> GetLeaderboard(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetLeaderboard([FromQuery] TeamContract.GetTeamLeaderboardRequest request, CancellationToken cancellationToken)
     {
-        var query = new GetTeamLeaderboardQuery();
-        var result = await _mediator.Send(query, cancellationToken);
+        var query = _mapper.Map<GetTeamLeaderboardQuery>(request ?? new TeamContract.GetTeamLeaderboardRequest());        var result = await _mediator.Send(query, cancellationToken);
         var response = _mapper.Map<List<TeamContract.GetTeamLeaderboardResponse>>(result);
 
         return Ok(new ApiResponseModel<List<TeamContract.GetTeamLeaderboardResponse>>

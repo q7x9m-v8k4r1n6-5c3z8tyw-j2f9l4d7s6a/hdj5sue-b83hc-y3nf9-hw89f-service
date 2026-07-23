@@ -2,8 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using System.Security.Claims;
+using AutoMapper;
+using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.DTOs.Booth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
+using OVCMOVE.Application.Features.Booths.Query.GetBoothSummary;
+using OVCMOVE.Application.Features.Booths.Query.GetBoothDetail;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -12,10 +18,12 @@ namespace OVCMOVE.Api.Controllers.v1;
 public class BoothController : ControllerBase
 {
     private readonly ISender _mediator;
+    private readonly IMapper _mapper;
 
-    public BoothController(ISender mediator)
+    public BoothController(ISender mediator, IMapper mapper)
     {
         _mediator = mediator;
+        _mapper = mapper;
     }
 
     /// <summary>
@@ -47,5 +55,41 @@ public class BoothController : ControllerBase
             return BadRequest(new { Message = "Chấm điểm thất bại." });
 
         return Ok(new { Message = "Chấm điểm và ghi nhật ký thành công!" });
+    }
+
+    /// <summary>
+    /// API lấy tổng quan tất cả các trạm (phục vụ danh sách & SignalR)
+    /// </summary>
+    [HttpGet("status-summary")]
+    public async Task<IActionResult> GetBoothSummary([FromQuery] BoothContract.GetBoothSummaryRequest request, CancellationToken cancellationToken)
+    {
+        var query = _mapper.Map<GetBoothSummaryQuery>(request ?? new BoothContract.GetBoothSummaryRequest());
+        var result = await _mediator.Send(query, cancellationToken);
+        var response = _mapper.Map<List<BoothContract.GetBoothSummaryResponse>>(result);
+
+        return Ok(new ApiResponseModel<List<BoothContract.GetBoothSummaryResponse>>
+        {
+            StatusCode = APIContansts.StatusCode.Success,
+            Message = APIContansts.StatusMessage.Success,
+            Data = response
+        });
+    }
+
+    /// <summary>
+    /// API lấy chi tiết 1 trạm (hiện tên Đội đang chiếm)
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetBoothDetail([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var query = new GetBoothDetailQuery { Id = id };
+        var result = await _mediator.Send(query, cancellationToken);
+        var response = _mapper.Map<BoothContract.GetBoothDetailResponse>(result);
+        
+        return Ok(new ApiResponseModel<BoothContract.GetBoothDetailResponse>
+        {
+            StatusCode = APIContansts.StatusCode.Success,
+            Message = APIContansts.StatusMessage.Success,
+            Data = response
+        });
     }
 }

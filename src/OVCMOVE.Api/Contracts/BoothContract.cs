@@ -1,15 +1,30 @@
-﻿using System;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace OVCMOVE.Api.Contracts;
 
-/// <summary>
-/// Gói dữ liệu dùng để  kết nối giữa một Đội đua và một Giải đua.
-/// </summary>
 public class BoothContract
 {
-    public string Name { get; set; }
-    public string Place { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string BoothOrganizerID { get; set; }
-    public Guid RaceID { get; set; } 
+    public class GetBoothSummaryRequest
+    {
+        [Required(ErrorMessage = "thiếu RaceId để lấy trạng thái các booth")]
+        public Guid RaceId { get; set; }
+    }
+
+    public class GetBoothSummaryResponse
+    {
+        public Guid BoothId { get; set; }
+        public string BoothName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class GetBoothDetailResponse
+    {
+        public Guid BoothId { get; set; }
+        public string BoothName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string Place { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsHidden { get; set; }
+        public string? CurrentTeamName { get; set; } 
+    }
 }

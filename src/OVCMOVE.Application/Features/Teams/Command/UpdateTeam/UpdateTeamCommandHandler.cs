@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Mail;
 using System.Text;
 using AutoMapper;
 using MediatR;
@@ -20,17 +21,20 @@ public class UpdateTeamCommandHandler :
     private readonly ITeamRepository _teamRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly IPasswordHasher _passwordHasher;
 
     public UpdateTeamCommandHandler(
         ILogger<UpdateTeamCommandHandler> logger,
         IMapper mapper,
         ITeamRepository teamRepository,
         IUserRepository userRepository,
-        IEmailService emailService) : base(logger, mapper)
+        IEmailService emailService,
+        IPasswordHasher passwordHasher) : base(logger, mapper)
     {
         _teamRepository = teamRepository;
         _userRepository = userRepository;
         _emailService = emailService;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<TeamResponse?> Handle(UpdateTeamCommand request, CancellationToken cancellationToken)
@@ -39,9 +43,9 @@ public class UpdateTeamCommandHandler :
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var teamName = request.Name.Trim();
-            var leaderEmail = request.LeaderEmail.Trim();
-            var password = request.Password.Trim();
+            var teamName = request.Name?.Trim() ?? string.Empty;
+            var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
+            var password = request.Password?.Trim() ?? string.Empty;
             var username = BuildUsername(teamName);
 
             if (string.IsNullOrWhiteSpace(teamName) ||
@@ -54,6 +58,11 @@ public class UpdateTeamCommandHandler :
             if (!IsValidUsername(teamName) || teamName != username)
             {
                 throw new InvalidOperationException("Team username must be lowercase, unsigned and without spaces.");
+            }
+
+            if (!IsValidEmail(leaderEmail))
+            {
+                throw new InvalidOperationException("Invalid leader email format.");
             }
 
             var existingTeam = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken);
@@ -90,7 +99,7 @@ public class UpdateTeamCommandHandler :
             {
                 Id = existingTeam.UserId,
                 Username = username,
-                PasswordHash = password,
+                PasswordHash = _passwordHasher.HashPassword(password),
                 Email = leaderEmail,
                 Role = UserConstant.Role.Team,
                 DisplayName = teamName,
@@ -131,6 +140,7 @@ public class UpdateTeamCommandHandler :
             <p><strong>Team:</strong> {WebUtility.HtmlEncode(team.Name)}</p>
             <p><strong>Username:</strong> {WebUtility.HtmlEncode(team.Username)}</p>
             <p><strong>Password:</strong> {WebUtility.HtmlEncode(password)}</p>
+            <p>Please change your password after signing in.</p>
             <p>Account chi duoc dang nhap tren 1 may.</p>";
 
         await _emailService.SendTeamCredentialsAsync(team.LeaderEmail, subject, body, cancellationToken);
@@ -166,5 +176,18 @@ public class UpdateTeamCommandHandler :
         return username.All(character =>
             character is >= 'a' and <= 'z' ||
             character is >= '0' and <= '9');
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var address = new MailAddress(email);
+            return address.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

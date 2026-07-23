@@ -15,17 +15,20 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IPasswordHasher _passwordHasher;
 
     public LoginCommandHandler(
         IUserRepository userRepository, 
         IRefreshTokenRepository refreshTokenRepository, 
         IJwtTokenGenerator jwtTokenGenerator,
+        IPasswordHasher passwordHasher,
         IMapper mapper,
         ILogger<LoginCommandHandler> logger) : base(logger, mapper) 
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<LoginResultModel> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -34,8 +37,7 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
         {
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
             
-            // * HÀM so sánh pass này LÀ TẠM THỜI VÀ CHƯA CÓ CƠ CHẾ HASH ĐỂ DỄ TESTING
-            if (user == null || user.PasswordHash != request.Password)
+            if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash ?? string.Empty))
                 throw new UnauthorizedAccessException("Tên đăng nhập hoặc mật khẩu không đúng.");
                 
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);

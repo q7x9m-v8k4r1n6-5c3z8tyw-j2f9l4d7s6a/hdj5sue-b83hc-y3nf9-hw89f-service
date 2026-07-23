@@ -1,35 +1,46 @@
-﻿using OVCMOVE.Application.Abstractions;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Text;
+using OVCMOVE.Application.Abstractions;
+using OVCMOVE.Infrastructure.Persistance.SqlServer;
 
-namespace OVCMOVE.Infrastructure.Common
+namespace OVCMOVE.Infrastructure.Common;
+
+public class UnitOfWork : IUnitOfWork
 {
-    public class UnitOfWork : IUnitOfWork
+    public IDbConnection Connection { get; }
+    public IDbTransaction? Transaction { get; private set; }
+
+    public UnitOfWork(ISqlServerFactory sqlServerFactory)
     {
-        public IDbConnection Connection { get; }
-        public IDbTransaction Transaction { get; private set; }
+        Connection = sqlServerFactory.CreateConnection();
+    }
 
-        public void Begin()
+    public void Begin()
+    {
+        if (Connection.State != ConnectionState.Open)
         {
-            Transaction = Connection.BeginTransaction();
+            Connection.Open();
         }
 
-        public void Commit()
-        {
-            Transaction.Commit();
-        }
+        Transaction = Connection.BeginTransaction();
+    }
 
-        public void Dispose()
-        {
-            Transaction?.Dispose();
-            Connection?.Dispose();
-        }
+    public void Commit()
+    {
+        Transaction?.Commit();
+        Transaction?.Dispose();
+        Transaction = null;
+    }
 
-        public void Rollback()
-        {
-            Transaction.Rollback();
-        }
+    public void Rollback()
+    {
+        Transaction?.Rollback();
+        Transaction?.Dispose();
+        Transaction = null;
+    }
+
+    public void Dispose()
+    {
+        Transaction?.Dispose();
+        Connection.Dispose();
     }
 }

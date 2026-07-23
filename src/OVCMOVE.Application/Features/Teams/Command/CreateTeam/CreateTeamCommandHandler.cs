@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Mail;
 using System.Text;
 using AutoMapper;
 using MediatR;
+using OVCMOVE.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
@@ -20,17 +22,23 @@ public class CreateTeamCommandHandler :
     private readonly ITeamRepository _teamRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IUnitOfWork _unitOfWork;
 
     public CreateTeamCommandHandler(
         ILogger<CreateTeamCommandHandler> logger,
         IMapper mapper,
         ITeamRepository teamRepository,
         IUserRepository userRepository,
-        IEmailService emailService) : base(logger, mapper)
+        IEmailService emailService,
+        IPasswordHasher passwordHasher,
+        IUnitOfWork unitOfWork) : base(logger, mapper)
     {
         _teamRepository = teamRepository;
         _userRepository = userRepository;
         _emailService = emailService;
+        _passwordHasher = passwordHasher;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<TeamResponse> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
@@ -39,8 +47,8 @@ public class CreateTeamCommandHandler :
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var teamName = request.Name.Trim();
-            var leaderEmail = request.LeaderEmail.Trim();
+            var teamName = request.Name?.Trim() ?? string.Empty;
+            var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
             var username = BuildUsername(teamName);
 
             if (string.IsNullOrWhiteSpace(teamName) ||
@@ -53,6 +61,11 @@ public class CreateTeamCommandHandler :
             if (!IsValidUsername(teamName) || teamName != username)
             {
                 throw new InvalidOperationException("Team username must be lowercase, unsigned and without spaces.");
+            }
+
+            if (!IsValidEmail(leaderEmail))
+            {
+                throw new InvalidOperationException("Invalid leader email format.");
             }
 
             if (await _teamRepository.GetByUsernameAsync(username, cancellationToken) is not null ||
@@ -72,7 +85,7 @@ public class CreateTeamCommandHandler :
             {
                 Id = Guid.NewGuid(),
                 Username = username,
-                PasswordHash = request.Password,
+                PasswordHash = _passwordHasher.HashPassword(request.Password),
                 Email = leaderEmail,
                 Role = UserConstant.Role.Team,
                 DisplayName = teamName,
@@ -94,8 +107,19 @@ public class CreateTeamCommandHandler :
                 ModifiedAt = now
             };
 
-            await _userRepository.AddAsync(user, cancellationToken);
-            await _teamRepository.AddAsync(team, cancellationToken);
+            _unitOfWork.Begin();
+            try
+            {
+                await _userRepository.AddAsync(user, cancellationToken);
+                await _teamRepository.AddAsync(team, cancellationToken);
+                _unitOfWork.Commit();
+            }
+            catch
+            {
+                _unitOfWork.Rollback();
+                throw;
+            }
+
             await TrySendTeamCreatedEmailAsync(team, request.Password, cancellationToken);
 
             return _mapper.Map<TeamResponse>(team);
@@ -119,6 +143,7 @@ public class CreateTeamCommandHandler :
                 <p><strong>Team:</strong> {WebUtility.HtmlEncode(team.Name)}</p>
                 <p><strong>Username:</strong> {WebUtility.HtmlEncode(team.Username)}</p>
                 <p><strong>Password:</strong> {WebUtility.HtmlEncode(password)}</p>
+                <p>Please change your password after signing in.</p>
                 <p>Account chi duoc dang nhap tren 1 may.</p>";
 
             await _emailService.SendTeamCredentialsAsync(team.LeaderEmail, subject, body, cancellationToken);
@@ -159,5 +184,18 @@ public class CreateTeamCommandHandler :
         return username.All(character =>
             character is >= 'a' and <= 'z' ||
             character is >= '0' and <= '9');
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var address = new MailAddress(email);
+            return address.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

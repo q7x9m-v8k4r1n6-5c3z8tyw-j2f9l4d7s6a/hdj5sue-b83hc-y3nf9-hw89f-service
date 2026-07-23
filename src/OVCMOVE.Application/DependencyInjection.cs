@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Services;
 
 namespace OVCMOVE.Application;
 
@@ -12,6 +14,7 @@ public static class DependencyInjection
         });
 
         services.AddAutoMapper(AssemblyReference.Assembly);
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         return services;
     }

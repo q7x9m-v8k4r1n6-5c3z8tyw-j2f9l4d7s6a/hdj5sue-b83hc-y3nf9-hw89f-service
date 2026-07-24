@@ -85,9 +85,8 @@ public static class OrganizerQueries
             WHERE Id = (
                   SELECT UserId
                   FROM [dbo].[Organizers]
-                  WHERE Id = @OrganizerId
+              WHERE Id = @OrganizerId
               )
-              AND Role = @OrganizerRole
         ";
     }
 }

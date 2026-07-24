@@ -1,9 +1,9 @@
-using System.Globalization;
 using System.Net;
-using System.Text;
+using System.Net.Mail;
 using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -20,17 +20,26 @@ public class CreateTeamCommandHandler :
     private readonly ITeamRepository _teamRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IPasswordGenerator _passwordGenerator;
+    private readonly IUnitOfWork _unitOfWork;
 
     public CreateTeamCommandHandler(
         ILogger<CreateTeamCommandHandler> logger,
         IMapper mapper,
         ITeamRepository teamRepository,
         IUserRepository userRepository,
-        IEmailService emailService) : base(logger, mapper)
+        IEmailService emailService,
+        IPasswordHasher passwordHasher,
+        IPasswordGenerator passwordGenerator,
+        IUnitOfWork unitOfWork) : base(logger, mapper)
     {
         _teamRepository = teamRepository;
         _userRepository = userRepository;
         _emailService = emailService;
+        _passwordHasher = passwordHasher;
+        _passwordGenerator = passwordGenerator;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<TeamResponse> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
@@ -39,18 +48,18 @@ public class CreateTeamCommandHandler :
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var teamName = request.Name.Trim();
-            var leaderEmail = request.LeaderEmail.Trim();
-            var username = BuildUsername(teamName);
+            var displayName = request.DisplayName?.Trim() ?? string.Empty;
+            var username = request.Username?.Trim() ?? string.Empty;
+            var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
 
-            if (string.IsNullOrWhiteSpace(teamName) ||
-                string.IsNullOrWhiteSpace(leaderEmail) ||
-                string.IsNullOrWhiteSpace(request.Password))
+            if (string.IsNullOrWhiteSpace(displayName) ||
+                string.IsNullOrWhiteSpace(username) ||
+                string.IsNullOrWhiteSpace(leaderEmail))
             {
-                throw new InvalidOperationException("Team name, leader email and password are required.");
+                throw new InvalidOperationException("Team display name, username and leader email are required.");
             }
 
-            if (!IsValidUsername(teamName) || teamName != username)
+            if (!IsValidUsername(username))
             {
                 throw new InvalidOperationException("Team username must be lowercase, unsigned and without spaces.");
             }
@@ -67,15 +76,16 @@ public class CreateTeamCommandHandler :
                 throw new InvalidOperationException("Leader email da duoc dang ky.");
             }
 
+            var generatedPassword = _passwordGenerator.Generate();
             var now = DateTime.UtcNow;
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 Username = username,
-                PasswordHash = request.Password,
+                PasswordHash = _passwordHasher.HashPassword(generatedPassword),
                 Email = leaderEmail,
                 Role = UserConstant.Role.Team,
-                DisplayName = teamName,
+                DisplayName = displayName,
                 Status = UserConstant.Status.Active,
                 CreatedAt = now,
                 ModifiedAt = now
@@ -86,7 +96,7 @@ public class CreateTeamCommandHandler :
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 TotalScore = 0,
-                Name = teamName,
+                Name = displayName,
                 LeaderEmail = leaderEmail,
                 Username = username,
                 Status = TeamConstants.TeamStatus.Active,
@@ -94,9 +104,20 @@ public class CreateTeamCommandHandler :
                 ModifiedAt = now
             };
 
-            await _userRepository.AddAsync(user, cancellationToken);
-            await _teamRepository.AddAsync(team, cancellationToken);
-            await TrySendTeamCreatedEmailAsync(team, request.Password, cancellationToken);
+            _unitOfWork.Begin();
+            try
+            {
+                await _userRepository.AddAsync(user, cancellationToken);
+                await _teamRepository.AddAsync(team, cancellationToken);
+                _unitOfWork.Commit();
+            }
+            catch
+            {
+                _unitOfWork.Rollback();
+                throw;
+            }
+
+            await TrySendTeamCreatedEmailAsync(team, generatedPassword, cancellationToken);
 
             return _mapper.Map<TeamResponse>(team);
         }
@@ -127,31 +148,6 @@ public class CreateTeamCommandHandler :
         {
             _logger.LogWarning(ex, "Team account was created but email could not be sent to {LeaderEmail}.", team.LeaderEmail);
         }
-    }
-
-    private static string BuildUsername(string teamName)
-    {
-        var normalized = teamName.Normalize(NormalizationForm.FormD);
-        var builder = new StringBuilder();
-
-        foreach (var character in normalized)
-        {
-            if (character is 'đ' or 'Đ')
-            {
-                builder.Append('d');
-                continue;
-            }
-
-            var category = CharUnicodeInfo.GetUnicodeCategory(character);
-            if (category == UnicodeCategory.NonSpacingMark || char.IsWhiteSpace(character))
-            {
-                continue;
-            }
-
-            builder.Append(char.ToLowerInvariant(character));
-        }
-
-        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private static bool IsValidUsername(string username)

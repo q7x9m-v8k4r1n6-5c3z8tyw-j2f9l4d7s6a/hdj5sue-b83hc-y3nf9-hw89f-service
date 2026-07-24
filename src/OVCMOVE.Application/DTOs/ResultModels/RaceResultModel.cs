@@ -2,12 +2,6 @@
 
 namespace OVCMOVE.Application.DTOs.ResultModels;
 
-public class RaceListItemResultModel
-{
-    public int TotalCount { get; init; }
-    public IReadOnlyCollection<RaceItemResultModel> Items { get; init; } = Array.Empty<RaceItemResultModel>();
-}
-
 public class RaceItemResultModel
 {
     public Guid Id { get; init; }
@@ -18,6 +12,7 @@ public class RaceItemResultModel
     public string Place { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public string? CoverUrl { get; init; }
+    public DateTime ModifiedAt { get; init; }
 }
 
 public class RaceDetailResultModel : RaceItemResultModel

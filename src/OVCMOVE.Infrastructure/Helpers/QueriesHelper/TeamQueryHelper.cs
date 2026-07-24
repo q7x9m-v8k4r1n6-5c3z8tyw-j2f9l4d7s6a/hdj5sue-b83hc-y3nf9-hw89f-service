@@ -51,13 +51,14 @@ public static class TeamQueries
                 t.Id,
                 t.UserId,
                 t.TotalScore,
-                u.DisplayName AS Name,
+                COALESCE(NULLIF(u.DisplayName, ''), u.Username) AS Name,
                 u.Email AS LeaderEmail,
                 u.Username,
                 u.Status
-            FROM [dbo].[Teams] t
-            INNER JOIN [dbo].[Users] u ON u.Id = t.UserId
-            ORDER BY u.DisplayName;
+            FROM [dbo].[Teams] t WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
+            WHERE u.IsDeleted = 0
+            ORDER BY COALESCE(NULLIF(u.DisplayName, ''), u.Username);
         ";
     }
 
@@ -68,16 +69,19 @@ public static class TeamQueries
                 t.Id,
                 t.UserId,
                 t.TotalScore,
-                u.DisplayName AS Name,
+                COALESCE(NULLIF(u.DisplayName, ''), u.Username) AS Name,
                 u.Email AS LeaderEmail,
                 u.Username,
                 u.Status
-            FROM [dbo].[Teams] t
-            INNER JOIN [dbo].[Users] u ON u.Id = t.UserId
-            WHERE u.DisplayName LIKE @Keyword
-               OR u.Username LIKE @Keyword
-               OR u.Email LIKE @Keyword
-            ORDER BY u.DisplayName;
+            FROM [dbo].[Teams] t WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
+            WHERE u.IsDeleted = 0
+              AND (
+                COALESCE(NULLIF(u.DisplayName, ''), u.Username) LIKE @Keyword
+                OR u.Username LIKE @Keyword
+                OR u.Email LIKE @Keyword
+              )
+            ORDER BY COALESCE(NULLIF(u.DisplayName, ''), u.Username);
         ";
     }
 }

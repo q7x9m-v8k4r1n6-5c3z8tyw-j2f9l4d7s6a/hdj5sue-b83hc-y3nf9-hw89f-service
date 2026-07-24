@@ -13,8 +13,8 @@ public static class OrganizerQueries
                 u.Role,
                 u.Status,
                 o.CreatedAt
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE u.Email = @Email";
     }
 
@@ -38,8 +38,8 @@ public static class OrganizerQueries
                 u.Email,
                 u.Role,
                 u.Status
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             ORDER BY u.DisplayName";
     }
 
@@ -53,8 +53,8 @@ public static class OrganizerQueries
                 u.Email,
                 u.Role,
                 u.Status
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE u.DisplayName LIKE @Keyword
                OR u.Email LIKE @Keyword
             ORDER BY u.DisplayName";
@@ -71,8 +71,8 @@ public static class OrganizerQueries
                 u.Role,
                 u.Status,
                 o.CreatedAt
-            FROM [dbo].[Organizers] o
-            INNER JOIN [dbo].[Users] u ON u.Id = o.UserId
+            FROM [dbo].[Organizers] o WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = o.UserId
             WHERE o.Id = @OrganizerId
         ";
     }

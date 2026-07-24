@@ -75,33 +75,39 @@ jobs:
           DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHA }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          OVCMOVE_DbConfig__SQLServer__ConnectionString: ${{ secrets.DB_CONNECTION_STRING }}
-          OVCMOVE_ExternalServicesConfig__EmailService__Email: ${{ secrets.EMAIL_SERVICE_EMAIL }}
-          OVCMOVE_ExternalServicesConfig__EmailService__Password: ${{ secrets.EMAIL_SERVICE_PASSWORD }}
-          OVCMOVE_JwtConfig__SecretKey: ${{ secrets.JWT_SECRET_KEY }}
-          OVCMOVE_JwtConfig__Issuer: ${{ secrets.JWT_ISSUER }}
-          OVCMOVE_JwtConfig__Audience: ${{ secrets.JWT_AUDIENCE }}
-          OVCMOVE_JwtConfig__AccessTokenExpirationMinutes: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_MINUTES }}
-          OVCMOVE_JwtConfig__RefreshTokenExpirationDays: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_DAYS }}
-          OVCMOVE_GoogleAuthConfig__ClientId: ${{ secrets.GOOGLE_CLIENT_ID }}
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          EMAIL_SERVICE_EMAIL: ${{ secrets.EMAIL_SERVICE_EMAIL }}
+          EMAIL_SERVICE_PASSWORD: ${{ secrets.EMAIL_SERVICE_PASSWORD }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_MINUTES }}
+          JWT_REFRESH_TOKEN_EXPIRATION_DAYS: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_DAYS }}
+          JWT_SIGNING_KEY_ID: ${{ secrets.JWT_SIGNING_KEY_ID }}
+          JWT_PREVIOUS_SIGNING_KEY_ID: ${{ secrets.JWT_PREVIOUS_SIGNING_KEY_ID }}
+          JWT_PREVIOUS_SECRET_KEY: ${{ secrets.JWT_PREVIOUS_SECRET_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         with:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           password: ${{ secrets.AZURE_VM_PASSWORD }}
-          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,OVCMOVE_DbConfig__SQLServer__ConnectionString,OVCMOVE_ExternalServicesConfig__EmailService__Email,OVCMOVE_ExternalServicesConfig__EmailService__Password,OVCMOVE_JwtConfig__SecretKey,OVCMOVE_JwtConfig__Issuer,OVCMOVE_JwtConfig__Audience,OVCMOVE_JwtConfig__AccessTokenExpirationMinutes,OVCMOVE_JwtConfig__RefreshTokenExpirationDays,OVCMOVE_GoogleAuthConfig__ClientId
+          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DB_CONNECTION_STRING,EMAIL_SERVICE_EMAIL,EMAIL_SERVICE_PASSWORD,JWT_SECRET_KEY,JWT_ISSUER,JWT_AUDIENCE,JWT_ACCESS_TOKEN_EXPIRATION_MINUTES,JWT_REFRESH_TOKEN_EXPIRATION_DAYS,JWT_SIGNING_KEY_ID,JWT_PREVIOUS_SIGNING_KEY_ID,JWT_PREVIOUS_SECRET_KEY,GOOGLE_CLIENT_ID
           script: |
             cd ${{ env.AZURE_APP_DIR }}
             cat > .env <<EOF
             DOCKER_IMAGE=$DOCKER_IMAGE
-            OVCMOVE_DbConfig__SQLServer__ConnectionString=$OVCMOVE_DbConfig__SQLServer__ConnectionString
-            OVCMOVE_ExternalServicesConfig__EmailService__Email=$OVCMOVE_ExternalServicesConfig__EmailService__Email
-            OVCMOVE_ExternalServicesConfig__EmailService__Password=$OVCMOVE_ExternalServicesConfig__EmailService__Password
-            OVCMOVE_JwtConfig__SecretKey=$OVCMOVE_JwtConfig__SecretKey
-            OVCMOVE_JwtConfig__Issuer=$OVCMOVE_JwtConfig__Issuer
-            OVCMOVE_JwtConfig__Audience=$OVCMOVE_JwtConfig__Audience
-            OVCMOVE_JwtConfig__AccessTokenExpirationMinutes=$OVCMOVE_JwtConfig__AccessTokenExpirationMinutes
-            OVCMOVE_JwtConfig__RefreshTokenExpirationDays=$OVCMOVE_JwtConfig__RefreshTokenExpirationDays
-            OVCMOVE_GoogleAuthConfig__ClientId=$OVCMOVE_GoogleAuthConfig__ClientId
+            OVCMOVE_DbConfig__SQLServer__ConnectionString=$DB_CONNECTION_STRING
+            OVCMOVE_ExternalServicesConfig__EmailService__Email=$EMAIL_SERVICE_EMAIL
+            OVCMOVE_ExternalServicesConfig__EmailService__Password=$EMAIL_SERVICE_PASSWORD
+            OVCMOVE_JwtConfig__SecretKey=$JWT_SECRET_KEY
+            OVCMOVE_JwtConfig__Issuer=$JWT_ISSUER
+            OVCMOVE_JwtConfig__Audience=$JWT_AUDIENCE
+            OVCMOVE_JwtConfig__AccessTokenExpirationMinutes=$JWT_ACCESS_TOKEN_EXPIRATION_MINUTES
+            OVCMOVE_JwtConfig__RefreshTokenExpirationDays=$JWT_REFRESH_TOKEN_EXPIRATION_DAYS
+            OVCMOVE_JwtConfig__SigningKeyId=$JWT_SIGNING_KEY_ID
+            OVCMOVE_JwtConfig__PreviousSigningKeyId=$JWT_PREVIOUS_SIGNING_KEY_ID
+            OVCMOVE_JwtConfig__PreviousSecretKey=$JWT_PREVIOUS_SECRET_KEY
+            OVCMOVE_GoogleAuthConfig__ClientId=$GOOGLE_CLIENT_ID
             EOF
             docker login --username "$DOCKERHUB_USERNAME" --password-stdin <<EOF
             $DOCKERHUB_TOKEN

@@ -37,26 +37,38 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
     {
         try
         {
-            var email = await _googleAuthService.ValidateGoogleTokenAndGetEmailAsync(request.IdToken);
+            var googleUser = await _googleAuthService.ValidateGoogleTokenAsync(request.IdToken);
             
-            if (string.IsNullOrEmpty(email))
+            if (googleUser is null || string.IsNullOrWhiteSpace(googleUser.Email))
                 throw new UnauthorizedAccessException("Xác thực Google thất bại hoặc Token đã hết hạn.");
 
-            var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+            var user = await _userRepository.GetByEmailAsync(googleUser.Email, cancellationToken);
 
             if (user == null || user.Role != UserConstant.Role.Organizer)
                 throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer."); 
 
+            if (string.IsNullOrWhiteSpace(user.DisplayName) && !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+            {
+                var displayName = googleUser.DisplayName.Trim();
+                await _userRepository.UpdateDisplayNameAsync(user.Id, displayName, cancellationToken);
+                user.DisplayName = displayName;
+            }
+
             var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
             var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+            var now = DateTime.UtcNow;
+            var sessionId = Guid.NewGuid();
 
             var newRefreshTokenEntity = new RefreshToken
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                Token = refreshToken,
-                ExpiryDate = DateTime.UtcNow.AddDays(_jwtTokenGenerator.RefreshTokenExpirationDays), 
-                IsRevoked = false
+                SessionId = sessionId,
+                FamilyId = sessionId,
+                TokenHash = _jwtTokenGenerator.HashRefreshToken(refreshToken),
+                ExpiryDate = now.AddDays(_jwtTokenGenerator.RefreshTokenExpirationDays),
+                IsRevoked = false,
+                CreatedAt = now
             };
             
             await _refreshTokenRepository.CreateAsync(newRefreshTokenEntity, cancellationToken);

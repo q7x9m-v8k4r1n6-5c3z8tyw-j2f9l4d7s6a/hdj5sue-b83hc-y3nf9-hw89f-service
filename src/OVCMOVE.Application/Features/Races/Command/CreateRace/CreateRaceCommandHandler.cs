@@ -3,7 +3,8 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Application.Features.Races.Command;
+using OVCMOVE.Domain.Common;
+using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Races.Command.CreateRace;
 
@@ -34,41 +35,57 @@ public class CreateRaceCommandHandler :
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // 1. Cấp phát xung ID chủ động - Siêu an toàn
         var raceId = Guid.NewGuid();
-        var race = RaceCommandMapper.BuildRace(
-            raceId,
-            request.RaceName,
-            request.TimeStart,
-            request.TimeEnd,
-            request.Place,
-            request.CoverUrl,
-            request.IsToggledLeaderboard,
-            request.IsHiddenPoint,
-            DateTime.UtcNow,
-            "system");
+        var now = DateTime.UtcNow;
+        var race = _mapper.Map<Race>(request);
+        SetAuditFields(race, raceId, now, "system", now, "system");
 
         var createdRaceId = await _raceRepository.CreateAsync(race, cancellationToken);
         if (createdRaceId is null) return null;
 
-        // 2. Tạo từng Booth (Trạm) theo logic của em
         foreach (var boothInput in request.Booth)
         {
-            await _boothRepository.CreateAsync(RaceCommandMapper.BuildBooth(raceId, boothInput), cancellationToken);
+            var booth = _mapper.Map<Booth>(boothInput);
+            SetAuditFields(booth, Guid.NewGuid(), now, "system", now, "system");
+            booth.RaceID = raceId;
+
+            await _boothRepository.CreateAsync(booth, cancellationToken);
         }
 
-        // 3. Tạo từng Team (Đội đua) theo logic của em
         foreach (var teamInput in request.RaceTeam)
         {
-            await _raceTeamRepository.CreateAsync(RaceCommandMapper.BuildRaceTeam(raceId, teamInput), cancellationToken);
+            var raceTeam = _mapper.Map<RaceTeam>(teamInput);
+            SetAuditFields(raceTeam, Guid.NewGuid(), now, "system", now, "system");
+            raceTeam.RaceID = raceId;
+
+            await _raceTeamRepository.CreateAsync(raceTeam, cancellationToken);
         }
 
-        // 4. Tạo từng Organizer (Ban tổ chức) theo logic của em
         foreach (var organizerId in request.OrganizerId.Where(id => id.HasValue).Select(id => id!.Value))
         {
-            await _raceOrganizerRepository.CreateAsync(RaceCommandMapper.BuildRaceOrganizer(raceId, organizerId), cancellationToken);
+            var raceOrganizer = _mapper.Map<RaceOrganizer>(organizerId);
+            SetAuditFields(raceOrganizer, Guid.NewGuid(), now, "system", now, "system");
+            raceOrganizer.RaceID = raceId;
+
+            await _raceOrganizerRepository.CreateAsync(raceOrganizer, cancellationToken);
         }
 
         return raceId;
+    }
+
+    private static void SetAuditFields(
+        BaseEntity entity,
+        Guid id,
+        DateTime createdAt,
+        string? createdBy,
+        DateTime modifiedAt,
+        string? modifiedBy)
+    {
+        entity.Id = id;
+        entity.CreatedAt = createdAt;
+        entity.CreatedBy = createdBy;
+        entity.ModifiedAt = modifiedAt;
+        entity.ModifiedBy = modifiedBy;
+        entity.IsDeleted = false;
     }
 }

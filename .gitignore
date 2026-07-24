@@ -13,6 +13,7 @@ obj/
 .DS_Store
 *.user
 *.suo
+*.log
 
 # Build output
 TestResults/

@@ -4,6 +4,12 @@
 
 OVC-MOVE-SERVICE là hệ thống backend phục vụ ứng dụng tính điểm, hỗ trợ vận hành vòng `RACE` trong chương trình `MOVE`.
 
+## Cần tạo HTTPS certificate trên máy để chạy được local
+```
+cd ovc-move-service
+bash scripts/setup-local-https.sh
+```
+
 ## Công nghệ sử dụng
 
 Các công nghệ chính đang được áp dụng trong dự án:

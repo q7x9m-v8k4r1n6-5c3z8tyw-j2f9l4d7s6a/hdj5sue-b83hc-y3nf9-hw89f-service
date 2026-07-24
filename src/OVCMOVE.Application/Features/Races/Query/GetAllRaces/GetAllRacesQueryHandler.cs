@@ -8,7 +8,7 @@ namespace OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 
 public class GetAllRacesQueryHandler :
     BaseQueryHandler<GetAllRacesQueryHandler>,
-    IRequestHandler<GetAllRacesQuery, RaceListItemResultModel>
+    IRequestHandler<GetAllRacesQuery, PagedResult<RaceItemResultModel>>
 {
     private readonly IRaceRepository _raceRepository;
 
@@ -17,15 +17,23 @@ public class GetAllRacesQueryHandler :
         _raceRepository = raceRepository;
     }
 
-    public async Task<RaceListItemResultModel> Handle(GetAllRacesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<RaceItemResultModel>> Handle(GetAllRacesQuery request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var racesFromDb = await _raceRepository.GetAllAsync(cancellationToken);
-        return new RaceListItemResultModel
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
+        return new PagedResult<RaceItemResultModel>
         {
-            TotalCount = racesFromDb.Count, 
-            Items = racesFromDb            
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = racesFromDb.Count,
+            Items = racesFromDb
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToArray()
         };
     }
 }

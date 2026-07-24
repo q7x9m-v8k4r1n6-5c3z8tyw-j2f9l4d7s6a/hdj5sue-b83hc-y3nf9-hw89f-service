@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
@@ -34,6 +35,20 @@ public class TeamController : BaseController<TeamController>
                 Message = APIContansts.StatusMessage.Success,
                 Data = result
             });
+        }
+        catch (ValidationException ex)
+        {
+            return Ok(new ApiResponseModel<object>(
+                APIContansts.StatusCode.BadRequest,
+                APIContansts.StatusMessage.BadRequest,
+                string.Join(" ", ex.Errors.Select(error => error.ErrorMessage))));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Ok(new ApiResponseModel<object>(
+                APIContansts.StatusCode.BadRequest,
+                APIContansts.StatusMessage.BadRequest,
+                ex.Message));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

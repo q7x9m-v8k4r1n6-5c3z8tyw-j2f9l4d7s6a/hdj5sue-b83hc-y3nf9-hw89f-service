@@ -44,10 +44,12 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
 
             var user = await _userRepository.GetByEmailAsync(googleUser.Email, cancellationToken);
 
-            if (user == null || user.Role != UserConstant.Role.Organizer)
-                throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer."); 
+            if (user == null ||
+                (user.Role != UserConstant.Role.Organizer && user.Role != UserConstant.Role.Admin))
+            throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer.");
 
-            if (string.IsNullOrWhiteSpace(user.DisplayName) && !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+            if (string.IsNullOrWhiteSpace(user.DisplayName) &&
+                !string.IsNullOrWhiteSpace(googleUser.DisplayName))
             {
                 var displayName = googleUser.DisplayName.Trim();
                 await _userRepository.UpdateDisplayNameAsync(user.Id, displayName, cancellationToken);

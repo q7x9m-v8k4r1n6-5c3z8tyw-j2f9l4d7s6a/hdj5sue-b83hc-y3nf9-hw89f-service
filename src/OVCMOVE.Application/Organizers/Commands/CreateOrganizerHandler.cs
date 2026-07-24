@@ -1,6 +1,8 @@
+using System.Net.Mail;
 using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -15,18 +17,21 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
     private readonly IOrganizerRepository _organizerRepo;
     private readonly IUserRepository _userRepo;
     private readonly IEmailService _emailService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public CreateOrganizerHandler(
         ILogger<CreateOrganizerHandler> logger,
         IOrganizerRepository organizerRepo,
         IUserRepository userRepo,
         IEmailService emailService,
-        IMapper mapper)
+        IMapper mapper,
+        IUnitOfWork unitOfWork)
         : base(logger, mapper)
     {
         _organizerRepo = organizerRepo;
         _userRepo = userRepo;
         _emailService = emailService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<OrganizerResponse> Handle(CreateOrganizerCommand request, CancellationToken cancellationToken)
@@ -35,47 +40,70 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var existing = await _organizerRepo.GetByEmailAsync(request.Email, cancellationToken);
+            var email = request.Email?.Trim() ?? string.Empty;
+            if (!IsValidEmail(email))
+            {
+                throw new InvalidOperationException("Invalid organizer email format.");
+            }
+
+            var role = NormalizeRole(request.Role);
+
+            var existing = await _organizerRepo.GetByEmailAsync(email, cancellationToken);
             if (existing != null)
             {
                 throw new InvalidOperationException("Email da duoc dang ky.");
             }
 
-            var user = await _userRepo.GetByEmailAnyStatusAsync(request.Email, cancellationToken);
+            var user = await _userRepo.GetByEmailAnyStatusAsync(email, cancellationToken);
+            var isNewUser = user is null;
             if (user is null)
             {
                 var now = DateTime.UtcNow;
                 user = new User
                 {
                     Id = Guid.NewGuid(),
-                    Username = request.Email,
-                    Email = request.Email,
-                    DisplayName = request.Email,
-                    Role = UserConstant.Role.Organizer,
+                    Username = null,
+                    Email = email,
+                    DisplayName = null,
+                    Role = role,
                     Status = UserConstant.Status.Active,
                     CreatedAt = now,
                     ModifiedAt = now
                 };
-
-                await _userRepo.AddAsync(user, cancellationToken);
             }
-            else if (user.Role != UserConstant.Role.Organizer)
+            else if (!string.Equals(user.Role, role, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("Email da ton tai voi role khac Organizer.");
+                throw new InvalidOperationException("Email da ton tai voi role khac.");
             }
 
             var organizer = new Organizer
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                DisplayName = user.DisplayName ?? user.Email,
+                DisplayName = user.DisplayName ?? string.Empty,
                 Email = user.Email,
                 Role = user.Role,
                 Status = OrganizerConstants.OrganizerStatus.Active,
                 CreatedAt = DateTime.UtcNow
             };
 
-            await _organizerRepo.AddAsync(organizer, cancellationToken);
+            _unitOfWork.Begin();
+            try
+            {
+                if (isNewUser)
+                {
+                    await _userRepo.AddAsync(user, cancellationToken);
+                }
+
+                await _organizerRepo.AddAsync(organizer, cancellationToken);
+                _unitOfWork.Commit();
+            }
+            catch
+            {
+                _unitOfWork.Rollback();
+                throw;
+            }
+
             await TrySendOrganizerCreatedEmailAsync(organizer, cancellationToken);
 
             return _mapper.Map<OrganizerResponse>(organizer);
@@ -89,6 +117,30 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
             _logger.LogError(ex, "Error occurred while handling CreateOrganizerCommand for {Email}.", request.Email);
             throw;
         }
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var address = new MailAddress(email);
+            return address.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizeRole(string role)
+    {
+        return (role ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            UserConstant.Role.Organizer => UserConstant.Role.Organizer,
+            UserConstant.Role.Admin => UserConstant.Role.Admin,
+            "administrator" => UserConstant.Role.Admin,
+            _ => throw new InvalidOperationException("Role must be Organizer or Administrator.")
+        };
     }
 
     private async Task TrySendOrganizerCreatedEmailAsync(Organizer organizer, CancellationToken cancellationToken)

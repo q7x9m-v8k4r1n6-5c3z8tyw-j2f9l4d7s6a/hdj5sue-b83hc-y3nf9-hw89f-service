@@ -8,7 +8,6 @@ obj/
 .env
 .env.*
 !.env.example
-src/OVCMOVE.Api/.data-protection-keys/
 
 # OS/editor noise
 .DS_Store

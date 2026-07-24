@@ -1,5 +1,4 @@
 using DotNetEnv;
-using Microsoft.AspNetCore.DataProtection;
 
 using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Middleware;
@@ -13,12 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
 {
-    var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, ".data-protection-keys");
-    builder.Services
-        .AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
-        .SetApplicationName("OVCMOVE.Api");
-
     var envFiles = Env.TraversePath().Load();
 
     if (envFiles.Any())

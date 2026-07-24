@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Mail;
 using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -22,7 +21,6 @@ public class CreateTeamCommandHandler :
     private readonly IEmailService _emailService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IPasswordGenerator _passwordGenerator;
-    private readonly IUnitOfWork _unitOfWork;
 
     public CreateTeamCommandHandler(
         ILogger<CreateTeamCommandHandler> logger,
@@ -32,14 +30,13 @@ public class CreateTeamCommandHandler :
         IEmailService emailService,
         IPasswordHasher passwordHasher,
         IPasswordGenerator passwordGenerator,
-        IUnitOfWork unitOfWork) : base(logger, mapper)
+        IUnitOfWork unitOfWork) : base(logger, mapper, unitOfWork)
     {
         _teamRepository = teamRepository;
         _userRepository = userRepository;
         _emailService = emailService;
         _passwordHasher = passwordHasher;
         _passwordGenerator = passwordGenerator;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<TeamResponse> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
@@ -51,18 +48,6 @@ public class CreateTeamCommandHandler :
             var displayName = request.DisplayName?.Trim() ?? string.Empty;
             var username = request.Username?.Trim() ?? string.Empty;
             var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(displayName) ||
-                string.IsNullOrWhiteSpace(username) ||
-                string.IsNullOrWhiteSpace(leaderEmail))
-            {
-                throw new InvalidOperationException("Team display name, username and leader email are required.");
-            }
-
-            if (!IsValidUsername(username))
-            {
-                throw new InvalidOperationException("Team username must be lowercase, unsigned and without spaces.");
-            }
 
             if (await _teamRepository.GetByUsernameAsync(username, cancellationToken) is not null ||
                 await _userRepository.GetByUsernameAnyStatusAsync(username, cancellationToken) is not null)
@@ -104,16 +89,19 @@ public class CreateTeamCommandHandler :
                 ModifiedAt = now
             };
 
-            _unitOfWork.Begin();
+            var unitOfWork = _unitOfWork
+                ?? throw new InvalidOperationException("Unit of work is not configured.");
+
+            unitOfWork.Begin();
             try
             {
                 await _userRepository.AddAsync(user, cancellationToken);
                 await _teamRepository.AddAsync(team, cancellationToken);
-                _unitOfWork.Commit();
+                unitOfWork.Commit();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                unitOfWork.Rollback();
                 throw;
             }
 
@@ -150,10 +138,4 @@ public class CreateTeamCommandHandler :
         }
     }
 
-    private static bool IsValidUsername(string username)
-    {
-        return username.All(character =>
-            character is >= 'a' and <= 'z' ||
-            character is >= '0' and <= '9');
-    }
 }

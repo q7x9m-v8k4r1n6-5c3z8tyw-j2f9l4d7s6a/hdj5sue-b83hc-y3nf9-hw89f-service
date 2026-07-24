@@ -25,9 +25,13 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QueryAsync<T>(command);
+        return await ExecuteWithConnectionAsync(
+            transaction,
+            async (connection, effectiveTransaction) =>
+            {
+                var command = new CommandDefinition(sql, param, effectiveTransaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+                return await connection.QueryAsync<T>(command);
+            });
     }
 
     public async Task<T?> QueryFirstOrDefaultAsync<T>(
@@ -38,9 +42,13 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QueryFirstOrDefaultAsync<T>(command);
+        return await ExecuteWithConnectionAsync(
+            transaction,
+            async (connection, effectiveTransaction) =>
+            {
+                var command = new CommandDefinition(sql, param, effectiveTransaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+                return await connection.QueryFirstOrDefaultAsync<T>(command);
+            });
     }
 
     public async Task<T> QuerySingleAsync<T>(
@@ -51,9 +59,13 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QuerySingleAsync<T>(command);
+        return await ExecuteWithConnectionAsync(
+            transaction,
+            async (connection, effectiveTransaction) =>
+            {
+                var command = new CommandDefinition(sql, param, effectiveTransaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+                return await connection.QuerySingleAsync<T>(command);
+            });
     }
 
     public async Task<int> ExecuteAsync(
@@ -64,9 +76,13 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.ExecuteAsync(command);
+        return await ExecuteWithConnectionAsync(
+            transaction,
+            async (connection, effectiveTransaction) =>
+            {
+                var command = new CommandDefinition(sql, param, effectiveTransaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+                return await connection.ExecuteAsync(command);
+            });
     }
 
     public async Task<T?> ExecuteScalarAsync<T>(
@@ -77,9 +93,27 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
+        return await ExecuteWithConnectionAsync(
+            transaction,
+            async (connection, effectiveTransaction) =>
+            {
+                var command = new CommandDefinition(sql, param, effectiveTransaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+                return await connection.ExecuteScalarAsync<T>(command);
+            });
+    }
+
+    private async Task<TResult> ExecuteWithConnectionAsync<TResult>(
+        IDbTransaction? transaction,
+        Func<IDbConnection, IDbTransaction?, Task<TResult>> execute)
+    {
+        var effectiveTransaction = transaction ?? _unitOfWork.Transaction;
+        if (effectiveTransaction?.Connection is not null)
+        {
+            return await execute(effectiveTransaction.Connection, effectiveTransaction);
+        }
+
         using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.ExecuteScalarAsync<T>(command);
+        return await execute(connection, null);
     }
 
     private async Task<IDbConnection> OpenConnectionAsync()

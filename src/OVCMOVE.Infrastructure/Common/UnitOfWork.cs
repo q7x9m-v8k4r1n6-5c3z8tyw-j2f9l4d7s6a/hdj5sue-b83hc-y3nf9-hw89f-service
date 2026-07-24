@@ -1,24 +1,34 @@
 ﻿using OVCMOVE.Application.Abstractions;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Text;
+using OVCMOVE.Infrastructure.Persistance.SqlServer;
 
 namespace OVCMOVE.Infrastructure.Common
 {
     public class UnitOfWork : IUnitOfWork
     {
         public IDbConnection Connection { get; }
-        public IDbTransaction Transaction { get; private set; }
+        public IDbTransaction? Transaction { get; private set; }
+
+        public UnitOfWork(ISqlServerFactory sqlServerFactory)
+        {
+            Connection = sqlServerFactory.CreateConnection();
+        }
 
         public void Begin()
         {
+            if (Connection.State != ConnectionState.Open)
+            {
+                Connection.Open();
+            }
+
             Transaction = Connection.BeginTransaction();
         }
 
         public void Commit()
         {
-            Transaction.Commit();
+            Transaction?.Commit();
+            Transaction?.Dispose();
+            Transaction = null;
         }
 
         public void Dispose()
@@ -29,7 +39,9 @@ namespace OVCMOVE.Infrastructure.Common
 
         public void Rollback()
         {
-            Transaction.Rollback();
+            Transaction?.Rollback();
+            Transaction?.Dispose();
+            Transaction = null;
         }
     }
 }

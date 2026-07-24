@@ -13,8 +13,8 @@ public static class TeamQueries
                 u.Email AS LeaderEmail,
                 u.Username,
                 u.Status
-            FROM [dbo].[Teams] t
-            INNER JOIN [dbo].[Users] u ON u.Id = t.UserId
+            FROM [dbo].[Teams] t WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
             WHERE u.Username = @Username;
         ";
     }
@@ -30,8 +30,8 @@ public static class TeamQueries
                 u.Email AS LeaderEmail,
                 u.Username,
                 u.Status
-            FROM [dbo].[Teams] t
-            INNER JOIN [dbo].[Users] u ON u.Id = t.UserId
+            FROM [dbo].[Teams] t WITH (NOLOCK)
+            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
             WHERE u.Email = @LeaderEmail;
         ";
     }

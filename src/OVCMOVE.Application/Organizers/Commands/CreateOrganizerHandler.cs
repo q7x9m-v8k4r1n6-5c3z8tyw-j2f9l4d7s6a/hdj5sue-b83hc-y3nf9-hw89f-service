@@ -17,7 +17,6 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
     private readonly IOrganizerRepository _organizerRepo;
     private readonly IUserRepository _userRepo;
     private readonly IEmailService _emailService;
-    private readonly IUnitOfWork _unitOfWork;
 
     public CreateOrganizerHandler(
         ILogger<CreateOrganizerHandler> logger,
@@ -26,12 +25,11 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
         IEmailService emailService,
         IMapper mapper,
         IUnitOfWork unitOfWork)
-        : base(logger, mapper)
+        : base(logger, mapper, unitOfWork)
     {
         _organizerRepo = organizerRepo;
         _userRepo = userRepo;
         _emailService = emailService;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<OrganizerResponse> Handle(CreateOrganizerCommand request, CancellationToken cancellationToken)
@@ -87,7 +85,10 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 CreatedAt = DateTime.UtcNow
             };
 
-            _unitOfWork.Begin();
+            var unitOfWork = _unitOfWork
+                ?? throw new InvalidOperationException("Unit of work is not configured.");
+
+            unitOfWork.Begin();
             try
             {
                 if (isNewUser)
@@ -96,11 +97,11 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 }
 
                 await _organizerRepo.AddAsync(organizer, cancellationToken);
-                _unitOfWork.Commit();
+                unitOfWork.Commit();
             }
             catch
             {
-                _unitOfWork.Rollback();
+                unitOfWork.Rollback();
                 throw;
             }
 

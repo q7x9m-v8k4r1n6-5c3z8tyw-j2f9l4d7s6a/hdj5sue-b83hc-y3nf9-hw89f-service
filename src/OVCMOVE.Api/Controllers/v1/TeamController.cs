@@ -6,6 +6,7 @@ using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Team;
 using OVCMOVE.Application.Features.Teams.Command.CreateTeam;
 using OVCMOVE.Application.Features.Teams.Command.UpdateTeam;
+using OVCMOVE.Application.Features.Teams.Command.ResetTeamPassword;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
 using OVCMOVE.Domain.Constants;
@@ -76,6 +77,42 @@ public class TeamController : BaseController<TeamController>
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error occurred while processing UpdateTeam.");
+            return Ok(new InternalServerErrorModel(ex.Message));
+        }
+    }
+
+    [HttpPost("{teamId:guid}/reset-password")]
+    public async Task<IActionResult> ResetTeamPassword(
+        Guid teamId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await _mediator.Send(
+                new ResetTeamPasswordCommand(teamId),
+                cancellationToken);
+
+            if (result is null)
+            {
+                return Ok(new ApiResponseModel<object>
+                {
+                    StatusCode = APIContansts.StatusCode.NotFound,
+                    Message = "Team account was not found."
+                });
+            }
+
+            return Ok(new ApiResponseModel<TeamResponse>
+            {
+                StatusCode = APIContansts.StatusCode.Success,
+                Message = "Team password has been reset and sent to the leader email.",
+                Data = result
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Error occurred while resetting team password.");
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }

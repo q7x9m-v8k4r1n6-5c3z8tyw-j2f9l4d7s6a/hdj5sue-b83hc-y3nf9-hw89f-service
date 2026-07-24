@@ -87,6 +87,14 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
             cancellationToken: cancellationToken);
     }
 
+    public async Task UpdateTeamPasswordAsync(Guid id, string passwordHash, CancellationToken cancellationToken = default)
+    {
+        await _dapperHelper.ExecuteAsync(
+            UserQueryHelper.UpdateTeamPasswordQuery(),
+            new { Id = id, PasswordHash = passwordHash },
+            cancellationToken: cancellationToken);
+    }
+
     public async Task UpdateDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default)
     {
         await _dapperHelper.ExecuteAsync(

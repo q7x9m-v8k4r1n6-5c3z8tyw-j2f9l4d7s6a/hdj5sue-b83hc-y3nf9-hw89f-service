@@ -11,5 +11,6 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     Task UpdateTeamAccountAsync(User user, CancellationToken cancellationToken = default);
+    Task UpdateTeamPasswordAsync(Guid id, string passwordHash, CancellationToken cancellationToken = default);
     Task UpdateDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default);
 }

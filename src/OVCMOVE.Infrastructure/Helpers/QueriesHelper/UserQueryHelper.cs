@@ -59,13 +59,24 @@ public static class UserQueryHelper
         return @"
             UPDATE [dbo].[Users]
             SET Username = @Username,
-                PasswordHash = @PasswordHash,
                 Email = @Email,
                 DisplayName = @DisplayName,
                 ModifiedBy = @ModifiedBy,
                 ModifiedAt = @ModifiedAt
             WHERE Id = @Id
               AND Role = @Role";
+    }
+
+    public static string UpdateTeamPasswordQuery()
+    {
+        return @"
+            UPDATE [dbo].[Users]
+            SET PasswordHash = @PasswordHash,
+                ModifiedBy = 'admin-reset-password',
+                ModifiedAt = SYSUTCDATETIME()
+            WHERE Id = @Id
+              AND Role = 'Team'
+              AND Status = 'active'";
     }
 
     public static string UpdateDisplayNameQuery()

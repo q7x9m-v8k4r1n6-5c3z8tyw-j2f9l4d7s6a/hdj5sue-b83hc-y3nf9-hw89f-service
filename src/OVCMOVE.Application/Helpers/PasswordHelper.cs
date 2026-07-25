@@ -1,9 +1,8 @@
 using System.Security.Cryptography;
-using OVCMOVE.Application.Abstractions.Services;
 
-namespace OVCMOVE.Application.Services;
+namespace OVCMOVE.Application.Helpers;
 
-public sealed class PasswordGenerator : IPasswordGenerator
+public static class PasswordHelper
 {
     private const string Lowercase = "abcdefghijkmnopqrstuvwxyz";
     private const string Uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -11,7 +10,7 @@ public sealed class PasswordGenerator : IPasswordGenerator
     private const string Symbols = "!@#$%^&*()-_=+";
     private const string AllCharacters = Lowercase + Uppercase + Digits + Symbols;
 
-    public string Generate()
+    public static string Generate()
     {
         var password = new char[16];
         password[0] = GetRandomCharacter(Lowercase);
@@ -26,6 +25,28 @@ public sealed class PasswordGenerator : IPasswordGenerator
 
         Shuffle(password);
         return new string(password);
+    }
+
+    public static string Hash(string password)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password);
+    }
+
+    public static bool Verify(string password, string? passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash) || !passwordHash.StartsWith("$2", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(password, passwordHash);
+        }
+        catch (BCrypt.Net.SaltParseException)
+        {
+            return false;
+        }
     }
 
     private static char GetRandomCharacter(string characters)

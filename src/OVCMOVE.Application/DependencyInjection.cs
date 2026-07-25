@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Teams.Command.CreateTeam;
-using OVCMOVE.Application.Services;
 
 namespace OVCMOVE.Application;
 
@@ -19,8 +18,6 @@ public static class DependencyInjection
         });
 
         services.AddAutoMapper(AssemblyReference.Assembly);
-        services.AddScoped<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
         services.AddScoped<IValidator<CreateTeamCommand>, CreateTeamCommandValidator>();
 
         return services;

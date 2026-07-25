@@ -7,6 +7,7 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Team;
+using OVCMOVE.Application.Helpers;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
 
@@ -19,8 +20,6 @@ public class CreateTeamCommandHandler :
     private readonly ITeamRepository _teamRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly IPasswordGenerator _passwordGenerator;
 
     public CreateTeamCommandHandler(
         ILogger<CreateTeamCommandHandler> logger,
@@ -28,15 +27,11 @@ public class CreateTeamCommandHandler :
         ITeamRepository teamRepository,
         IUserRepository userRepository,
         IEmailService emailService,
-        IPasswordHasher passwordHasher,
-        IPasswordGenerator passwordGenerator,
         IUnitOfWork unitOfWork) : base(logger, mapper, unitOfWork)
     {
         _teamRepository = teamRepository;
         _userRepository = userRepository;
         _emailService = emailService;
-        _passwordHasher = passwordHasher;
-        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<TeamResponse> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
@@ -61,19 +56,16 @@ public class CreateTeamCommandHandler :
                 throw new InvalidOperationException("Leader email da duoc dang ky.");
             }
 
-            var generatedPassword = _passwordGenerator.Generate();
-            var now = DateTime.UtcNow;
+            var generatedPassword = PasswordHelper.Generate();
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 Username = username,
-                PasswordHash = _passwordHasher.HashPassword(generatedPassword),
+                PasswordHash = PasswordHelper.Hash(generatedPassword),
                 Email = leaderEmail,
                 Role = UserConstant.Role.Team,
-                DisplayName = displayName,
-                Status = UserConstant.Status.Active,
-                CreatedAt = now,
-                ModifiedAt = now
+                DisplayName = request.DisplayName?.Trim() ?? string.Empty,
+                Status = UserConstant.Status.Active
             };
 
             var team = new Team
@@ -84,9 +76,7 @@ public class CreateTeamCommandHandler :
                 Name = displayName,
                 LeaderEmail = leaderEmail,
                 Username = username,
-                Status = TeamConstants.TeamStatus.Active,
-                CreatedAt = now,
-                ModifiedAt = now
+                Status = TeamConstants.TeamStatus.Active
             };
 
             var unitOfWork = _unitOfWork
@@ -130,7 +120,7 @@ public class CreateTeamCommandHandler :
                 <p><strong>Password:</strong> {WebUtility.HtmlEncode(password)}</p>
                 <p>Account chi duoc dang nhap tren 1 may.</p>";
 
-            await _emailService.SendTeamCredentialsAsync(team.LeaderEmail, subject, body, cancellationToken);
+            await _emailService.SendAsync(team.LeaderEmail, subject, body, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

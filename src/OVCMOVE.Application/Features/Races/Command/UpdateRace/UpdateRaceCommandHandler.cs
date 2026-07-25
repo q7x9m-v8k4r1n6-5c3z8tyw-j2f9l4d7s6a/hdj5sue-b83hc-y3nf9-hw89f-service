@@ -91,7 +91,7 @@ public class UpdateRaceCommandHandler :
     private static void SetAuditFields(
         BaseEntity entity,
         Guid id,
-        DateTime createdAt,
+        DateTime? createdAt,
         string? createdBy,
         DateTime modifiedAt,
         string? modifiedBy)

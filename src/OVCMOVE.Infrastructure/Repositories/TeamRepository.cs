@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Helpers;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Helpers;
 using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
@@ -60,7 +61,13 @@ public class TeamRepository : BaseRepository<TeamRepository>, ITeamRepository
 
             await _dapperHelper.ExecuteAsync(
                 TeamQueries.AddTeamQuery(),
-                team,
+                new
+                {
+                    team.Id,
+                    team.UserId,
+                    team.TotalScore,
+                    CreatedAt = VietnamTimeHelper.Now
+                },
                 cancellationToken: cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

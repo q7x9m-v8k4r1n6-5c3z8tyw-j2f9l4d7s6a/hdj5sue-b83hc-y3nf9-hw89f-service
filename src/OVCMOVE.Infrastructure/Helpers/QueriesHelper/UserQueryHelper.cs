@@ -49,9 +49,9 @@ public static class UserQueryHelper
     {
         return @"
             INSERT INTO [dbo].[Users]
-                (Id, Username, PasswordHash, Email, Role, DisplayName, Status, CreatedBy, CreatedAt, ModifiedBy, ModifiedAt, IsDeleted)
+                (Id, Username, PasswordHash, Email, Role, DisplayName, Status, IsDeleted)
             VALUES
-                (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
+                (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @IsDeleted)";
     }
 
     public static string UpdateDisplayNameQuery()

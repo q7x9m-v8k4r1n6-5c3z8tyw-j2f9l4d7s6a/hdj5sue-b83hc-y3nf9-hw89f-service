@@ -157,7 +157,7 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 <p><strong>Status:</strong> {organizer.Status}</p>
                 """;
 
-            await _emailService.SendOrganizerCredentialsAsync(
+            await _emailService.SendAsync(
                 organizer.Email,
                 subject,
                 body,

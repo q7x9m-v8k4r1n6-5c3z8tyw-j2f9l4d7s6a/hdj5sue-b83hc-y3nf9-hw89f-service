@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
-using OVCMOVE.Application.Features.Races.Command;
+using OVCMOVE.Domain.Constants;
+using OVCMOVE.Domain.Common;
+using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Races.Command.UpdateRace;
 
@@ -38,23 +40,16 @@ public class UpdateRaceCommandHandler :
         var existingRace = await _raceRepository.GetByIdAsync(request.RaceId, cancellationToken);
         if (existingRace is null) return null;
 
-        // Nghiep vu edit-race: chi Race chua bat dau moi duoc cap nhat.
-        if (existingRace.TimeStart <= DateTime.UtcNow)
+        if (string.Equals(existingRace.Status, RaceConstants.RaceStatus.Completed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Chi co the cap nhat Race o trang thai Upcoming.");
+            throw new InvalidOperationException("Khong the cap nhat Race da ket thuc.");
         }
 
-        var updatedRace = RaceCommandMapper.BuildRace(
-            request.RaceId,
-            request.RaceName,
-            request.TimeStart,
-            request.TimeEnd,
-            request.Place,
-            request.CoverUrl,
-            request.IsToggledLeaderboard,
-            request.IsHiddenPoint,
-            existingRace.CreatedAt,
-            existingRace.CreatedBy);
+        request.Status ??= existingRace.Status;
+
+        var now = DateTime.UtcNow;
+        var updatedRace = _mapper.Map<Race>(request);
+        SetAuditFields(updatedRace, request.RaceId, existingRace.CreatedAt, existingRace.CreatedBy, now, "system");
 
         var updated = await _raceRepository.UpdateAsync(updatedRace, cancellationToken);
         if (!updated) return null;
@@ -65,19 +60,47 @@ public class UpdateRaceCommandHandler :
 
         foreach (var boothInput in request.Booth)
         {
-            await _boothRepository.CreateAsync(RaceCommandMapper.BuildBooth(request.RaceId, boothInput), cancellationToken);
+            var booth = _mapper.Map<Booth>(boothInput);
+            SetAuditFields(booth, Guid.NewGuid(), now, "system", now, "system");
+            booth.RaceID = request.RaceId;
+
+            await _boothRepository.CreateAsync(booth, cancellationToken);
         }
 
         foreach (var teamInput in request.RaceTeam)
         {
-            await _raceTeamRepository.CreateAsync(RaceCommandMapper.BuildRaceTeam(request.RaceId, teamInput), cancellationToken);
+            var raceTeam = _mapper.Map<RaceTeam>(teamInput);
+            SetAuditFields(raceTeam, Guid.NewGuid(), now, "system", now, "system");
+            raceTeam.RaceID = request.RaceId;
+
+            await _raceTeamRepository.CreateAsync(raceTeam, cancellationToken);
         }
 
         foreach (var organizerId in request.OrganizerId.Where(id => id.HasValue).Select(id => id!.Value))
         {
-            await _raceOrganizerRepository.CreateAsync(RaceCommandMapper.BuildRaceOrganizer(request.RaceId, organizerId), cancellationToken);
+            var raceOrganizer = _mapper.Map<RaceOrganizer>(organizerId);
+            SetAuditFields(raceOrganizer, Guid.NewGuid(), now, "system", now, "system");
+            raceOrganizer.RaceID = request.RaceId;
+
+            await _raceOrganizerRepository.CreateAsync(raceOrganizer, cancellationToken);
         }
 
         return await _raceRepository.GetDetailAsync(request.RaceId, cancellationToken);
+    }
+
+    private static void SetAuditFields(
+        BaseEntity entity,
+        Guid id,
+        DateTime createdAt,
+        string? createdBy,
+        DateTime modifiedAt,
+        string? modifiedBy)
+    {
+        entity.Id = id;
+        entity.CreatedAt = createdAt;
+        entity.CreatedBy = createdBy;
+        entity.ModifiedAt = modifiedAt;
+        entity.ModifiedBy = modifiedBy;
+        entity.IsDeleted = false;
     }
 }

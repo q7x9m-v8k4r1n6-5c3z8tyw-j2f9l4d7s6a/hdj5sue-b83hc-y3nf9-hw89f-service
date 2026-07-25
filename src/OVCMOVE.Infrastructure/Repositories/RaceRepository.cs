@@ -64,6 +64,7 @@ public class RaceRepository : BaseRepository<RaceRepository>, IRaceRepository
             Place = race.Place,
             Status = race.Status,
             CoverUrl = race.CoverUrl,
+            ModifiedAt = race.ModifiedAt,
             IsToggledLeaderboard = race.IsToggledLeaderboard,
             IsHiddenPoint = race.IsHiddenPoint,
             Booth = booths.ToArray(),

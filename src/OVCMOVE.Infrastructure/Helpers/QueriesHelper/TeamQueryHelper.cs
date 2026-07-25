@@ -1,24 +1,25 @@
-﻿namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 public static class TeamQueries
 {
     public static string GetAllTeamsQuery()
     {
         return @"
-            SELECT Id, Name, LeaderEmail, Username, Status
-            FROM [dbo].[Team] WITH (NOLOCK)
-            ORDER BY Name;
+            SELECT Id, DisplayName AS Name, Email AS LeaderEmail, Username, Status
+            FROM [dbo].[Users] WITH (NOLOCK)
+            WHERE Role = 'team'
+            ORDER BY DisplayName;
         ";
     }
 
     public static string SearchTeamQuery()
     {
         return @"
-            SELECT Id, Name, LeaderEmail, Username, Status
-            FROM [dbo].[Team] WITH (NOLOCK)
-            WHERE Name LIKE @Keyword
-               OR Username LIKE @Keyword
-            ORDER BY Name;
+            SELECT Id, DisplayName AS Name, Email AS LeaderEmail, Username, Status
+            FROM [dbo].[Users] WITH (NOLOCK)
+            WHERE Role = 'team'
+               AND (DisplayName LIKE @Keyword OR Username LIKE @Keyword)
+            ORDER BY DisplayName;
         ";
     }
 }

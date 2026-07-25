@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
@@ -62,6 +62,35 @@ public class TeamController : BaseController<TeamController>
         catch (Exception ex)
         {
             _logger.LogError("Error occurred while processing SearchTeams: {Message}", ex.Message);
+            return Ok(new InternalServerErrorModel(ex.Message));
+        }
+    }
+
+    // Tạo đội chơi mới
+    [HttpPost]
+    public async Task<IActionResult> CreateTeam([FromBody] OVCMOVE.Application.Features.Teams.Command.CreateTeam.CreateTeamCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (!result)
+            {
+                return Ok(new InternalServerErrorModel("Failed to create team."));
+            }
+
+            return Ok(new ApiResponseModel<bool>
+            {
+                StatusCode = APIContansts.StatusCode.Success,
+                Message = APIContansts.StatusMessage.Success,
+                Data = result
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error occurred while processing CreateTeam: {Message}", ex.Message);
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }

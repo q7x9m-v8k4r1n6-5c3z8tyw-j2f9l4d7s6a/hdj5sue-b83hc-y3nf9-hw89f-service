@@ -34,7 +34,11 @@ public static class RaceQueries
     public static string GetRaceByIdQuery() => @"
         SELECT
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
-            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
+            CASE
+                WHEN LOWER([Status]) = 'upcoming' THEN 'draft'
+                WHEN LOWER([Status]) = 'active' THEN 'ongoing'
+                ELSE [Status]
+            END AS [Status],
             [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         FROM [dbo].[Race] WITH (NOLOCK)
@@ -48,7 +52,11 @@ public static class RaceQueries
             [TimeStart],
             [TimeEnd],
             [Place],
-            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
+            CASE
+                WHEN LOWER([Status]) = 'upcoming' THEN 'draft'
+                WHEN LOWER([Status]) = 'active' THEN 'ongoing'
+                ELSE [Status]
+            END AS [Status],
             [CoverUrl],
             [ModifiedAt]
         FROM [dbo].[Race] WITH (NOLOCK)
@@ -63,7 +71,11 @@ public static class RaceQueries
             [TimeStart],
             [TimeEnd],
             [Place],
-            CASE WHEN LOWER([Status]) = 'upcoming' THEN 'draft' ELSE [Status] END AS [Status],
+            CASE
+                WHEN LOWER([Status]) = 'upcoming' THEN 'draft'
+                WHEN LOWER([Status]) = 'active' THEN 'ongoing'
+                ELSE [Status]
+            END AS [Status],
             [CoverUrl],
             [IsToggledLeaderboard],
             [IsHiddenPoint],
@@ -72,7 +84,7 @@ public static class RaceQueries
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetRaceBoothsQuery() => @"
-        SELECT [Name], [Place], [Description], [BoothOrganizerID] AS [OrganizerID]
+        SELECT [Name], [Place], [Description], CONVERT(varchar(36), [BoothOrganizerID]) AS [OrganizerID]
         FROM [dbo].[Booth] WITH (NOLOCK)
         WHERE [RaceID] = @RaceId;";
 

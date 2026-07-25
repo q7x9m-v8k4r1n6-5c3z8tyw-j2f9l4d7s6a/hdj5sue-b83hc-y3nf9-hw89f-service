@@ -1,41 +1,7 @@
-﻿namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+namespace OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 public static class TeamQueries
 {
-    public static string GetByUsernameQuery()
-    {
-        return @"
-            SELECT
-                t.Id,
-                t.UserId,
-                t.TotalScore,
-                u.DisplayName AS Name,
-                u.Email AS LeaderEmail,
-                u.Username,
-                u.Status
-            FROM [dbo].[Teams] t WITH (NOLOCK)
-            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
-            WHERE u.Username = @Username;
-        ";
-    }
-
-    public static string GetByLeaderEmailQuery()
-    {
-        return @"
-            SELECT
-                t.Id,
-                t.UserId,
-                t.TotalScore,
-                u.DisplayName AS Name,
-                u.Email AS LeaderEmail,
-                u.Username,
-                u.Status
-            FROM [dbo].[Teams] t WITH (NOLOCK)
-            INNER JOIN [dbo].[Users] u WITH (NOLOCK) ON u.Id = t.UserId
-            WHERE u.Email = @LeaderEmail;
-        ";
-    }
-
     public static string AddTeamQuery()
     {
         return @"
@@ -51,6 +17,7 @@ public static class TeamQueries
                 t.Id,
                 t.UserId,
                 t.TotalScore,
+                t.CreatedAt,
                 COALESCE(NULLIF(u.DisplayName, ''), u.Username) AS Name,
                 u.Email AS LeaderEmail,
                 u.Username,
@@ -69,6 +36,7 @@ public static class TeamQueries
                 t.Id,
                 t.UserId,
                 t.TotalScore,
+                t.CreatedAt,
                 COALESCE(NULLIF(u.DisplayName, ''), u.Username) AS Name,
                 u.Email AS LeaderEmail,
                 u.Username,

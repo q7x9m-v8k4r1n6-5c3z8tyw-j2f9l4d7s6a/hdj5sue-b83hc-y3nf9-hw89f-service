@@ -44,14 +44,12 @@ public class CreateTeamCommandHandler :
             var username = request.Username?.Trim() ?? string.Empty;
             var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
 
-            if (await _teamRepository.GetByUsernameAsync(username, cancellationToken) is not null ||
-                await _userRepository.GetByUsernameAnyStatusAsync(username, cancellationToken) is not null)
+            if (await _userRepository.GetByUsernameAnyStatusAsync(username, cancellationToken) is not null)
             {
                 throw new InvalidOperationException("Team username da duoc dang ky.");
             }
 
-            if (await _teamRepository.GetByLeaderEmailAsync(leaderEmail, cancellationToken) is not null ||
-                await _userRepository.GetByEmailAnyStatusAsync(leaderEmail, cancellationToken) is not null)
+            if (await _userRepository.GetByEmailAnyStatusAsync(leaderEmail, cancellationToken) is not null)
             {
                 throw new InvalidOperationException("Leader email da duoc dang ky.");
             }
@@ -64,7 +62,7 @@ public class CreateTeamCommandHandler :
                 PasswordHash = PasswordHelper.Hash(generatedPassword),
                 Email = leaderEmail,
                 Role = UserConstant.Role.Team,
-                DisplayName = request.DisplayName?.Trim() ?? string.Empty,
+                DisplayName = displayName,
                 Status = UserConstant.Status.Active
             };
 
@@ -73,10 +71,7 @@ public class CreateTeamCommandHandler :
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 TotalScore = 0,
-                Name = displayName,
-                LeaderEmail = leaderEmail,
-                Username = username,
-                Status = TeamConstants.TeamStatus.Active
+                CreatedAt = VietnamTimeHelper.Now
             };
 
             var unitOfWork = _unitOfWork
@@ -95,9 +90,17 @@ public class CreateTeamCommandHandler :
                 throw;
             }
 
-            await TrySendTeamCreatedEmailAsync(team, generatedPassword, cancellationToken);
+            await TrySendTeamCreatedEmailAsync(displayName, username, leaderEmail, generatedPassword, cancellationToken);
 
-            return _mapper.Map<TeamResponse>(team);
+            return new TeamResponse
+            {
+                Id = team.Id,
+                UserId = user.Id,
+                Name = displayName,
+                LeaderEmail = leaderEmail,
+                Username = username,
+                Status = user.Status
+            };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -106,7 +109,12 @@ public class CreateTeamCommandHandler :
         }
     }
 
-    private async Task TrySendTeamCreatedEmailAsync(Team team, string password, CancellationToken cancellationToken)
+    private async Task TrySendTeamCreatedEmailAsync(
+        string displayName,
+        string username,
+        string leaderEmail,
+        string password,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -115,17 +123,16 @@ public class CreateTeamCommandHandler :
             var subject = "OVCMOVE team account created";
             var body = $@"
                 <p>Your OVCMOVE team account has been created.</p>
-                <p><strong>Team:</strong> {WebUtility.HtmlEncode(team.Name)}</p>
-                <p><strong>Username:</strong> {WebUtility.HtmlEncode(team.Username)}</p>
+                <p><strong>Team:</strong> {WebUtility.HtmlEncode(displayName)}</p>
+                <p><strong>Username:</strong> {WebUtility.HtmlEncode(username)}</p>
                 <p><strong>Password:</strong> {WebUtility.HtmlEncode(password)}</p>
                 <p>Account chi duoc dang nhap tren 1 may.</p>";
 
-            await _emailService.SendAsync(team.LeaderEmail, subject, body, cancellationToken);
+            await _emailService.SendAsync(leaderEmail, subject, body, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Team account was created but email could not be sent to {LeaderEmail}.", team.LeaderEmail);
+            _logger.LogWarning(ex, "Team account was created but email could not be sent to {LeaderEmail}.", leaderEmail);
         }
     }
-
 }

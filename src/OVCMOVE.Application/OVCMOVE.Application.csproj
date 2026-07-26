@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <Folder Include="Features\Organizers\Command\" />
+    <Folder Include="Features\Races\Command\UpdateRace\" />
     <Folder Include="Features\Teams\Command\" />
   </ItemGroup>
 

@@ -9,6 +9,7 @@ public static class RaceDto
     /// </summary>
     public class BoothInput
     {
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Place { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

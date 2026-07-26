@@ -3,13 +3,15 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Security;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
-using OVCMOVE.Application.Features.Races.Command.UpdateRace;
+using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
-using OVCMOVE.Application.Common;
 using OVCMOVE.Domain.Constants;
+using static OVCMOVE.Api.Contracts.RaceContract;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -21,12 +23,16 @@ public class RaceController : BaseController<RaceController>
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            query ??= new GetAllRacesQuery();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var query = _mapper.Map<GetAllRacesQuery>(request);
+
             var result = await _mediator.Send(query, cancellationToken);
+
             return Ok(new ApiResponseModel<PagedResult<RaceItemResultModel>>(
                 APIContansts.StatusCode.Success,
                 APIContansts.StatusMessage.Success,
@@ -39,11 +45,13 @@ public class RaceController : BaseController<RaceController>
         }
     }
 
-    [HttpGet("{raceId:guid}")]
-    public async Task<IActionResult> GetRaceDetail(Guid raceId, CancellationToken cancellationToken)
+    [HttpGet("{raceId}")]
+    public async Task<IActionResult> GetRaceDetail([FromQuery] Guid raceId, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var result = await _mediator.Send(new GetRaceDetailQuery { RaceId = raceId }, cancellationToken);
             if (result is null)
             {
@@ -65,10 +73,13 @@ public class RaceController : BaseController<RaceController>
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateRace([FromBody] RaceContract.UpsertRaceRequest request, CancellationToken cancellationToken)
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> CreateRace([FromBody] RaceContract.CreateNewRaceRequest request, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var command = _mapper.Map<CreateRaceCommand>(request);
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -84,37 +95,27 @@ public class RaceController : BaseController<RaceController>
         }
     }
 
-    [HttpPut("{raceId:guid}")]
-    public async Task<IActionResult> UpdateRace(Guid raceId, [FromBody] RaceContract.UpsertRaceRequest request, CancellationToken cancellationToken)
+    [HttpPatch("{raceId:guid}")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> PatchRace(Guid raceId, [FromBody] RaceContract.PatchRaceRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var command = _mapper.Map<UpdateRaceCommand>(request);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var command = _mapper.Map<PatchRaceCommand>(request);
             command.RaceId = raceId;
 
             var result = await _mediator.Send(command, cancellationToken);
-            if (result is null)
-            {
-                return Ok(new ApiResponseModel<object>(
-                    APIContansts.StatusCode.NotFound,
-                    APIContansts.StatusMessage.NotFound));
-            }
 
             return Ok(new ApiResponseModel<RaceDetailResultModel>(
                 APIContansts.StatusCode.Success,
                 APIContansts.StatusMessage.Success,
                 data: result));
         }
-        catch (InvalidOperationException ex)
-        {
-            return Ok(new ApiResponseModel<object>(
-                APIContansts.StatusCode.BadRequest,
-                APIContansts.StatusMessage.BadRequest,
-                detailError: ex.Message));
-        }
         catch (Exception ex)
         {
-            _logger.LogError("Error occurred while processing UpdateRace: {Message}", ex.Message);
+            _logger.LogError("Error occurred while processing PatchRace: {Message}", ex.Message);
             return Ok(new InternalServerErrorModel(ex.Message));
         }
     }

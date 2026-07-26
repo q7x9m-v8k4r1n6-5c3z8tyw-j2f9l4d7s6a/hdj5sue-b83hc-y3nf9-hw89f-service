@@ -60,6 +60,17 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
         return user;
     } 
 
+    public async Task<User?> GetByShortNameAsync(string shortName, CancellationToken cancellationToken = default)
+    {
+        var sql = UserQueryHelper.GetByShortNameQuery();
+        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+            sql,
+            new { ShortName = shortName },
+            cancellationToken: cancellationToken);
+
+        return user;
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _dapperHelper.ExecuteAsync(

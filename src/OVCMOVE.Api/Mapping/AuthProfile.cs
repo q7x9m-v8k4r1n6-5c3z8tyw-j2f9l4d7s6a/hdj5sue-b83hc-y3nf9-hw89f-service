@@ -1,6 +1,7 @@
 using AutoMapper;
 
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Application.DTOs.Security;
 using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
@@ -14,6 +15,9 @@ public class AuthProfile : Profile
 {
     public AuthProfile()
     {
+        CreateMap<RoleAccessModel, AuthContract.RoleAccessResponse>();
+        CreateMap<PermissionAccessModel, AuthContract.PermissionAccessResponse>();
+
         // --- REQUEST ---
         CreateMap<AuthContract.LoginRequest, LoginCommand>();
         CreateMap<AuthContract.LogoutRequest, LogoutCommand>();

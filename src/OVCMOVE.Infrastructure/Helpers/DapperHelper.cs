@@ -11,6 +11,8 @@ public class DapperHelper : IDapperHelper
     private readonly ISqlServerFactory _sqlServerFactory;
     private readonly IUnitOfWork _unitOfWork;
 
+    private readonly record struct ConnectionScope(IDbConnection Connection, IDbTransaction? Transaction, bool DisposeConnection);
+
     public DapperHelper(ISqlServerFactory sqlServerFactory, IUnitOfWork unitOfWork)
     {
         _sqlServerFactory = sqlServerFactory;
@@ -25,9 +27,17 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QueryAsync<T>(command);
+        var scope = await OpenConnectionAsync(transaction);
+
+        try
+        {
+            var command = new CommandDefinition(sql, param, scope.Transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+            return await scope.Connection.QueryAsync<T>(command);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
     }
 
     public async Task<T?> QueryFirstOrDefaultAsync<T>(
@@ -38,9 +48,17 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QueryFirstOrDefaultAsync<T>(command);
+        var scope = await OpenConnectionAsync(transaction);
+
+        try
+        {
+            var command = new CommandDefinition(sql, param, scope.Transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+            return await scope.Connection.QueryFirstOrDefaultAsync<T>(command);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
     }
 
     public async Task<T> QuerySingleAsync<T>(
@@ -51,9 +69,17 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.QuerySingleAsync<T>(command);
+        var scope = await OpenConnectionAsync(transaction);
+
+        try
+        {
+            var command = new CommandDefinition(sql, param, scope.Transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+            return await scope.Connection.QuerySingleAsync<T>(command);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
     }
 
     public async Task<int> ExecuteAsync(
@@ -64,9 +90,17 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.ExecuteAsync(command);
+        var scope = await OpenConnectionAsync(transaction);
+
+        try
+        {
+            var command = new CommandDefinition(sql, param, scope.Transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+            return await scope.Connection.ExecuteAsync(command);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
     }
 
     public async Task<T?> ExecuteScalarAsync<T>(
@@ -77,27 +111,58 @@ public class DapperHelper : IDapperHelper
         CommandType? commandType = null,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await OpenConnectionAsync();
-        var command = new CommandDefinition(sql, param, transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
-        return await connection.ExecuteScalarAsync<T>(command);
+        var scope = await OpenConnectionAsync(transaction);
+
+        try
+        {
+            var command = new CommandDefinition(sql, param, scope.Transaction, commandTimeout, commandType, cancellationToken: cancellationToken);
+            return await scope.Connection.ExecuteScalarAsync<T>(command);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
     }
 
-    private async Task<IDbConnection> OpenConnectionAsync()
+    private async Task<ConnectionScope> OpenConnectionAsync(IDbTransaction? transaction)
     {
-        var connection = _sqlServerFactory.CreateConnection();
+        var effectiveTransaction = transaction ?? _unitOfWork.Transaction;
+        var transactionConnection = effectiveTransaction?.Connection;
 
+        if (transactionConnection is not null)
+        {
+            await EnsureConnectionOpenAsync(transactionConnection);
+            return new ConnectionScope(transactionConnection, effectiveTransaction, false);
+        }
+
+        var connection = _sqlServerFactory.CreateConnection();
+        await EnsureConnectionOpenAsync(connection);
+        return new ConnectionScope(connection, null, true);
+    }
+
+    private static async Task EnsureConnectionOpenAsync(IDbConnection connection)
+    {
         if (connection.State == ConnectionState.Open)
         {
-            return connection;
+            return;
         }
 
         if (connection is DbConnection dbConnection)
         {
             await dbConnection.OpenAsync();
-            return dbConnection;
+            return;
         }
 
         connection.Open();
-        return connection;
+    }
+
+    private static void DisposeConnection(ConnectionScope scope)
+    {
+        if (!scope.DisposeConnection)
+        {
+            return;
+        }
+
+        scope.Connection.Dispose();
     }
 }

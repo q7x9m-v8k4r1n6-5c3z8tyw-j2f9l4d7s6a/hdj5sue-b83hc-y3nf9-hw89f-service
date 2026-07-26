@@ -14,17 +14,20 @@ namespace OVCMOVE.Application.Features.Auth.Command.Refresh;
 public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommandHandler>, IRequestHandler<RefreshTokenCommand, LoginResultModel>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUserAccessRepository _userAccessRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
     public RefreshTokenCommandHandler(
         IUserRepository userRepository,
+        IUserAccessRepository userAccessRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         IMapper mapper,
         ILogger<RefreshTokenCommandHandler> logger) : base(logger, mapper)
     {
         _userRepository = userRepository;
+        _userAccessRepository = userAccessRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
     }
@@ -51,8 +54,14 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
 
             var user = await _userRepository.GetByIdAsync(oldTokenEntity.UserId, cancellationToken)
                 ?? throw new UnauthorizedAccessException("Người dùng không còn tồn tại.");
-            
-            var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+
+            var accessProfile = await _userAccessRepository.GetAccessProfileAsync(user.Id, cancellationToken);
+            if (accessProfile.Roles.Count == 0)
+            {
+                throw new UnauthorizedAccessException("Tài khoản chưa được gán role truy cập.");
+            }
+
+            var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user, accessProfile);
             var newRefreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
             var now = DateTime.UtcNow;
 
@@ -85,7 +94,10 @@ public class RefreshTokenCommandHandler : BaseCommandHandler<RefreshTokenCommand
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshTokenString,
                 AccessTokenExpiration = expirationDate,
-                UserId = user.Id
+                UserId = user.Id,
+                Roles = accessProfile.Roles,
+                Permissions = accessProfile.Permissions,
+                Access = accessProfile.Access
             };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)

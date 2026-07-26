@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
@@ -18,6 +19,7 @@ public class TeamController : BaseController<TeamController>
 
     // Task View Teams
     [HttpGet]
+    [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> GetAllTeams([FromQuery] GetAllTeamsQuery query, CancellationToken cancellationToken)
     {
         try
@@ -44,6 +46,7 @@ public class TeamController : BaseController<TeamController>
     }
     // Thanh tìm kiếm Teams
     [HttpGet("search")]
+    [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> SearchTeams([FromQuery] string query, CancellationToken cancellationToken)
     {
         try

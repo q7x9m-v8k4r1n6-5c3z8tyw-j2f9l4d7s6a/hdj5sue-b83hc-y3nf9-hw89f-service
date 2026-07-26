@@ -44,6 +44,11 @@ public static class DependencyInjection
         services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IOrganizerRepository, OrganizerRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
+        services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+        services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+        services.AddScoped<IUserAccessRepository, UserAccessRepository>();
         #endregion
 
         #region ==================== Services ====================

@@ -37,13 +37,21 @@ public static class UserQueryHelper
               AND Status = @Status";
     }
 
+    public static string GetByShortNameQuery()
+    {
+        return @"
+            SELECT *
+            FROM [dbo].[Users] WITH (NOLOCK)
+            WHERE ShortName = @ShortName";
+    }
+
     public static string AddUserQuery()
     {
         return @"
             INSERT INTO [dbo].[Users]
-                (Id, Username, PasswordHash, Email, Role, DisplayName, Status, CreatedBy, CreatedAt, ModifiedBy, ModifiedAt, IsDeleted)
+                (Id, Username, PasswordHash, Email, Role, DisplayName, ShortName, Status, CreatedBy, CreatedAt, ModifiedBy, ModifiedAt, IsDeleted)
             VALUES
-                (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
+                (@Id, @Username, @PasswordHash, @Email, @Role, @DisplayName, @ShortName, @Status, @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted)";
     }
 
     public static string UpdateDisplayNameQuery()

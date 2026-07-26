@@ -72,7 +72,12 @@ public static class RaceQueries
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetRaceBoothsQuery() => @"
-        SELECT [Name], [Place], [Description], [BoothOrganizerID] AS [OrganizerID]
+        SELECT [Id], [Name], [Place], [Description], [BoothOrganizerID] AS [OrganizerID]
+        FROM [dbo].[Booth] WITH (NOLOCK)
+        WHERE [RaceID] = @RaceId;";
+
+    public static string GetBoothsByRaceIdQuery() => @"
+        SELECT [Id], [Name], [Place], [Description], [BoothOrganizerID], [RaceID]
         FROM [dbo].[Booth] WITH (NOLOCK)
         WHERE [RaceID] = @RaceId;";
 
@@ -98,12 +103,33 @@ public static class RaceQueries
         INSERT INTO [dbo].[Booth] ([Id], [Name], [Place], [BoothOrganizerID], [RaceID], [Description])
         VALUES (@Id, @Name, @Place, @BoothOrganizerID, @RaceID, @Description);";
 
+    public static string UpdateBoothQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Name] = @Name,
+            [Place] = @Place,
+            [Description] = @Description,
+            [BoothOrganizerID] = @BoothOrganizerID
+        WHERE [Id] = @Id AND [RaceID] = @RaceID;";
+
+    public static string DeleteBoothByIdQuery() => @"
+        DELETE FROM [dbo].[Booth]
+        WHERE [Id] = @BoothId;";
+
     public static string DeleteBoothsByRaceIdQuery() => @"
         DELETE FROM [dbo].[Booth] WHERE [RaceID] = @RaceId;";
 
     public static string DeleteRaceTeamsByRaceIdQuery() => @"
         DELETE FROM [dbo].[RaceTeam] WHERE [RaceID] = @RaceId;";
 
+    public static string DeleteRaceTeamQuery() => @"
+        DELETE FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId AND [TeamID] = @TeamId;";
+
     public static string DeleteRaceOrganizersByRaceIdQuery() => @"
         DELETE FROM [dbo].[RaceOrganizer] WHERE [RaceID] = @RaceId;";
+
+    public static string DeleteRaceOrganizerQuery() => @"
+        DELETE FROM [dbo].[RaceOrganizer]
+        WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
 }

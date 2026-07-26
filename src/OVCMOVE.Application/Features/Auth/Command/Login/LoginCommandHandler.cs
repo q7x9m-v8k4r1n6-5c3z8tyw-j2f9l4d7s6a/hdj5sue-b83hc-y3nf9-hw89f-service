@@ -13,17 +13,20 @@ namespace OVCMOVE.Application.Features.Auth.Command.Login;
 public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IRequestHandler<LoginCommand, LoginResultModel>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUserAccessRepository _userAccessRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
     public LoginCommandHandler(
-        IUserRepository userRepository, 
-        IRefreshTokenRepository refreshTokenRepository, 
+        IUserRepository userRepository,
+        IUserAccessRepository userAccessRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         IMapper mapper,
         ILogger<LoginCommandHandler> logger) : base(logger, mapper) 
     {
         _userRepository = userRepository;
+        _userAccessRepository = userAccessRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
     }
@@ -37,8 +40,14 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
             // * HÀM so sánh pass này LÀ TẠM THỜI VÀ CHƯA CÓ CƠ CHẾ HASH ĐỂ DỄ TESTING
             if (user == null || user.PasswordHash != request.Password)
                 throw new UnauthorizedAccessException("Tên đăng nhập hoặc mật khẩu không đúng.");
-                
-            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+
+            var accessProfile = await _userAccessRepository.GetAccessProfileAsync(user.Id, cancellationToken);
+            if (accessProfile.Roles.Count == 0)
+            {
+                throw new UnauthorizedAccessException("Tài khoản chưa được gán role truy cập.");
+            }
+
+            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, accessProfile);
             var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
             var now = DateTime.UtcNow;
             var sessionId = Guid.NewGuid();
@@ -64,7 +73,10 @@ public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IReq
                 AccessToken = accessToken,
                 AccessTokenExpiration = expirationDate,
                 RefreshToken = refreshTokenString,
-                UserId = user.Id
+                UserId = user.Id,
+                Roles = accessProfile.Roles,
+                Permissions = accessProfile.Permissions,
+                Access = accessProfile.Access
             };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)

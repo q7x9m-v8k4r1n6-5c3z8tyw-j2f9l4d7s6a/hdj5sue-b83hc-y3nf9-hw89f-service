@@ -8,20 +8,21 @@ using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
-using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
 
 public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHandler>, IRequestHandler<GoogleLoginCommand, LoginResultModel>
 {
     private readonly IGoogleAuthService _googleAuthService; 
-    private readonly IUserRepository _userRepository;       
-    private readonly IRefreshTokenRepository _refreshTokenRepository; 
-    private readonly IJwtTokenGenerator _jwtTokenGenerator; 
+    private readonly IUserRepository _userRepository;
+    private readonly IUserAccessRepository _userAccessRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
     public GoogleLoginCommandHandler(
         IGoogleAuthService googleAuthService,
         IUserRepository userRepository,
+        IUserAccessRepository userAccessRepository,
         IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         IMapper mapper,
@@ -29,6 +30,7 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
     {
         _googleAuthService = googleAuthService;
         _userRepository = userRepository;
+        _userAccessRepository = userAccessRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
     }
@@ -44,9 +46,10 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
 
             var user = await _userRepository.GetByEmailAsync(googleUser.Email, cancellationToken);
 
-            if (user == null ||
-                (user.Role != UserConstant.Role.Organizer && user.Role != UserConstant.Role.Admin))
-            throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer.");
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("Email này chưa được cấp quyền truy cập.");
+            }
 
             if (string.IsNullOrWhiteSpace(user.DisplayName) &&
                 !string.IsNullOrWhiteSpace(googleUser.DisplayName))
@@ -56,7 +59,13 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
                 user.DisplayName = displayName;
             }
 
-            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+            var accessProfile = await _userAccessRepository.GetAccessProfileAsync(user.Id, cancellationToken);
+            if (accessProfile.Roles.Count == 0)
+            {
+                throw new UnauthorizedAccessException("Email này chưa được gán role truy cập.");
+            }
+
+            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, accessProfile);
             var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
             var now = DateTime.UtcNow;
             var sessionId = Guid.NewGuid();
@@ -82,7 +91,10 @@ public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHa
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 AccessTokenExpiration = expirationDate,
-                UserId = user.Id
+                UserId = user.Id,
+                Roles = accessProfile.Roles,
+                Permissions = accessProfile.Permissions,
+                Access = accessProfile.Access
             };
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)

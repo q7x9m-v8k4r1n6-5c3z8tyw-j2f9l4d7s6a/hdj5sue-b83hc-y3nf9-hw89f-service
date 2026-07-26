@@ -1,4 +1,5 @@
 using System;
+using OVCMOVE.Application.DTOs.Security;
 
 namespace OVCMOVE.Application.DTOs.ResultModels;
 
@@ -8,4 +9,7 @@ public class LoginResultModel
     public string RefreshToken { get; init; } = string.Empty;
     public DateTime AccessTokenExpiration { get; init; }
     public Guid UserId { get; init; }
+    public IReadOnlyCollection<RoleAccessModel> Roles { get; init; } = Array.Empty<RoleAccessModel>();
+    public IReadOnlyCollection<PermissionAccessModel> Permissions { get; init; } = Array.Empty<PermissionAccessModel>();
+    public IReadOnlyCollection<string> Access { get; init; } = Array.Empty<string>();
 }

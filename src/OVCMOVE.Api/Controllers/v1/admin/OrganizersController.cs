@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Controllers.v1;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.DTOs.Organizer;
 using OVCMOVE.Application.Features.Organizer.Command.ChangeOrganizerStatus;
 using OVCMOVE.Application.Organizers.Commands;
@@ -19,6 +21,7 @@ public class OrganizersController : BaseController<OrganizersController>
     }
 
     [HttpPost]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
     public async Task<IActionResult> CreateOrganizer([FromBody] CreateOrganizerRequest request, CancellationToken cancellationToken)
     {
         try
@@ -47,6 +50,7 @@ public class OrganizersController : BaseController<OrganizersController>
     }
 
     [HttpPatch("{organizerId:guid}/deactivate")]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
     public async Task<IActionResult> DeactivateOrganizerAccount(
         Guid organizerId,
         CancellationToken cancellationToken)
@@ -59,6 +63,7 @@ public class OrganizersController : BaseController<OrganizersController>
     }
 
     [HttpPatch("{organizerId:guid}/activate")]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
     public async Task<IActionResult> ActivateOrganizerAccount(
         Guid organizerId,
         CancellationToken cancellationToken)

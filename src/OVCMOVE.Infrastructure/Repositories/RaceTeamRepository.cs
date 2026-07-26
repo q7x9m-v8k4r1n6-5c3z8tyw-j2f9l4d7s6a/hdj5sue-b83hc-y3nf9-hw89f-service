@@ -23,6 +23,21 @@ public class RaceTeamRepository : BaseRepository<RaceTeamRepository>, IRaceTeamR
         return affectedRows >= 1 ? raceTeam.Id : null;
     }
 
+    public async Task<IReadOnlyCollection<Guid>> GetTeamIdsByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var teamIds = await _dapperHelper.QueryAsync<Guid>(RaceQueries.GetRaceTeamsQuery(), new { RaceId = raceId });
+        return teamIds.ToArray();
+    }
+
+    public Task DeleteAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return _dapperHelper.ExecuteAsync(RaceQueries.DeleteRaceTeamQuery(), new { RaceId = raceId, TeamId = teamId });
+    }
+
     public Task DeleteByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

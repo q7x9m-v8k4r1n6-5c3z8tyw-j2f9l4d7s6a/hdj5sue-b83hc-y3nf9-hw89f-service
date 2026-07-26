@@ -8,6 +8,7 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<User?> GetByEmailAnyStatusAsync(string email, CancellationToken cancellationToken = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<User?> GetByShortNameAsync(string shortName, CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     Task UpdateDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default);
 }

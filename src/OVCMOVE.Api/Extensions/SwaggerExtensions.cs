@@ -34,6 +34,24 @@ public static class SwaggerExtensions
 
                 return false;
             });
+
+            var bearerScheme = new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Description = "Enter a valid bearer access token.",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT"
+            };
+
+            var bearerSchemeReference = new OpenApiSecuritySchemeReference("Bearer", null, null);
+
+            options.AddSecurityDefinition("Bearer", bearerScheme);
+            options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+            {
+                [bearerSchemeReference] = []
+            });
         });
 
         return services;

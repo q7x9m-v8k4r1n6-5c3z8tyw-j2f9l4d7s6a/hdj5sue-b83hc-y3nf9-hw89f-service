@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 using OVCMOVE.Domain.Constants;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
@@ -36,7 +37,7 @@ public class AuthController : BaseController<AuthController>
 
 
     [HttpGet("me")]
-    [Authorize]
+    [RequirePermission(PermissionCodes.AuthProfileRead)]
     public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
     {
         var userIdString = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
@@ -61,6 +62,7 @@ public class AuthController : BaseController<AuthController>
 
     // POST host:port/api/v1/Auth/login
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] AuthContract.LoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -82,6 +84,7 @@ public class AuthController : BaseController<AuthController>
 
     //POST host:port/api/v1/Auth/logout
     [HttpPost("logout")]
+    [AllowAnonymous]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -118,6 +121,7 @@ public class AuthController : BaseController<AuthController>
 
     //POST host:port/api/v1/Auth/refresh-token
     [HttpPost("refresh-token")]
+    [AllowAnonymous]
     public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -144,6 +148,7 @@ public class AuthController : BaseController<AuthController>
 
     // POST host:port/api/v1/Auth/google-login
     [HttpPost("google-login")]
+    [AllowAnonymous]
     public async Task<IActionResult> GoogleLogin([FromBody] AuthContract.GoogleLoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

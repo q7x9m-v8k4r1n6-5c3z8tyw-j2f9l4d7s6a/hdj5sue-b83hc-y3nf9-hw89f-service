@@ -1,7 +1,6 @@
 using AutoMapper;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
-using OVCMOVE.Application.Features.Races.Command.UpdateRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
@@ -13,18 +12,6 @@ public class RaceMappingProfile : Profile
     public RaceMappingProfile()
     {
         CreateMap<CreateRaceCommand, Race>()
-            .ForMember(dest => dest.RaceName, opt => opt.MapFrom(src => src.RaceName.Trim()))
-            .ForMember(dest => dest.Place, opt => opt.MapFrom(src => src.Place.Trim()))
-            .ForMember(dest => dest.CoverUrl, opt => opt.MapFrom(src => string.IsNullOrWhiteSpace(src.CoverUrl) ? null : src.CoverUrl.Trim()))
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => NormalizeRaceStatus(src.Status)))
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.ModifiedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.ModifiedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.IsDeleted, opt => opt.Ignore());
-
-        CreateMap<UpdateRaceCommand, Race>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.RaceId))
             .ForMember(dest => dest.RaceName, opt => opt.MapFrom(src => src.RaceName.Trim()))
             .ForMember(dest => dest.Place, opt => opt.MapFrom(src => src.Place.Trim()))
             .ForMember(dest => dest.CoverUrl, opt => opt.MapFrom(src => string.IsNullOrWhiteSpace(src.CoverUrl) ? null : src.CoverUrl.Trim()))

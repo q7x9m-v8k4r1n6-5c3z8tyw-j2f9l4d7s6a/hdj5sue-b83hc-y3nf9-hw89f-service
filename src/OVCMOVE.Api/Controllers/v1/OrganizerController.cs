@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
@@ -18,6 +19,7 @@ public class OrganizerController : BaseController<OrganizerController>
     }
 
     [HttpGet]
+    [RequirePermission(PermissionCodes.OrganizerRead)]
     public async Task<IActionResult> GetAllOrganizers(
         [FromQuery] GetAllOrganizersQuery query,
         CancellationToken cancellationToken)
@@ -44,6 +46,7 @@ public class OrganizerController : BaseController<OrganizerController>
     }
 
     [HttpGet("search")]
+    [RequirePermission(PermissionCodes.OrganizerRead)]
     public async Task<IActionResult> SearchOrganizers(
         [FromQuery] string query,
         CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Behaviors;
 
 namespace OVCMOVE.Application;
 
@@ -9,6 +10,7 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(AssemblyReference.Assembly);
+            configuration.AddOpenBehavior(typeof(AuditFieldsBehavior<,>));
         });
 
         services.AddAutoMapper(AssemblyReference.Assembly);

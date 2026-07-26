@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Features.Images.Command;
 using OVCMOVE.Application.Features.Images.Command.UploadImage;
 using OVCMOVE.Domain.Constants;
@@ -22,6 +23,7 @@ public class ImageController : BaseController<ImageController>
     }
 
     [HttpPost("upload")]
+    [RequirePermission(PermissionCodes.ImageUpload)]
     public async Task<IActionResult> UploadImage(IFormFile file, CancellationToken cancellationToken)
     {
         try

@@ -16,12 +16,16 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
 {
     private readonly IOrganizerRepository _organizerRepo;
     private readonly IUserRepository _userRepo;
+    private readonly IRoleRepository _roleRepository;
+    private readonly IUserRoleRepository _userRoleRepository;
     private readonly IEmailService _emailService;
 
     public CreateOrganizerHandler(
         ILogger<CreateOrganizerHandler> logger,
         IOrganizerRepository organizerRepo,
         IUserRepository userRepo,
+        IRoleRepository roleRepository,
+        IUserRoleRepository userRoleRepository,
         IEmailService emailService,
         IMapper mapper,
         IUnitOfWork unitOfWork)
@@ -29,6 +33,8 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
     {
         _organizerRepo = organizerRepo;
         _userRepo = userRepo;
+        _roleRepository = roleRepository;
+        _userRoleRepository = userRoleRepository;
         _emailService = emailService;
     }
 
@@ -45,6 +51,7 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
             }
 
             var role = NormalizeRole(request.Role);
+            var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
 
             var existing = await _organizerRepo.GetByEmailAsync(email, cancellationToken);
             if (existing != null)
@@ -63,15 +70,14 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                     Username = null,
                     Email = email,
                     DisplayName = null,
+                    ShortName = await ShortNameHelper.GenerateUniqueAsync(email, _userRepo, cancellationToken),
                     Role = role,
                     Status = UserConstant.Status.Active,
+                    CreatedBy = actor,
                     CreatedAt = now,
+                    ModifiedBy = actor,
                     ModifiedAt = now
                 };
-            }
-            else if (!string.Equals(user.Role, role, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Email da ton tai voi role khac.");
             }
 
             var organizer = new Organizer
@@ -80,10 +86,13 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 UserId = user.Id,
                 DisplayName = user.DisplayName ?? string.Empty,
                 Email = user.Email,
-                Role = user.Role,
+                Role = role,
                 Status = OrganizerConstants.OrganizerStatus.Active,
                 CreatedAt = DateTime.UtcNow
             };
+
+            var roleEntity = await _roleRepository.GetByCodeAsync(role, cancellationToken)
+                ?? throw new InvalidOperationException($"Role '{role}' does not exist in RBAC catalog.");
 
             var unitOfWork = _unitOfWork
                 ?? throw new InvalidOperationException("Unit of work is not configured.");
@@ -97,6 +106,24 @@ public class CreateOrganizerHandler : BaseCommandHandler<CreateOrganizerHandler>
                 }
 
                 await _organizerRepo.AddAsync(organizer, cancellationToken);
+
+                var currentRoleIds = await _userRoleRepository.GetRoleIdsByUserIdAsync(user.Id, cancellationToken);
+                if (!currentRoleIds.Contains(roleEntity.Id))
+                {
+                    var now = DateTime.UtcNow;
+                    await _userRoleRepository.CreateAsync(new UserRole
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        RoleId = roleEntity.Id,
+                        CreatedAt = now,
+                        CreatedBy = actor,
+                        ModifiedAt = now,
+                        ModifiedBy = actor,
+                        IsDeleted = false
+                    }, cancellationToken);
+                }
+
                 unitOfWork.Commit();
             }
             catch

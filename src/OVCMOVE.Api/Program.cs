@@ -2,8 +2,10 @@ using DotNetEnv;
 
 using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Middleware;
+using OVCMOVE.Api.Services;
 using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Services;
@@ -35,8 +37,11 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentActorProvider, HttpContextCurrentActorProvider>();
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddRbacAuthorization();
 builder.Services.AddCustomCors(builder.Configuration);
     
 var app = builder.Build();

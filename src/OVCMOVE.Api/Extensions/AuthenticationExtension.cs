@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Security.Claims;
 using OVCMOVE.Infrastructure.Options;
 
 namespace OVCMOVE.Api.Extensions;
@@ -77,6 +78,8 @@ public static class AuthenticationExtension
                     RequireSignedTokens = true,
                     ValidIssuer = jwtOptions.Issuer,
                     ValidAudience = jwtOptions.Audience,
+                    NameClaimType = ClaimTypes.NameIdentifier,
+                    RoleClaimType = ClaimTypes.Role,
                     ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                     ClockSkew = TimeSpan.FromMinutes(1),
                     IssuerSigningKeyResolver = (_, _, keyId, _) =>

@@ -8,12 +8,15 @@ namespace OVCMOVE.Application.Features.Auth.Queries.GetMe;
 public class GetMeQueryHandler : BaseQueryHandler<GetMeQueryHandler>, IRequestHandler<GetMeQuery, GetMeResult>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUserAccessRepository _userAccessRepository;
 
     public GetMeQueryHandler(
-        IUserRepository userRepository, 
+        IUserRepository userRepository,
+        IUserAccessRepository userAccessRepository,
         ILogger<GetMeQueryHandler> logger) : base(logger)
     {
         _userRepository = userRepository;
+        _userAccessRepository = userAccessRepository;
     }
 
     public async Task<GetMeResult> Handle(GetMeQuery request, CancellationToken cancellationToken)
@@ -23,10 +26,14 @@ public class GetMeQueryHandler : BaseQueryHandler<GetMeQueryHandler>, IRequestHa
         if (user == null)
             throw new UnauthorizedAccessException("Tài khoản không tồn tại");
 
+        var accessProfile = await _userAccessRepository.GetAccessProfileAsync(user.Id, cancellationToken);
+
         return new GetMeResult(
             user.Id,
             user.Email,
-            user.Role,
+            accessProfile.Roles,
+            accessProfile.Permissions,
+            accessProfile.Access,
             user.DisplayName,
             user.Status
         );

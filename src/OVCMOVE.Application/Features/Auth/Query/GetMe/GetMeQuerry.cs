@@ -1,11 +1,14 @@
 using MediatR;
+using OVCMOVE.Application.DTOs.Security;
 
 namespace OVCMOVE.Application.Features.Auth.Queries.GetMe;
 
 public record GetMeResult(
     Guid Id,
     string Email,
-    string Role,
+    IReadOnlyCollection<RoleAccessModel> Roles,
+    IReadOnlyCollection<PermissionAccessModel> Permissions,
+    IReadOnlyCollection<string> Access,
     string? DisplayName,
     string Status);
 

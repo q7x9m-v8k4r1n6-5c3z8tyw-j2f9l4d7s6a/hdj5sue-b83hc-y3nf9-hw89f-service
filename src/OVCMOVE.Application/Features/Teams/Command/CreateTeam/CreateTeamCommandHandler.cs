@@ -40,16 +40,16 @@ public class CreateTeamCommandHandler :
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var displayName = request.DisplayName?.Trim() ?? string.Empty;
-            var username = request.Username?.Trim() ?? string.Empty;
-            var leaderEmail = request.LeaderEmail?.Trim() ?? string.Empty;
-
-            if (await _userRepository.GetByUsernameAnyStatusAsync(username, cancellationToken) is not null)
+            if (await _userRepository.GetByUsernameAnyStatusAsync(
+                    request.Username?.Trim() ?? string.Empty,
+                    cancellationToken) is not null)
             {
                 throw new InvalidOperationException("Team username da duoc dang ky.");
             }
 
-            if (await _userRepository.GetByEmailAnyStatusAsync(leaderEmail, cancellationToken) is not null)
+            if (await _userRepository.GetByEmailAnyStatusAsync(
+                    request.LeaderEmail?.Trim() ?? string.Empty,
+                    cancellationToken) is not null)
             {
                 throw new InvalidOperationException("Leader email da duoc dang ky.");
             }
@@ -58,11 +58,11 @@ public class CreateTeamCommandHandler :
             var user = new User
             {
                 Id = Guid.NewGuid(),
-                Username = username,
+                Username = request.Username?.Trim() ?? string.Empty,
                 PasswordHash = PasswordHelper.Hash(generatedPassword),
-                Email = leaderEmail,
+                Email = request.LeaderEmail?.Trim() ?? string.Empty,
                 Role = UserConstant.Role.Team,
-                DisplayName = displayName,
+                DisplayName = request.DisplayName?.Trim() ?? string.Empty,
                 Status = UserConstant.Status.Active
             };
 
@@ -90,15 +90,20 @@ public class CreateTeamCommandHandler :
                 throw;
             }
 
-            await TrySendTeamCreatedEmailAsync(displayName, username, leaderEmail, generatedPassword, cancellationToken);
+            await TrySendTeamCreatedEmailAsync(
+                request.DisplayName?.Trim() ?? string.Empty,
+                request.Username?.Trim() ?? string.Empty,
+                request.LeaderEmail?.Trim() ?? string.Empty,
+                generatedPassword,
+                cancellationToken);
 
             return new TeamResponse
             {
                 Id = team.Id,
                 UserId = user.Id,
-                Name = displayName,
-                LeaderEmail = leaderEmail,
-                Username = username,
+                Name = request.DisplayName?.Trim() ?? string.Empty,
+                LeaderEmail = request.LeaderEmail?.Trim() ?? string.Empty,
+                Username = request.Username?.Trim() ?? string.Empty,
                 Status = user.Status
             };
         }

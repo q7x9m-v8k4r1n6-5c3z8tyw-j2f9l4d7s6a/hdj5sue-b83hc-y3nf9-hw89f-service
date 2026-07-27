@@ -7,16 +7,21 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 {
     public const string PermissionClaimType = "permission";
 
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        PermissionRequirement requirement)
     {
-        if (!context.User.Identity?.IsAuthenticated ?? true)
+        if (context.User.Identity?.IsAuthenticated != true)
         {
             return Task.CompletedTask;
         }
 
         var hasPermission = context.User.Claims.Any(claim =>
-            claim.Type == PermissionClaimType
-            && string.Equals(claim.Value, requirement.PermissionCode, StringComparison.OrdinalIgnoreCase));
+            claim.Type == PermissionClaimType &&
+            string.Equals(
+                claim.Value,
+                requirement.PermissionCode,
+                StringComparison.OrdinalIgnoreCase));
 
         if (hasPermission)
         {

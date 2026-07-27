@@ -1,24 +1,18 @@
-using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
-using OVCMOVE.Api.Controllers.v1;
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
-using OVCMOVE.Application.DTOs.Security;
-using OVCMOVE.Application.Features.Rbac.Roles.Command.CreateRole;
 using OVCMOVE.Application.Features.Rbac.Roles.Command.DeleteRole;
-using OVCMOVE.Application.Features.Rbac.Roles.Command.UpdateRole;
 using OVCMOVE.Application.Features.Rbac.Roles.Query.GetAllRoles;
-using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1.Admin;
 
 [Route("api/v1/admin/rbac/roles")]
-public class RbacRolesController : BaseController<RbacRolesController>
+public class RbacRolesController : BaseController
 {
-    public RbacRolesController(ILogger<RbacRolesController> logger, IMediator mediator, IMapper mapper)
-        : base(logger, mediator, mapper)
+    public RbacRolesController(IMediator mediator) : base(mediator)
     {
     }
 
@@ -26,76 +20,58 @@ public class RbacRolesController : BaseController<RbacRolesController>
     [RequirePermission(PermissionCodes.RbacRoleManage)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        try
-        {
-            var result = await _mediator.Send(new GetAllRolesQuery(), cancellationToken);
-            return Ok(new ApiResponseModel<IReadOnlyCollection<RoleSummaryModel>>(APIContansts.StatusCode.Success, APIContansts.StatusMessage.Success, data: result));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while processing GetAll RBAC roles.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        var result = await _mediator.Send(
+            new GetAllRolesQuery(),
+            cancellationToken);
+        return Ok(ApiResponse.Success(
+            result.Select(item => item.ToResponse()).ToArray()));
     }
 
     [HttpPost]
     [RequirePermission(PermissionCodes.RbacRoleManage)]
-    public async Task<IActionResult> Create([FromBody] RbacContract.UpsertRoleRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(
+        [FromBody] RbacContract.UpsertRoleRequest request,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = _mapper.Map<CreateRoleCommand>(request);
-            var result = await _mediator.Send(command, cancellationToken);
-            return Ok(new ApiResponseModel<RoleSummaryModel>(APIContansts.StatusCode.Success, APIContansts.StatusMessage.Success, data: result));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while processing Create RBAC role.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        var result = await _mediator.Send(
+            request.ToCreateCommand(),
+            cancellationToken);
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     [HttpPut("{roleId:guid}")]
     [RequirePermission(PermissionCodes.RbacRoleManage)]
-    public async Task<IActionResult> Update(Guid roleId, [FromBody] RbacContract.UpsertRoleRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(
+        Guid roleId,
+        [FromBody] RbacContract.UpsertRoleRequest request,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = _mapper.Map<UpdateRoleCommand>(request);
-            command.RoleId = roleId;
-            var result = await _mediator.Send(command, cancellationToken);
-            if (result is null)
-            {
-                return Ok(new ApiResponseModel<object>(APIContansts.StatusCode.NotFound, APIContansts.StatusMessage.NotFound));
-            }
-
-            return Ok(new ApiResponseModel<RoleSummaryModel>(APIContansts.StatusCode.Success, APIContansts.StatusMessage.Success, data: result));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while processing Update RBAC role.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        var result = await _mediator.Send(
+            request.ToUpdateCommand(roleId),
+            cancellationToken);
+        return result is null
+            ? NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound))
+            : Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     [HttpDelete("{roleId:guid}")]
     [RequirePermission(PermissionCodes.RbacRoleManage)]
-    public async Task<IActionResult> Delete(Guid roleId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(
+        Guid roleId,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var result = await _mediator.Send(new DeleteRoleCommand { RoleId = roleId }, cancellationToken);
-            if (!result)
+        var deleted = await _mediator.Send(
+            new DeleteRoleCommand
             {
-                return Ok(new ApiResponseModel<object>(APIContansts.StatusCode.NotFound, APIContansts.StatusMessage.NotFound));
-            }
-
-            return Ok(new ApiResponseModel<bool>(APIContansts.StatusCode.Success, APIContansts.StatusMessage.Success, data: true));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while processing Delete RBAC role.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+                RoleId = roleId
+            },
+            cancellationToken);
+        return deleted
+            ? Ok(ApiResponse.Success(true))
+            : NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
     }
 }

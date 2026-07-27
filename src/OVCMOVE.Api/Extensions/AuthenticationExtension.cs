@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
-using OVCMOVE.Infrastructure.Options;
+using System.Text.Json;
+using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Options;
 
 namespace OVCMOVE.Api.Extensions;
 
@@ -17,7 +19,9 @@ public static class AuthenticationExtension
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
 
-        var jwtOptions = configuration.GetSection(JwtConfigOptions.SectionName).Get<JwtConfigOptions>()
+        var jwtOptions = configuration
+            .GetSection(JwtAuthenticationOptions.SectionName)
+            .Get<JwtAuthenticationOptions>()
             ?? throw new InvalidOperationException("JwtConfig is not configured.");
         var secretKey = jwtOptions.SecretKey;
 
@@ -67,13 +71,29 @@ public static class AuthenticationExtension
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        context.HandleResponse();
+                        return WriteAuthenticationErrorAsync(
+                            context.HttpContext,
+                            ApiStatus.Codes.Unauthorized,
+                            ApiStatus.Messages.Unauthorized);
+                    },
+                    OnForbidden = context =>
+                        WriteAuthenticationErrorAsync(
+                            context.HttpContext,
+                            ApiStatus.Codes.Forbidden,
+                            ApiStatus.Messages.Forbidden)
+                };
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
-                    ValidateLifetime = true, 
-                    ValidateIssuerSigningKey = true, 
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
                     RequireExpirationTime = true,
                     RequireSignedTokens = true,
                     ValidIssuer = jwtOptions.Issuer,
@@ -90,5 +110,17 @@ public static class AuthenticationExtension
             });
 
         return services;
+    }
+
+    private static Task WriteAuthenticationErrorAsync(
+        HttpContext context,
+        int statusCode,
+        string message)
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+        return context.Response.WriteAsync(JsonSerializer.Serialize(
+            ApiResponse.Error(statusCode, message),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 }

@@ -1,122 +1,71 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AutoMapper;
 using OVCMOVE.Api.Common;
-using OVCMOVE.Api.Controllers.v1;
+using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
-using OVCMOVE.Application.DTOs.Organizer;
-using OVCMOVE.Application.Features.Organizer.Command.ChangeOrganizerStatus;
-using OVCMOVE.Application.Organizers.Commands;
+using OVCMOVE.Application.Features.Organizers.Command.ChangeOrganizerStatus;
 using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1.Admin;
 
 [Route("api/v1/admin/organizers")]
-public class OrganizersController : BaseController<OrganizersController>
+public class OrganizersController : BaseController
 {
-    public OrganizersController(ILogger<OrganizersController> logger, IMediator mediator, IMapper mapper)
-        : base(logger, mediator, mapper)
+    public OrganizersController(IMediator mediator) : base(mediator)
     {
     }
 
     [HttpPost]
     [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
-    public async Task<IActionResult> CreateOrganizer([FromBody] CreateOrganizerRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(
+        [FromBody] OrganizerContract.CreateOrganizerRequest request,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var command = _mapper.Map<CreateOrganizerCommand>(request);
-            var result = await _mediator.Send(command, cancellationToken);
-
-            return Ok(new ApiResponseModel<OrganizerResponse>
-            {
-                StatusCode = APIContansts.StatusCode.Success,
-                Message = APIContansts.StatusMessage.Success,
-                Data = result
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while creating organizer.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        var result = await _mediator.Send(
+            request.ToCommand(),
+            cancellationToken);
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     [HttpPatch("{organizerId:guid}/deactivate")]
     [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
-    public async Task<IActionResult> DeactivateOrganizerAccount(
+    public Task<IActionResult> Deactivate(
         Guid organizerId,
-        CancellationToken cancellationToken)
-    {
-        return await ChangeOrganizerStatusAsync(
+        CancellationToken cancellationToken) =>
+        ChangeStatusAsync(
             organizerId,
-            OrganizerConstants.OrganizerStatus.Inactive,
-            "Organizer account has been deactivated successfully.",
+            UserConstants.Status.Inactive,
             cancellationToken);
-    }
 
     [HttpPatch("{organizerId:guid}/activate")]
     [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
-    public async Task<IActionResult> ActivateOrganizerAccount(
+    public Task<IActionResult> Activate(
         Guid organizerId,
-        CancellationToken cancellationToken)
-    {
-        return await ChangeOrganizerStatusAsync(
+        CancellationToken cancellationToken) =>
+        ChangeStatusAsync(
             organizerId,
-            OrganizerConstants.OrganizerStatus.Active,
-            "Organizer account has been activated successfully.",
+            UserConstants.Status.Active,
             cancellationToken);
-    }
 
-    private async Task<IActionResult> ChangeOrganizerStatusAsync(
+    /// <summary>Sends one organizer status change and maps a missing account to HTTP 404.</summary>
+    private async Task<IActionResult> ChangeStatusAsync(
         Guid organizerId,
         string status,
-        string successMessage,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var result = await _mediator.Send(
-                new ChangeOrganizerStatusCommand
-                {
-                    OrganizerId = organizerId,
-                    Status = status
-                },
-                cancellationToken);
-
-            if (result is null)
+        var result = await _mediator.Send(
+            new ChangeOrganizerStatusCommand
             {
-                return Ok(new ApiResponseModel<object>
-                {
-                    StatusCode = APIContansts.StatusCode.NotFound,
-                    Message = "Organizer account was not found."
-                });
-            }
+                OrganizerId = organizerId,
+                Status = status
+            },
+            cancellationToken);
 
-            return Ok(new ApiResponseModel<OrganizerStatusResponse>
-            {
-                StatusCode = APIContansts.StatusCode.Success,
-                Message = successMessage,
-                Data = result
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while changing organizer account status.");
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        return result is null
+            ? NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound))
+            : Ok(ApiResponse.Success(result.ToResponse()));
     }
 }

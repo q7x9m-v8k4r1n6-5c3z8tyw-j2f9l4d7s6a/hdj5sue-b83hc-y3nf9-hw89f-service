@@ -34,14 +34,14 @@ public class AuthContract
         public string IdToken { get; set; } = string.Empty;
     }
 
-    public class LogoutRequest {}
+    public class LogoutRequest { }
     public class RefreshTokenRequest { }
 
     // --- RESPONSE ---
     public class LoginResponse
     {
         public string AccessToken { get; set; } = string.Empty;
-        public DateTime AccessTokenExpiration { get; set; } 
+        public DateTime AccessTokenExpiration { get; set; }
         public Guid UserId { get; set; }
         public IReadOnlyCollection<RoleAccessResponse> Roles { get; set; } = Array.Empty<RoleAccessResponse>();
         public IReadOnlyCollection<PermissionAccessResponse> Permissions { get; set; } = Array.Empty<PermissionAccessResponse>();

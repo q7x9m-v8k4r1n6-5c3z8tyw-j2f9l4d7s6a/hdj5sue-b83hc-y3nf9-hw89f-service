@@ -17,4 +17,37 @@ public static class RbacContract
         public string Module { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
     }
+
+    public sealed class RoleResponse
+    {
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Code { get; init; } = string.Empty;
+        public string? Description { get; init; }
+        public bool IsSystem { get; init; }
+        public DateTime CreatedAt { get; init; }
+    }
+
+    public sealed class PermissionResponse
+    {
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Code { get; init; } = string.Empty;
+        public string? Description { get; init; }
+        public string Module { get; init; } = string.Empty;
+        public string Action { get; init; } = string.Empty;
+        public bool IsSystem { get; init; }
+    }
+
+    public sealed class UserRoleAssignmentResponse
+    {
+        public Guid UserId { get; init; }
+        public Guid RoleId { get; init; }
+    }
+
+    public sealed class RolePermissionAssignmentResponse
+    {
+        public Guid RoleId { get; init; }
+        public Guid PermissionId { get; init; }
+    }
 }

@@ -1,11 +1,13 @@
 using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Application.Features.Rbac.Permissions.Command.DeletePermission;
 
 public class DeletePermissionCommandHandler(IPermissionRepository permissionRepository)
     : IRequestHandler<DeletePermissionCommand, bool>
 {
+    /// <summary>Soft-deletes a non-system RBAC permission.</summary>
     public async Task<bool> Handle(DeletePermissionCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -18,10 +20,11 @@ public class DeletePermissionCommandHandler(IPermissionRepository permissionRepo
 
         if (permission.IsSystem)
         {
-            throw new InvalidOperationException("System permissions cannot be deleted.");
+            throw new ApplicationConflictException(
+                "Không thể xóa permission hệ thống.");
         }
 
-        var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+        var actor = request.GetActorOrSystem();
         return await permissionRepository.SoftDeleteAsync(request.PermissionId, actor, DateTime.UtcNow, cancellationToken);
     }
 }

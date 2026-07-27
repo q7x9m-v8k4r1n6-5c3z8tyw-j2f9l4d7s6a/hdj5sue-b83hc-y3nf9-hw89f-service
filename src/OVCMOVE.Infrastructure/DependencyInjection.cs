@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
-using OVCMOVE.Infrastructure.Helpers;
+using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Options;
-using OVCMOVE.Infrastructure.Persistance.SqlServer;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.SqlServer;
 using OVCMOVE.Infrastructure.Repositories;
 using OVCMOVE.Infrastructure.Services;
 
@@ -17,29 +19,60 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         #region =================== Options ====================
-        services.Configure<DbConfigOptions>(
-            configuration.GetSection(DbConfigOptions.SectionName));
+        services.AddOptions<DbConfigOptions>()
+            .Bind(configuration.GetSection(DbConfigOptions.SectionName))
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(
+                    options.SqlServer.ConnectionString),
+                "DbConfig:SQLServer:ConnectionString is required.")
+            .ValidateOnStart();
 
         services.Configure<ExternalServicesConfigOptions>(
             configuration.GetSection(ExternalServicesConfigOptions.SectionName));
 
 
-        services.Configure<JwtConfigOptions>(
-            configuration.GetSection(JwtConfigOptions.SectionName));
+        services.AddOptions<JwtConfigOptions>()
+            .Bind(configuration.GetSection(JwtConfigOptions.SectionName))
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(options.SecretKey) &&
+                    !string.IsNullOrWhiteSpace(options.SigningKeyId) &&
+                    !string.IsNullOrWhiteSpace(options.Issuer) &&
+                    !string.IsNullOrWhiteSpace(options.Audience),
+                "JwtConfig signing and issuer settings are required.")
+            .ValidateOnStart();
 
-        services.Configure<GoogleAuthConfigOptions>(
-            configuration.GetSection(GoogleAuthConfigOptions.SectionName));
+        services.AddOptions<GoogleAuthConfigOptions>()
+            .Bind(configuration.GetSection(
+                GoogleAuthConfigOptions.SectionName))
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.ClientId),
+                "GoogleAuthConfig:ClientId is required.")
+            .ValidateOnStart();
+
+        services.AddOptions<AzureBlobStorageOptions>()
+            .Bind(configuration.GetSection(
+                AzureBlobStorageOptions.SectionName))
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(options.ConnectionString) &&
+                    !string.IsNullOrWhiteSpace(options.ContainerName),
+                "Azure blob connection string and container name are required.")
+            .ValidateOnStart();
         #endregion
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
-        services.AddScoped<IDapperHelper, DapperHelper>();
+        services.AddScoped<UnitOfWork>();
+        services.AddScoped<IUnitOfWork>(
+            provider => provider.GetRequiredService<UnitOfWork>());
+        services.AddScoped<IDbExecutor, DapperExecutor>();
 
         #region ==================== Repositories ====================
-        services.AddScoped<IExampleRepository, ExampleRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IRaceRepository, RaceRepository>();
         services.AddScoped<IBoothRepository, BoothRepository>();
+        services.AddScoped<IBoothOrganizerRepository, BoothOrganizerRepository>();
         services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
         services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
@@ -53,8 +86,10 @@ public static class DependencyInjection
 
         #region ==================== Services ====================
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
         #endregion
 
         #region ==================== BackgroundJobs ====================

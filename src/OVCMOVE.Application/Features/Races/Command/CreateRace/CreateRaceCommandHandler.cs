@@ -1,91 +1,139 @@
-﻿using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using MediatR;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Domain.Common;
-using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Races.Command.CreateRace;
 
 public class CreateRaceCommandHandler :
-    BaseCommandHandler<CreateRaceCommandHandler>,
-    IRequestHandler<CreateRaceCommand, Guid?>
+    IRequestHandler<CreateRaceCommand, Guid>
 {
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothRepository _boothRepository;
+    private readonly IBoothOrganizerRepository _boothOrganizerRepository;
     private readonly IRaceTeamRepository _raceTeamRepository;
     private readonly IRaceOrganizerRepository _raceOrganizerRepository;
+    private readonly IBlobStorageService _blobStorageService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly CreateRaceRelationValidator _relationValidator;
 
     public CreateRaceCommandHandler(
-        ILogger<CreateRaceCommandHandler> logger,
-        IMapper mapper,
         IRaceRepository raceRepository,
         IBoothRepository boothRepository,
+        IBoothOrganizerRepository boothOrganizerRepository,
         IRaceTeamRepository raceTeamRepository,
-        IRaceOrganizerRepository raceOrganizerRepository) : base(logger, mapper)
+        IRaceOrganizerRepository raceOrganizerRepository,
+        IBlobStorageService blobStorageService,
+        IUnitOfWork unitOfWork,
+        CreateRaceRelationValidator relationValidator)
     {
         _raceRepository = raceRepository;
         _boothRepository = boothRepository;
+        _boothOrganizerRepository = boothOrganizerRepository;
         _raceTeamRepository = raceTeamRepository;
         _raceOrganizerRepository = raceOrganizerRepository;
+        _blobStorageService = blobStorageService;
+        _unitOfWork = unitOfWork;
+        _relationValidator = relationValidator;
     }
 
-    public async Task<Guid?> Handle(CreateRaceCommand request, CancellationToken cancellationToken)
+    /// <summary>Creates a race and all selected relationships in one database transaction.</summary>
+    public async Task<Guid> Handle(CreateRaceCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        CreateRaceFactory.Validate(request);
+        await _relationValidator.ValidateAsync(request, cancellationToken);
 
         var raceId = Guid.NewGuid();
         var now = DateTime.UtcNow;
-        var race = _mapper.Map<Race>(request);
-        SetAuditFields(race, raceId, now, "system", now, "system");
+        var actor = request.GetActorOrSystem();
+        string? coverUrl = null;
 
-        var createdRaceId = await _raceRepository.CreateAsync(race, cancellationToken);
-        if (createdRaceId is null) return null;
-
-        foreach (var boothInput in request.Booth)
+        if (request.CoverImage is not null)
         {
-            var booth = _mapper.Map<Booth>(boothInput);
-            SetAuditFields(booth, Guid.NewGuid(), now, "system", now, "system");
-            booth.RaceID = raceId;
-
-            await _boothRepository.CreateAsync(booth, cancellationToken);
+            coverUrl = await _blobStorageService.UploadAsync(
+                request.CoverImage.Stream,
+                request.CoverImage.FileName,
+                request.CoverImage.ContentType,
+                cancellationToken);
         }
 
-        foreach (var teamInput in request.RaceTeam)
+        try
         {
-            var raceTeam = _mapper.Map<RaceTeam>(teamInput);
-            SetAuditFields(raceTeam, Guid.NewGuid(), now, "system", now, "system");
-            raceTeam.RaceID = raceId;
+            await _unitOfWork.BeginAsync(cancellationToken);
+            var race = CreateRaceFactory.CreateRace(
+                request,
+                raceId,
+                coverUrl,
+                actor,
+                now);
+            await _raceRepository.CreateAsync(
+                race,
+                cancellationToken);
 
-            await _raceTeamRepository.CreateAsync(raceTeam, cancellationToken);
+            foreach (var boothInput in request.Booths ?? [])
+            {
+                var booth = CreateRaceFactory.CreateBooth(
+                    boothInput,
+                    raceId,
+                    actor,
+                    now);
+                await _boothRepository.CreateAsync(
+                    booth,
+                    cancellationToken);
+
+                foreach (var organizerId in
+                         (boothInput.OrganizerIds ?? []).Distinct())
+                {
+                    await _boothOrganizerRepository.CreateAsync(
+                        CreateRaceFactory.CreateBoothOrganizer(
+                            booth.Id,
+                            organizerId,
+                            actor,
+                            now),
+                        cancellationToken);
+                }
+            }
+
+            foreach (var teamId in (request.TeamIds ?? []).Distinct())
+            {
+                await _raceTeamRepository.CreateAsync(
+                    CreateRaceFactory.CreateRaceTeam(
+                        raceId,
+                        teamId,
+                        actor,
+                        now),
+                    cancellationToken);
+            }
+
+            foreach (var organizerId in
+                     (request.OrganizerIds ?? []).Distinct())
+            {
+                await _raceOrganizerRepository.CreateAsync(
+                    CreateRaceFactory.CreateRaceOrganizer(
+                        raceId,
+                        organizerId,
+                        actor,
+                        now),
+                    cancellationToken);
+            }
+
+            // Do not delete the uploaded cover after an ambiguously canceled commit.
+            await _unitOfWork.CommitAsync(CancellationToken.None);
+            return raceId;
         }
-
-        foreach (var organizerId in request.OrganizerId.Where(id => id.HasValue).Select(id => id!.Value))
+        catch
         {
-            var raceOrganizer = _mapper.Map<RaceOrganizer>(organizerId);
-            SetAuditFields(raceOrganizer, Guid.NewGuid(), now, "system", now, "system");
-            raceOrganizer.RaceID = raceId;
+            await _unitOfWork.RollbackAsync(CancellationToken.None);
+            if (coverUrl is not null)
+            {
+                await _blobStorageService.TryDeleteAsync(
+                    coverUrl,
+                    CancellationToken.None);
+            }
 
-            await _raceOrganizerRepository.CreateAsync(raceOrganizer, cancellationToken);
+            throw;
         }
-
-        return raceId;
     }
 
-    private static void SetAuditFields(
-        BaseEntity entity,
-        Guid id,
-        DateTime createdAt,
-        string? createdBy,
-        DateTime modifiedAt,
-        string? modifiedBy)
-    {
-        entity.Id = id;
-        entity.CreatedAt = createdAt;
-        entity.CreatedBy = createdBy;
-        entity.ModifiedAt = modifiedAt;
-        entity.ModifiedBy = modifiedBy;
-        entity.IsDeleted = false;
-    }
 }

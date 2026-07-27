@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../src/OVCMOVE.Api/OVCMOVE.Api.csproj" />
+    <ProjectReference Include="../../src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

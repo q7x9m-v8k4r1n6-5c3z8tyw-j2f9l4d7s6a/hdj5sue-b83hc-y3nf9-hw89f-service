@@ -1,58 +1,106 @@
-﻿using Microsoft.Extensions.Logging;
-using OVCMOVE.Application.Abstractions.Repositories;
+﻿using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class RaceRepository : BaseRepository<RaceRepository>, IRaceRepository
+public class RaceRepository : IRaceRepository
 {
-    public RaceRepository(ILogger<RaceRepository> logger, IDapperHelper dapperHelper)
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
 
-    public async Task<Guid?> CreateAsync(Race race, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
+    public RaceRepository(IDbExecutor db) =>
+        _db = db;
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(RaceQueries.CreateRaceQuery(), race);
-        return affectedRows >= 1 ? race.Id : null;
-    }
-
-    public async Task<IReadOnlyCollection<RaceItemResultModel>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task CreateAsync(Race race, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var races = await _dapperHelper.QueryAsync<RaceItemResultModel>(RaceQueries.GetAllRacesQuery());
-        return races.ToArray();
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateRaceQuery(),
+            race,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(Race));
+    }
+
+    public async Task<(
+        IReadOnlyCollection<RaceItemResultModel> Items,
+        int TotalItems)> GetPageAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var races = await _db.QueryAsync<RaceItemResultModel>(
+            RaceQueries.GetAllRacesQuery(),
+            new
+            {
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+        var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CountRacesQuery(),
+            cancellationToken: cancellationToken);
+
+        return (races.ToArray(), totalItems);
     }
 
     public async Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var race = await _dapperHelper.QueryFirstOrDefaultAsync<RaceDetailResultModel>(
+        var race = await _db.QueryFirstOrDefaultAsync<RaceDetailResultModel>(
             RaceQueries.GetRaceDetailQuery(),
-            new { RaceId = raceId });
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
 
         if (race is null) return null;
 
-        var booths = await _dapperHelper.QueryAsync<RaceDto.BoothInput>(
+        var boothRows = await _db.QueryAsync<RaceBoothModel>(
             RaceQueries.GetRaceBoothsQuery(),
-            new { RaceId = raceId });
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+        var boothOrganizers = await _db.QueryAsync<BoothOrganizerRow>(
+            RaceQueries.GetRaceBoothOrganizersQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+        var organizerIdsByBooth = boothOrganizers
+            .GroupBy(item => item.BoothId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyCollection<Guid>)group
+                    .Select(item => item.OrganizerId)
+                    .ToArray());
+        var booths = boothRows.Select(booth => new RaceBoothModel
+        {
+            Id = booth.Id,
+            Name = booth.Name,
+            Place = booth.Place,
+            Description = booth.Description,
+            OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
+                booth.Id,
+                Array.Empty<Guid>())
+        }).ToArray();
 
-        var teams = await _dapperHelper.QueryAsync<RaceDto.RaceTeamInputDto>(
+        var teams = await _db.QueryAsync<RaceTeamModel>(
             RaceQueries.GetRaceTeamsQuery(),
-            new { RaceId = raceId });
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
 
-        var organizers = await _dapperHelper.QueryAsync<Guid>(
+        var organizerIds = await _db.QueryAsync<Guid>(
             RaceQueries.GetRaceOrganizersQuery(),
-            new { RaceId = raceId });
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        var organizers = await _db.QueryAsync<RaceOrganizerModel>(
+            RaceQueries.GetRaceOrganizerDetailsQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
 
         return new RaceDetailResultModel
         {
@@ -67,9 +115,10 @@ public class RaceRepository : BaseRepository<RaceRepository>, IRaceRepository
             ModifiedAt = race.ModifiedAt,
             IsToggledLeaderboard = race.IsToggledLeaderboard,
             IsHiddenPoint = race.IsHiddenPoint,
-            Booth = booths.ToArray(),
+            Booth = booths,
             RaceTeam = teams.ToArray(),
-            OrganizerId = organizers.ToArray()
+            OrganizerId = organizerIds.ToArray(),
+            Organizers = organizers.ToArray()
         };
     }
 
@@ -77,16 +126,43 @@ public class RaceRepository : BaseRepository<RaceRepository>, IRaceRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return _dapperHelper.QueryFirstOrDefaultAsync<Race>(
+        return _db.QueryFirstOrDefaultAsync<Race>(
             RaceQueries.GetRaceByIdQuery(),
-            new { RaceId = raceId });
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
     }
 
-    public async Task<bool> UpdateAsync(Race race, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateAsync(
+        Race race,
+        DateTime expectedModifiedAt,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(RaceQueries.UpdateRaceQuery(), race);
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateRaceQuery(),
+            new
+            {
+                race.Id,
+                race.RaceName,
+                race.TimeStart,
+                race.TimeEnd,
+                race.Place,
+                race.Status,
+                race.IsToggledLeaderboard,
+                race.IsHiddenPoint,
+                race.CoverUrl,
+                race.ModifiedBy,
+                race.ModifiedAt,
+                ExpectedModifiedAt = expectedModifiedAt
+            },
+            cancellationToken: cancellationToken);
         return affectedRows >= 1;
     }
+}
+
+internal sealed class BoothOrganizerRow
+{
+    public Guid BoothId { get; init; }
+    public Guid OrganizerId { get; init; }
 }

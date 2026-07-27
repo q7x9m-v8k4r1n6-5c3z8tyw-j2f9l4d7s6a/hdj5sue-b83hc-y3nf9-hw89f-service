@@ -1,18 +1,18 @@
 using MediatR;
-using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Security;
+using OVCMOVE.Application.Features.Rbac;
 
 namespace OVCMOVE.Application.Features.Rbac.Roles.Command.UpdateRole;
 
 public class UpdateRoleCommandHandler(
-    ILogger<UpdateRoleCommandHandler> logger,
     IRoleRepository roleRepository)
     : IRequestHandler<UpdateRoleCommand, RoleSummaryModel?>
 {
-    private readonly ILogger<UpdateRoleCommandHandler> _logger = logger;
     private readonly IRoleRepository _roleRepository = roleRepository;
 
+    /// <summary>Updates an existing RBAC role when its code remains unique.</summary>
     public async Task<RoleSummaryModel?> Handle(UpdateRoleCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -23,23 +23,37 @@ public class UpdateRoleCommandHandler(
             return null;
         }
 
-        var normalizedCode = request.Code.Trim().ToLowerInvariant();
+        if (role.IsSystem)
+        {
+            throw new ApplicationConflictException(
+                "Không thể chỉnh sửa role hệ thống.");
+        }
+
+        var name = RbacInput.Required(request.Name, "Tên role", 100);
+        var normalizedCode = RbacInput.Code(
+            request.Code,
+            "Role code",
+            100);
+        var description = RbacInput.Optional(
+            request.Description,
+            "Mô tả role",
+            500);
         var existing = await _roleRepository.GetByCodeAsync(normalizedCode, cancellationToken);
         if (existing is not null && existing.Id != role.Id)
         {
-            throw new InvalidOperationException($"Role code '{normalizedCode}' already exists.");
+            throw new ApplicationConflictException(
+                $"Role code '{normalizedCode}' đã tồn tại.");
         }
 
-        role.Name = request.Name.Trim();
+        role.Name = name;
         role.Code = normalizedCode;
-        role.Description = request.Description?.Trim();
+        role.Description = description;
         role.ModifiedAt = DateTime.UtcNow;
-        role.ModifiedBy = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+        role.ModifiedBy = request.GetActorOrSystem();
 
         var updated = await _roleRepository.UpdateAsync(role, cancellationToken);
         if (!updated)
         {
-            _logger.LogWarning("Role {RoleId} could not be updated.", request.RoleId);
             return null;
         }
 

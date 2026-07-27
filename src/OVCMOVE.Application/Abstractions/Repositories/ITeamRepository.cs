@@ -4,6 +4,14 @@ namespace OVCMOVE.Application.Abstractions.Repositories;
 
 public interface ITeamRepository
 {
-    Task<List<Team>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<List<Team>> SearchAsync(string keyword, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<Guid>> GetExistingIdsAsync(
+        IEnumerable<Guid> teamIds,
+        CancellationToken cancellationToken = default);
+    Task<(IReadOnlyCollection<User> Items, int TotalItems)> GetPageAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<User>> SearchAsync(
+        string keyword,
+        CancellationToken cancellationToken = default);
 }

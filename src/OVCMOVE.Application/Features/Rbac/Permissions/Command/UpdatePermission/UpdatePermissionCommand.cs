@@ -4,7 +4,7 @@ using OVCMOVE.Application.DTOs.Security;
 
 namespace OVCMOVE.Application.Features.Rbac.Permissions.Command.UpdatePermission;
 
-public class UpdatePermissionCommand : BaseRequestModel, IRequest<PermissionSummaryModel?>
+public class UpdatePermissionCommand : AuditedRequest, IRequest<PermissionSummaryModel?>
 {
     public Guid PermissionId { get; set; }
     public string Name { get; set; } = string.Empty;

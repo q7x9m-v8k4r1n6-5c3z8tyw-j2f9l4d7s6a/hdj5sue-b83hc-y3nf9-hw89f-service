@@ -6,11 +6,12 @@ namespace OVCMOVE.Application.Features.Rbac.Assignments.Command.RemovePermission
 public class RemovePermissionFromRoleCommandHandler(IRolePermissionRepository rolePermissionRepository)
     : IRequestHandler<RemovePermissionFromRoleCommand, bool>
 {
+    /// <summary>Removes one permission assignment from a role.</summary>
     public Task<bool> Handle(RemovePermissionFromRoleCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+        var actor = request.GetActorOrSystem();
         return rolePermissionRepository.SoftDeleteAsync(request.RoleId, request.PermissionId, actor, DateTime.UtcNow, cancellationToken);
     }
 }

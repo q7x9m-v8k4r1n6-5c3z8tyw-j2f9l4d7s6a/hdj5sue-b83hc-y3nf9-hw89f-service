@@ -33,9 +33,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.LinkedEmail),
             new Claim("short_name", string.IsNullOrWhiteSpace(user.ShortName)
-                ? OVCMOVE.Application.Common.ShortNameHelper.BuildBaseShortName(user.Email)
+                ? OVCMOVE.Application.Common.ShortNameHelper.BuildBaseShortName(user.LinkedEmail)
                 : user.ShortName!),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
         };
@@ -78,7 +78,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var randomNumber = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
-        
+
         return Convert.ToBase64String(randomNumber);
     }
 

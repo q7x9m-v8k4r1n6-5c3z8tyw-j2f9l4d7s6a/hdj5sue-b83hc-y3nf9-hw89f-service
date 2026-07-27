@@ -1,60 +1,53 @@
-﻿using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 
 public class GetAllTeamsQueryHandler :
-    BaseQueryHandler<GetAllTeamsQueryHandler>,
     IRequestHandler<GetAllTeamsQuery, PagedResult<GetAllTeamsResultModel>>
 {
-    private readonly IMapper _mapper;
     private readonly ITeamRepository _teamRepository;
 
     public GetAllTeamsQueryHandler(
-        ILogger<GetAllTeamsQueryHandler> logger,
-        IMapper mapper,
-        ITeamRepository teamRepository) : base(logger)
+        ITeamRepository teamRepository)
     {
-        _mapper = mapper;
         _teamRepository = teamRepository;
     }
 
+    /// <summary>Returns one normalized page of team accounts.</summary>
     public async Task<PagedResult<GetAllTeamsResultModel>> Handle(GetAllTeamsQuery request, CancellationToken cancellationToken)
     {
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        var (page, pageSize) = Pagination.Normalize(
+            request.Page,
+            request.PageSize);
+        var (teams, totalItems) = await _teamRepository.GetPageAsync(
+            page,
+            pageSize,
+            cancellationToken);
+
+        return new PagedResult<GetAllTeamsResultModel>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // 1. Lấy toàn bộ danh sách từ Repo 
-            var allTeams = await _teamRepository.GetAllAsync(cancellationToken);
-            var totalItems = allTeams.Count;
-            var page = Math.Max(1, request.Page);
-            var pageSize = Math.Clamp(request.PageSize, 1, 100);
-
-            // 2. Cắt mảng lấy đúng 20 items dựa theo số trang 
-            var pagedTeams = allTeams
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            var mappedItems = _mapper.Map<List<GetAllTeamsResultModel>>(pagedTeams);
-
-            // 3. Đóng gói vào khuôn PagedResult
-            return new PagedResult<GetAllTeamsResultModel>
-            {
-                Items = mappedItems,
-                TotalItems = totalItems,
-                Page = page,
-                PageSize = pageSize
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while handling GetAllTeamsQuery: {Message}", ex.Message);
-            throw;
-        }
+            Items = teams.Select(MapTeam).ToArray(),
+            TotalItems = totalItems,
+            Page = page,
+            PageSize = pageSize
+        };
     }
+
+    private static GetAllTeamsResultModel MapTeam(User user) => new()
+    {
+        Id = user.Id,
+        Name = GetDisplayName(user),
+        LeaderEmail = user.LinkedEmail,
+        Username = user.Username ?? string.Empty,
+        Status = user.Status
+    };
+
+    private static string GetDisplayName(User user) =>
+        string.IsNullOrWhiteSpace(user.DisplayName)
+            ? user.Username ?? user.LinkedEmail
+            : user.DisplayName;
 }

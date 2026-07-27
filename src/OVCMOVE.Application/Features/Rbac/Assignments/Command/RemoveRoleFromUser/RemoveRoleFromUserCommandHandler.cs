@@ -6,11 +6,12 @@ namespace OVCMOVE.Application.Features.Rbac.Assignments.Command.RemoveRoleFromUs
 public class RemoveRoleFromUserCommandHandler(IUserRoleRepository userRoleRepository)
     : IRequestHandler<RemoveRoleFromUserCommand, bool>
 {
+    /// <summary>Removes one role assignment from a user.</summary>
     public Task<bool> Handle(RemoveRoleFromUserCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+        var actor = request.GetActorOrSystem();
         return userRoleRepository.SoftDeleteAsync(request.UserId, request.RoleId, actor, DateTime.UtcNow, cancellationToken);
     }
 }

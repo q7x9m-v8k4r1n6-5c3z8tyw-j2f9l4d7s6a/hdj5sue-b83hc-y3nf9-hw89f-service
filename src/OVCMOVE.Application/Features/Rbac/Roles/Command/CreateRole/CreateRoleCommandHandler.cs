@@ -1,32 +1,41 @@
 using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Security;
 using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Features.Rbac;
 
 namespace OVCMOVE.Application.Features.Rbac.Roles.Command.CreateRole;
 
 public class CreateRoleCommandHandler(IRoleRepository roleRepository)
     : IRequestHandler<CreateRoleCommand, RoleSummaryModel>
 {
+    /// <summary>Creates a unique RBAC role.</summary>
     public async Task<RoleSummaryModel> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var code = NormalizeCode(request.Code);
+        var name = RbacInput.Required(request.Name, "Tên role", 100);
+        var code = RbacInput.Code(request.Code, "Role code", 100);
+        var description = RbacInput.Optional(
+            request.Description,
+            "Mô tả role",
+            500);
         var existing = await roleRepository.GetByCodeAsync(code, cancellationToken);
         if (existing is not null)
         {
-            throw new InvalidOperationException($"Role code '{code}' already exists.");
+            throw new ApplicationConflictException(
+                $"Role code '{code}' đã tồn tại.");
         }
 
         var now = DateTime.UtcNow;
-        var actor = ResolveActor(request.ModifiedBy);
+        var actor = request.GetActorOrSystem();
         var role = new Role
         {
             Id = Guid.NewGuid(),
-            Name = request.Name.Trim(),
+            Name = name,
             Code = code,
-            Description = request.Description?.Trim(),
+            Description = description,
             IsSystem = false,
             CreatedAt = now,
             CreatedBy = actor,
@@ -47,8 +56,4 @@ public class CreateRoleCommandHandler(IRoleRepository roleRepository)
             CreatedAt = role.CreatedAt
         };
     }
-
-    private static string NormalizeCode(string code) => code.Trim().ToLowerInvariant();
-
-    private static string ResolveActor(string? modifiedBy) => string.IsNullOrWhiteSpace(modifiedBy) ? "system" : modifiedBy.Trim();
 }

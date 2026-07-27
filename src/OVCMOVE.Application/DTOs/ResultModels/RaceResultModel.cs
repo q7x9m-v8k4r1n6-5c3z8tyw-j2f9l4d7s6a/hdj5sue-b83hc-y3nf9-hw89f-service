@@ -20,6 +20,7 @@ public class RaceDetailResultModel : RaceItemResultModel
     public bool IsToggledLeaderboard { get; init; }
     public bool IsHiddenPoint { get; init; }
     public IReadOnlyCollection<Guid> OrganizerId { get; init; } = Array.Empty<Guid>();
-    public IReadOnlyCollection<RaceDto.RaceTeamInputDto> RaceTeam { get; init; } = Array.Empty<RaceDto.RaceTeamInputDto>();
-    public IReadOnlyCollection<RaceDto.BoothInput> Booth { get; init; } = Array.Empty<RaceDto.BoothInput>();
+    public IReadOnlyCollection<RaceOrganizerModel> Organizers { get; init; } = [];
+    public IReadOnlyCollection<RaceTeamModel> RaceTeam { get; init; } = [];
+    public IReadOnlyCollection<RaceBoothModel> Booth { get; init; } = [];
 }

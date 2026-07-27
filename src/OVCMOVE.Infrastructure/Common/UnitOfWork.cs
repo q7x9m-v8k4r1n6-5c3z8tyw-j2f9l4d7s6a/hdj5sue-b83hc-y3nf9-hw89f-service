@@ -1,83 +1,150 @@
-﻿using OVCMOVE.Application.Abstractions;
-using OVCMOVE.Infrastructure.Persistance.SqlServer;
-using System;
-using System.Data;
+﻿using System.Data;
+using System.Data.Common;
+using OVCMOVE.Application.Abstractions;
+using OVCMOVE.Infrastructure.Persistence.SqlServer;
 
-namespace OVCMOVE.Infrastructure.Common
+namespace OVCMOVE.Infrastructure.Common;
+
+public sealed class UnitOfWork : IUnitOfWork, IDisposable
 {
-    public class UnitOfWork : IUnitOfWork
+    private readonly ISqlServerFactory _sqlServerFactory;
+    private IDbConnection? _connection;
+    private bool _disposed;
+
+    public UnitOfWork(ISqlServerFactory sqlServerFactory)
     {
-        private bool _disposed;
+        _sqlServerFactory = sqlServerFactory;
+    }
 
-        public UnitOfWork(ISqlServerFactory sqlServerFactory)
+    internal IDbTransaction? Transaction { get; private set; }
+
+    /// <summary>Starts the transaction shared by all repositories in this scope.</summary>
+    public async Task BeginAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (Transaction is not null)
         {
-            Connection = sqlServerFactory.CreateConnection();
+            throw new InvalidOperationException(
+                "A transaction is already active in this scope.");
         }
 
-        public IDbConnection Connection { get; }
-        public IDbTransaction? Transaction { get; private set; }
-
-        public void Begin()
+        _connection = _sqlServerFactory.CreateConnection();
+        try
         {
-            if (Transaction is not null)
-            {
-                return;
-            }
+            await EnsureConnectionOpenAsync(
+                _connection,
+                cancellationToken);
+            Transaction = _connection is DbConnection dbConnection
+                ? await dbConnection.BeginTransactionAsync(cancellationToken)
+                : _connection.BeginTransaction();
+        }
+        catch
+        {
+            ReleaseConnection();
+            throw;
+        }
+    }
 
-            EnsureConnectionOpen();
-            Transaction = Connection.BeginTransaction();
+    /// <summary>Commits and releases the active transaction.</summary>
+    public async Task CommitAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (Transaction is null)
+        {
+            throw new InvalidOperationException(
+                "No active transaction to commit.");
         }
 
-        public void Commit()
+        if (Transaction is DbTransaction dbTransaction)
         {
-            if (Transaction is null)
-            {
-                throw new InvalidOperationException("No active transaction to commit.");
-            }
-
+            await dbTransaction.CommitAsync(cancellationToken);
+            await dbTransaction.DisposeAsync();
+        }
+        else
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             Transaction.Commit();
             Transaction.Dispose();
+        }
+
+        Transaction = null;
+        ReleaseConnection();
+    }
+
+    /// <summary>Rolls back and releases the active transaction, if present.</summary>
+    public async Task RollbackAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (Transaction is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (Transaction is DbTransaction dbTransaction)
+            {
+                await dbTransaction.RollbackAsync(cancellationToken);
+                await dbTransaction.DisposeAsync();
+            }
+            else
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Transaction.Rollback();
+                Transaction.Dispose();
+            }
+        }
+        finally
+        {
             Transaction = null;
+            ReleaseConnection();
         }
+    }
 
-        public void Dispose()
+    public void Dispose()
+    {
+        if (_disposed)
         {
-            if (_disposed)
-            {
-                return;
-            }
-
-            Transaction?.Dispose();
-
-            if (Connection.State != ConnectionState.Closed)
-            {
-                Connection.Close();
-            }
-
-            Connection.Dispose();
-            _disposed = true;
+            return;
         }
 
-        public void Rollback()
+        Transaction?.Dispose();
+        ReleaseConnection();
+        _disposed = true;
+    }
+
+    private static async Task EnsureConnectionOpenAsync(
+        IDbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        if (connection.State == ConnectionState.Open)
         {
-            if (Transaction is null)
-            {
-                return;
-            }
-
-            Transaction.Rollback();
-            Transaction.Dispose();
-            Transaction = null;
+            return;
         }
 
-        private void EnsureConnectionOpen()
+        if (connection is DbConnection dbConnection)
         {
-            if (Connection.State == ConnectionState.Open)
-            {
-                return;
-            }
-
-            Connection.Open();
+            await dbConnection.OpenAsync(cancellationToken);
+            return;
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        connection.Open();
+    }
+
+    private void ReleaseConnection()
+    {
+        if (_connection is null)
+        {
+            return;
+        }
+
+        if (_connection.State != ConnectionState.Closed)
+        {
+            _connection.Close();
+        }
+
+        _connection.Dispose();
+        _connection = null;
     }
 }

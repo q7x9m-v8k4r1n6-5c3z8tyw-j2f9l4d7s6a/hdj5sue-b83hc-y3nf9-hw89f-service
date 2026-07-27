@@ -5,4 +5,4 @@ namespace OVCMOVE.Application.Features.Auth.Command.Login;
 
 public record LoginCommand(
     string Username,
-    string Password) : IRequest<LoginResultModel>; 
+    string Password) : IRequest<LoginResultModel>;

@@ -4,9 +4,11 @@ using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Application.Features.Races.Command.PatchRace;
 
-public class PatchRaceCommand : BaseRequestModel, IRequest<RaceDetailResultModel?>
+public class PatchRaceCommand : AuditedRequest, IRequest<RaceDetailResultModel?>
 {
     public Guid RaceId { get; set; }
+    public DateTime ExpectedModifiedAt { get; set; }
+    public FileUploadModel? CoverImage { get; set; }
     public BasicInfoPatchModel? BasicInfo { get; set; }
     public RaceSettingsPatchModel? RaceSettings { get; set; }
     public OrganizerPatchModel? Organizers { get; set; }

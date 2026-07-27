@@ -8,6 +8,7 @@ public class LoginResultModel
     public string AccessToken { get; init; } = string.Empty;
     public string RefreshToken { get; init; } = string.Empty;
     public DateTime AccessTokenExpiration { get; init; }
+    public DateTime RefreshTokenExpiration { get; init; }
     public Guid UserId { get; init; }
     public IReadOnlyCollection<RoleAccessModel> Roles { get; init; } = Array.Empty<RoleAccessModel>();
     public IReadOnlyCollection<PermissionAccessModel> Permissions { get; init; } = Array.Empty<PermissionAccessModel>();

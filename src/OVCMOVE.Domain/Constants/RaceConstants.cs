@@ -10,14 +10,4 @@ public static class RaceConstants
         public const string Paused = "paused";
         public const string Completed = "completed";
     }
-    public static class TeamStatus
-    {
-        public const string Active = "active";
-        public const string Inactive = "inactive";
-    }
-    public static class OrganizerStatus
-    {
-        public const string Active = "active";
-        public const string Inactive = "inactive";
-    }
 }

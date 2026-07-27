@@ -1,57 +1,58 @@
-using Microsoft.Extensions.Logging;
-
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
-using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IRefreshTokenRepository
+public class RefreshTokenRepository : IRefreshTokenRepository
 {
-    public RefreshTokenRepository(ILogger<RefreshTokenRepository> logger, IDapperHelper dapperHelper) 
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
+
+    public RefreshTokenRepository(IDbExecutor db) =>
+        _db = db;
 
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.GetByTokenHashQuery();
-        var refreshToken =  await _dapperHelper.QueryFirstOrDefaultAsync<RefreshToken>(
-            sql, 
+        var sql = RefreshTokenQueries.GetByTokenHashQuery();
+        var refreshToken = await _db.QueryFirstOrDefaultAsync<RefreshToken>(
+            sql,
             new { TokenHash = tokenHash },
             cancellationToken: cancellationToken);
 
         return refreshToken;
     }
 
-    public async Task<Guid> CreateAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.CreateQuery();
-            
-        var insertedId = await _dapperHelper.ExecuteScalarAsync<Guid>(
+        var sql = RefreshTokenQueries.CreateQuery();
+
+        var insertedId = await _db.ExecuteScalarAsync<Guid>(
             sql,
-            new 
-            { 
+            new
+            {
                 Id = refreshToken.Id,
-                UserId = refreshToken.UserId, 
+                UserId = refreshToken.UserId,
                 SessionId = refreshToken.SessionId,
                 FamilyId = refreshToken.FamilyId,
                 TokenHash = refreshToken.TokenHash,
-                ExpiryDate = refreshToken.ExpiryDate, 
+                ExpiryDate = refreshToken.ExpiryDate,
                 IsRevoked = refreshToken.IsRevoked,
                 CreatedAt = refreshToken.CreatedAt
-            }, 
+            },
             cancellationToken: cancellationToken);
 
-        return insertedId;
+        if (insertedId == Guid.Empty)
+        {
+            throw new InvalidOperationException(
+                "Refresh token insert did not return an identifier.");
+        }
     }
 
     public async Task<bool> TryRotateAsync(string oldTokenHash, RefreshToken newRefreshToken, DateTime utcNow, CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.TryRotateQuery();
-        return await _dapperHelper.ExecuteScalarAsync<bool>(sql, new
+        var sql = RefreshTokenQueries.TryRotateQuery();
+        return await _db.ExecuteScalarAsync<bool>(sql, new
         {
             OldTokenHash = oldTokenHash,
             NewTokenId = newRefreshToken.Id,
@@ -66,32 +67,35 @@ public class RefreshTokenRepository : BaseRepository<RefreshTokenRepository>, IR
 
     public async Task RevokeFamilyAsync(Guid familyId, DateTime utcNow, CancellationToken cancellationToken = default)
     {
-        await _dapperHelper.ExecuteAsync(
-            RefreshTokenQueryHelper.RevokeFamilyQuery(),
+        await _db.ExecuteAsync(
+            RefreshTokenQueries.RevokeFamilyQuery(),
             new { FamilyId = familyId, UtcNow = utcNow },
             cancellationToken: cancellationToken);
     }
 
     public async Task<bool> RevokeAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.RevokeQuery();
-        
-        var rowsAffected = await _dapperHelper.ExecuteAsync(
-            sql, 
-            new { Id = id }, 
+        var sql = RefreshTokenQueries.RevokeQuery();
+
+        var rowsAffected = await _db.ExecuteAsync(
+            sql,
+            new { Id = id },
             cancellationToken: cancellationToken);
-        
+
         bool result = rowsAffected > 0;
         return result;
     }
 
-    public async Task<int> CleanupOldTokensAsync(int daysToKeep)
+    public async Task<int> CleanupOldTokensAsync(
+        int daysToKeep,
+        CancellationToken cancellationToken = default)
     {
-        var sql = RefreshTokenQueryHelper.CleanupOldTokensQuery();
+        var sql = RefreshTokenQueries.CleanupOldTokensQuery();
 
-        var numberOfChangedRow = await _dapperHelper.ExecuteAsync(
-            sql, 
-            new { DaysToKeep = daysToKeep });
+        var numberOfChangedRow = await _db.ExecuteAsync(
+            sql,
+            new { DaysToKeep = daysToKeep },
+            cancellationToken: cancellationToken);
 
         return numberOfChangedRow;
     }

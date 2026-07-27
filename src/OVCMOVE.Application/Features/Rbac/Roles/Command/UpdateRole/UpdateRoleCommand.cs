@@ -4,7 +4,7 @@ using OVCMOVE.Application.DTOs.Security;
 
 namespace OVCMOVE.Application.Features.Rbac.Roles.Command.UpdateRole;
 
-public class UpdateRoleCommand : BaseRequestModel, IRequest<RoleSummaryModel?>
+public class UpdateRoleCommand : AuditedRequest, IRequest<RoleSummaryModel?>
 {
     public Guid RoleId { get; set; }
     public string Name { get; set; } = string.Empty;

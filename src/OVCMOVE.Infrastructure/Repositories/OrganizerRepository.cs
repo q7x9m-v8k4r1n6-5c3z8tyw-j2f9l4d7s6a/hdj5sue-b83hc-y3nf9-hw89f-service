@@ -1,110 +1,93 @@
-using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
-using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganizerRepository
+public class OrganizerRepository : IOrganizerRepository
 {
-    public OrganizerRepository(ILogger<OrganizerRepository> logger, IDapperHelper dapperHelper)
-        : base(logger, dapperHelper)
+    private readonly IDbExecutor _db;
+
+    public OrganizerRepository(IDbExecutor db) =>
+        _db = db;
+
+    public async Task<IReadOnlyCollection<Guid>> GetExistingIdsAsync(
+        IEnumerable<Guid> organizerIds,
+        CancellationToken cancellationToken = default)
     {
+        var ids = organizerIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return [];
+        }
+
+        var existingIds = await _db.QueryAsync<Guid>(
+            OrganizerQueries.GetExistingIdsQuery(),
+            new
+            {
+                Ids = ids,
+                UserType = UserConstants.UserType.Organizer
+            },
+            cancellationToken: cancellationToken);
+        return existingIds.ToArray();
     }
 
-    public async Task<Organizer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public Task<User?> GetByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            return await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
-                OrganizerQueries.GetByEmailQuery(),
-                new { Email = email },
-                cancellationToken: cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while getting organizer by email {Email}.", email);
-            throw;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return _db.QueryFirstOrDefaultAsync<User>(
+            OrganizerQueries.GetByEmailQuery(),
+            new
+            {
+                LinkedEmail = email,
+                UserType = UserConstants.UserType.Organizer
+            },
+            cancellationToken: cancellationToken);
     }
 
-    public async Task AddAsync(Organizer organizer, CancellationToken cancellationToken = default)
+    public async Task<(
+        IReadOnlyCollection<GetAllOrganizersResultModel> Items,
+        int TotalItems)> GetPageAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await _dapperHelper.ExecuteAsync(
-                OrganizerQueries.AddOrganizerQuery(),
-                organizer,
-                cancellationToken: cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while adding organizer with email {Email}.", organizer.Email);
-            throw;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _db.QueryAsync<GetAllOrganizersResultModel>(
+            OrganizerQueries.GetAllOrganizersQuery(),
+            new
+            {
+                UserType = UserConstants.UserType.Organizer,
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+        var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
+            OrganizerQueries.CountOrganizersQuery(),
+            new { UserType = UserConstants.UserType.Organizer },
+            cancellationToken: cancellationToken);
+        return (result.ToArray(), totalItems);
     }
 
-    public async Task<List<Organizer>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<User>> SearchAsync(
+        string keyword,
+        CancellationToken cancellationToken = default)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var result = await _dapperHelper.QueryAsync<Organizer>(
-                OrganizerQueries.GetAllOrganizersQuery(),
-                cancellationToken: cancellationToken);
-
-            return result.ToList();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while getting all organizers.");
-            throw;
-        }
-    }
-
-    public async Task<List<Organizer>> SearchAsync(string keyword, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var parameters = new { Keyword = $"%{keyword}%" };
-            var result = await _dapperHelper.QueryAsync<Organizer>(
-                OrganizerQueries.SearchOrganizerQuery(),
-                parameters,
-                cancellationToken: cancellationToken);
-
-            return result.ToList();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while searching organizers with keyword {Keyword}.", keyword);
-            throw;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _db.QueryAsync<User>(
+            OrganizerQueries.SearchOrganizerQuery(),
+            new
+            {
+                Keyword = $"%{keyword}%",
+                UserType = UserConstants.UserType.Organizer
+            },
+            cancellationToken: cancellationToken);
+        return result.ToArray();
     }
 
     public async Task<bool> ChangeStatusAsync(
@@ -112,46 +95,20 @@ public class OrganizerRepository : BaseRepository<OrganizerRepository>, IOrganiz
         string status,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var organizer = await _dapperHelper.QueryFirstOrDefaultAsync<Organizer>(
-                OrganizerQueries.GetOrganizerByIdQuery(),
-                new { OrganizerId = organizerId },
-                cancellationToken: cancellationToken);
-
-            if (organizer is null)
+        cancellationToken.ThrowIfCancellationRequested();
+        var affectedRows = await _db.ExecuteAsync(
+            OrganizerQueries.UpdateOrganizerStatusQuery(),
+            new
             {
-                return false;
-            }
-
-            await _dapperHelper.ExecuteAsync(
-                OrganizerQueries.UpdateOrganizerUserStatusQuery(),
-                new
-                {
-                    OrganizerId = organizerId,
-                    OrganizerRole = UserConstant.Role.Organizer,
-                    UserStatus = status == OrganizerConstants.OrganizerStatus.Active
-                        ? UserConstant.Status.Active
-                        : UserConstant.Status.Inactive
-                },
-                cancellationToken: cancellationToken);
-
-            return true;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Error occurred while changing organizer {OrganizerId} status to {Status}.",
-                organizerId,
-                status);
-            throw;
-        }
+                OrganizerId = organizerId,
+                UserType = UserConstants.UserType.Organizer,
+                UserStatus = status == UserConstants.Status.Active
+                    ? UserConstants.Status.Active
+                    : UserConstants.Status.Inactive,
+                ModifiedBy = "system",
+                ModifiedAt = DateTime.UtcNow
+            },
+            cancellationToken: cancellationToken);
+        return affectedRows >= 1;
     }
 }

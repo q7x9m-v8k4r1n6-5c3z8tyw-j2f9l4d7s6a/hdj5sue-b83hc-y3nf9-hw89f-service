@@ -1,25 +1,24 @@
-using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.DTOs.Security;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class RoleRepository : BaseRepository<RoleRepository>, IRoleRepository
+public class RoleRepository : IRoleRepository
 {
-    public RoleRepository(ILogger<RoleRepository> logger, IDapperHelper dapperHelper)
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
+
+    public RoleRepository(IDbExecutor db) =>
+        _db = db;
 
     public async Task<IReadOnlyCollection<RoleSummaryModel>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var roles = await _dapperHelper.QueryAsync<RoleSummaryModel>(RbacQueries.GetAllRolesQuery(), cancellationToken: cancellationToken);
+        var roles = await _db.QueryAsync<RoleSummaryModel>(RbacQueries.GetAllRolesQuery(), cancellationToken: cancellationToken);
         return roles.ToArray();
     }
 
@@ -27,29 +26,29 @@ public class RoleRepository : BaseRepository<RoleRepository>, IRoleRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return _dapperHelper.QueryFirstOrDefaultAsync<Role>(RbacQueries.GetRoleByIdQuery(), new { RoleId = roleId }, cancellationToken: cancellationToken);
+        return _db.QueryFirstOrDefaultAsync<Role>(RbacQueries.GetRoleByIdQuery(), new { RoleId = roleId }, cancellationToken: cancellationToken);
     }
 
     public Task<Role?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return _dapperHelper.QueryFirstOrDefaultAsync<Role>(RbacQueries.GetRoleByCodeQuery(), new { Code = code }, cancellationToken: cancellationToken);
+        return _db.QueryFirstOrDefaultAsync<Role>(RbacQueries.GetRoleByCodeQuery(), new { Code = code }, cancellationToken: cancellationToken);
     }
 
-    public async Task<Guid?> CreateAsync(Role role, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(Role role, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(RbacQueries.CreateRoleQuery(), role, cancellationToken: cancellationToken);
-        return affectedRows >= 1 ? role.Id : null;
+        var affectedRows = await _db.ExecuteAsync(RbacQueries.CreateRoleQuery(), role, cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(Role));
     }
 
     public async Task<bool> UpdateAsync(Role role, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(RbacQueries.UpdateRoleQuery(), role, cancellationToken: cancellationToken);
+        var affectedRows = await _db.ExecuteAsync(RbacQueries.UpdateRoleQuery(), role, cancellationToken: cancellationToken);
         return affectedRows >= 1;
     }
 
@@ -57,7 +56,7 @@ public class RoleRepository : BaseRepository<RoleRepository>, IRoleRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(
+        var affectedRows = await _db.ExecuteAsync(
             RbacQueries.SoftDeleteRoleQuery(),
             new { RoleId = roleId, ModifiedBy = modifiedBy, ModifiedAt = modifiedAt },
             cancellationToken: cancellationToken);

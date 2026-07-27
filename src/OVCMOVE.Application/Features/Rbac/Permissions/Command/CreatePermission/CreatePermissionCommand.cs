@@ -4,7 +4,7 @@ using OVCMOVE.Application.DTOs.Security;
 
 namespace OVCMOVE.Application.Features.Rbac.Permissions.Command.CreatePermission;
 
-public class CreatePermissionCommand : BaseRequestModel, IRequest<PermissionSummaryModel>
+public class CreatePermissionCommand : AuditedRequest, IRequest<PermissionSummaryModel>
 {
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;

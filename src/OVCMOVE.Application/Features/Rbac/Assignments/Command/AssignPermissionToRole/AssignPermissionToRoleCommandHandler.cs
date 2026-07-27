@@ -11,6 +11,7 @@ public class AssignPermissionToRoleCommandHandler(
     IRolePermissionRepository rolePermissionRepository)
     : IRequestHandler<AssignPermissionToRoleCommand, RolePermissionAssignmentModel?>
 {
+    /// <summary>Assigns one permission to a role when both records exist.</summary>
     public async Task<RolePermissionAssignmentModel?> Handle(AssignPermissionToRoleCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -26,7 +27,7 @@ public class AssignPermissionToRoleCommandHandler(
         if (!currentPermissionIds.Contains(request.PermissionId))
         {
             var now = DateTime.UtcNow;
-            var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+            var actor = request.GetActorOrSystem();
             await rolePermissionRepository.CreateAsync(new RolePermission
             {
                 Id = Guid.NewGuid(),

@@ -6,7 +6,7 @@ namespace OVCMOVE.Application.Abstractions.Services;
 public interface IJwtTokenGenerator
 {
     int RefreshTokenExpirationDays { get; }
-    int AccessTokenExpirationMinutes {get;}
+    int AccessTokenExpirationMinutes { get; }
     string GenerateAccessToken(User user, UserAccessProfileModel accessProfile);
     string GenerateRefreshToken();
     string HashRefreshToken(string refreshToken);

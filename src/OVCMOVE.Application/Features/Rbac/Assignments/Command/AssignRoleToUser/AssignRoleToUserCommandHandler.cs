@@ -11,6 +11,7 @@ public class AssignRoleToUserCommandHandler(
     IUserRoleRepository userRoleRepository)
     : IRequestHandler<AssignRoleToUserCommand, UserRoleAssignmentModel?>
 {
+    /// <summary>Assigns one role to a user when both records exist.</summary>
     public async Task<UserRoleAssignmentModel?> Handle(AssignRoleToUserCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -26,7 +27,7 @@ public class AssignRoleToUserCommandHandler(
         if (!currentRoleIds.Contains(request.RoleId))
         {
             var now = DateTime.UtcNow;
-            var actor = string.IsNullOrWhiteSpace(request.ModifiedBy) ? "system" : request.ModifiedBy.Trim();
+            var actor = request.GetActorOrSystem();
             await userRoleRepository.CreateAsync(new UserRole
             {
                 Id = Guid.NewGuid(),

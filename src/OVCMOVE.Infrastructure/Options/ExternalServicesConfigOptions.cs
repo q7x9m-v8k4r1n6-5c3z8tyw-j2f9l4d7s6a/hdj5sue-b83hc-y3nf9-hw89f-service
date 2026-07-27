@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace OVCMOVE.Infrastructure.Options;
 
-namespace OVCMOVE.Infrastructure.Options
+public class ExternalServicesConfigOptions
 {
-    public class ExternalServicesConfigOptions
-    {
-        public const string SectionName = "ExternalServicesConfig";
-        public EmailServiceOption EmailService { get; set; }
+    public const string SectionName = "ExternalServicesConfig";
+    public EmailServiceOption EmailService { get; set; } = new();
 
-        public class EmailServiceOption {
-            public string Email { get; set; }
-            public string Password { get; set; }
-        }
+    public class EmailServiceOption
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

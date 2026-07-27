@@ -1,13 +1,12 @@
-﻿
-using OVCMOVE.Domain.Common;
+﻿using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;
 
 /// <summary>
-/// Domain entity: quan he giua Race va Team tham gia.
+/// Stores the relationship between a race and a participating team.
 /// </summary>
 public class RaceTeam : BaseEntity
 {
-    public Guid RaceID { get; set; }
-    public Guid TeamID { get; set; }
+    public Guid RaceId { get; set; }
+    public Guid TeamId { get; set; }
 }

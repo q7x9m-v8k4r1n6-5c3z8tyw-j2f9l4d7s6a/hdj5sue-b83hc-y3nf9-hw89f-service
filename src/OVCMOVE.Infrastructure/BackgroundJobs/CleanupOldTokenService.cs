@@ -5,36 +5,53 @@ using OVCMOVE.Application.Abstractions.Repositories;
 
 namespace OVCMOVE.Infrastructure.BackgroundJobs;
 
-public class CleanupOldTokenService : BackgroundService
+public sealed class CleanupOldTokenService : BackgroundService
 {
-    private readonly ILogger<CleanupOldTokenService> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private const int DaysToKeep = 14;
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromDays(1);
 
-    public CleanupOldTokenService(ILogger<CleanupOldTokenService> logger, IServiceProvider serviceProvider)
+    private readonly ILogger<CleanupOldTokenService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    public CleanupOldTokenService(
+        ILogger<CleanupOldTokenService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
     }
 
+    /// <summary>Removes expired refresh-token history once per day.</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                
-                var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
+                using var scope = _scopeFactory.CreateScope();
 
-                var deletedCount = await refreshTokenRepository.CleanupOldTokensAsync(14);
-                
+                var refreshTokenRepository = scope.ServiceProvider
+                    .GetRequiredService<IRefreshTokenRepository>();
+
+                var deletedCount = await refreshTokenRepository
+                    .CleanupOldTokensAsync(DaysToKeep, stoppingToken);
+                _logger.LogInformation(
+                    "Removed {DeletedCount} expired refresh tokens.",
+                    deletedCount);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Lỗi trong quá trình dọn dẹp Token.");
+                _logger.LogError(
+                    ex,
+                    "Refresh-token cleanup failed.");
             }
 
-            await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+            await Task.Delay(CleanupInterval, stoppingToken);
         }
     }
 }

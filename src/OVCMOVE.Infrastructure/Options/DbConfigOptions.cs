@@ -3,11 +3,10 @@ namespace OVCMOVE.Infrastructure.Options;
 public class DbConfigOptions
 {
     public const string SectionName = "DbConfig";
-    public SQLServerOptions SQLServer { get; init; } 
+    public SqlServerOptions SqlServer { get; init; } = new();
 
-    public class SQLServerOptions
+    public class SqlServerOptions
     {
         public string ConnectionString { get; init; } = string.Empty;
     }
-
 }

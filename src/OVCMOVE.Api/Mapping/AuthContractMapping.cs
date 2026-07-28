@@ -25,6 +25,7 @@ public static class AuthContractMapping
             AccessToken = result.AccessToken,
             AccessTokenExpiration = result.AccessTokenExpiration,
             UserId = result.UserId,
+            UserType = result.UserType,
             Roles = result.Roles.Select(ToResponse).ToArray(),
             Permissions = result.Permissions.Select(ToResponse).ToArray(),
             Access = result.Access
@@ -36,6 +37,7 @@ public static class AuthContractMapping
         {
             Id = result.Id,
             Email = result.Email,
+            UserType = result.UserType,
             Roles = result.Roles.Select(ToResponse).ToArray(),
             Permissions = result.Permissions.Select(ToResponse).ToArray(),
             Access = result.Access,

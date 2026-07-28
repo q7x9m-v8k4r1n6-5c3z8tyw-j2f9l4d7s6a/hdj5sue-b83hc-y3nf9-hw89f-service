@@ -43,6 +43,7 @@ public class AuthContract
         public string AccessToken { get; set; } = string.Empty;
         public DateTime AccessTokenExpiration { get; set; }
         public Guid UserId { get; set; }
+        public string UserType { get; set; } = string.Empty;
         public IReadOnlyCollection<RoleAccessResponse> Roles { get; set; } = Array.Empty<RoleAccessResponse>();
         public IReadOnlyCollection<PermissionAccessResponse> Permissions { get; set; } = Array.Empty<PermissionAccessResponse>();
         public IReadOnlyCollection<string> Access { get; set; } = Array.Empty<string>();
@@ -52,6 +53,7 @@ public class AuthContract
     {
         public Guid Id { get; set; }
         public string Email { get; set; } = string.Empty;
+        public string UserType { get; set; } = string.Empty;
         public IReadOnlyCollection<RoleAccessResponse> Roles { get; set; } = Array.Empty<RoleAccessResponse>();
         public IReadOnlyCollection<PermissionAccessResponse> Permissions { get; set; } = Array.Empty<PermissionAccessResponse>();
         public IReadOnlyCollection<string> Access { get; set; } = Array.Empty<string>();

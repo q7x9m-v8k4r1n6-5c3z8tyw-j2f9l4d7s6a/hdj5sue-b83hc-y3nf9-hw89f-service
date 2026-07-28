@@ -57,6 +57,7 @@ public class AuthSessionIssuer
             RefreshToken = refreshToken,
             RefreshTokenExpiration = refreshTokenExpiration,
             UserId = user.Id,
+            UserType = user.UserType,
             Roles = accessProfile.Roles,
             Permissions = accessProfile.Permissions,
             Access = accessProfile.Access

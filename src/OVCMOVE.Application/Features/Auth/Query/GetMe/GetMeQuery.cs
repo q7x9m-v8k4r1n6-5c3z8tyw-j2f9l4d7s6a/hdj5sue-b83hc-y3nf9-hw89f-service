@@ -6,6 +6,7 @@ namespace OVCMOVE.Application.Features.Auth.Query.GetMe;
 public record GetMeResult(
     Guid Id,
     string Email,
+    string UserType,
     IReadOnlyCollection<RoleAccessModel> Roles,
     IReadOnlyCollection<PermissionAccessModel> Permissions,
     IReadOnlyCollection<string> Access,

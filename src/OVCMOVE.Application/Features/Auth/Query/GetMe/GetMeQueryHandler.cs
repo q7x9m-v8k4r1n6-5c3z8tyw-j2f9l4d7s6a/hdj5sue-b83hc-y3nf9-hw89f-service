@@ -29,6 +29,7 @@ public class GetMeQueryHandler : IRequestHandler<GetMeQuery, GetMeResult>
         return new GetMeResult(
             user.Id,
             user.LinkedEmail,
+            user.UserType,
             accessProfile.Roles,
             accessProfile.Permissions,
             accessProfile.Access,

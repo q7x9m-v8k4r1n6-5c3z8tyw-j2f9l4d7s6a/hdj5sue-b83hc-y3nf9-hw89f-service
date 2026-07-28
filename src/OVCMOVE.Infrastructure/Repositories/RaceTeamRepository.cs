@@ -1,32 +1,50 @@
-﻿using Microsoft.Extensions.Logging;
-using OVCMOVE.Application.Abstractions.Repositories;
+﻿using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
-using OVCMOVE.Domain.Entities;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class RaceTeamRepository : BaseRepository<RaceTeamRepository>, IRaceTeamRepository
+public class RaceTeamRepository : IRaceTeamRepository
 {
-    public RaceTeamRepository(ILogger<RaceTeamRepository> logger, IDapperHelper dapperHelper)
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
 
-    public async Task<Guid?> CreateAsync(RaceTeam raceTeam, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
+    public RaceTeamRepository(IDbExecutor db) =>
+        _db = db;
 
-        var affectedRows = await _dapperHelper.ExecuteAsync(RaceQueries.CreateRaceTeamQuery(), raceTeam);
-        return affectedRows >= 1 ? raceTeam.Id : null;
-    }
-
-    public Task DeleteByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(RaceTeam raceTeam, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return _dapperHelper.ExecuteAsync(RaceQueries.DeleteRaceTeamsByRaceIdQuery(), new { RaceId = raceId });
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateRaceTeamQuery(),
+            raceTeam,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(
+            affectedRows,
+            nameof(RaceTeam));
     }
+
+    public async Task<IReadOnlyCollection<Guid>> GetTeamIdsByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var teamIds = await _db.QueryAsync<Guid>(
+            RaceQueries.GetRaceTeamIdsQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+        return teamIds.ToArray();
+    }
+
+    public Task DeleteAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return _db.ExecuteAsync(
+            RaceQueries.DeleteRaceTeamQuery(),
+            new { RaceId = raceId, TeamId = teamId },
+            cancellationToken: cancellationToken);
+    }
+
 }

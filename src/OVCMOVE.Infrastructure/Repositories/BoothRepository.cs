@@ -1,79 +1,106 @@
-﻿using Microsoft.Extensions.Logging;
-using OVCMOVE.Application.Abstractions.Repositories;
+﻿using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class BoothRepository : BaseRepository<BoothRepository>, IBoothRepository
+/// <summary>
+/// Repository xử lý truy xuất dữ liệu cho Trạm (Booth) sử dụng Dapper IDbExecutor.
+/// </summary>
+public class BoothRepository : IBoothRepository
 {
-    public BoothRepository(ILogger<BoothRepository> logger, IDapperHelper dapperHelper)
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
 
-    public async Task<Guid?> CreateAsync(Booth booth, CancellationToken cancellationToken = default)
-    {
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+    public BoothRepository(IDbExecutor db) =>
+        _db = db;
 
-            var affectedRows = await _dapperHelper.ExecuteAsync(RaceQueries.CreateBoothQuery(), booth);
-            return affectedRows >= 1 ? booth.Id : null;
-
-        }
-    }
-    public Task DeleteByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(Booth booth, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return _dapperHelper.ExecuteAsync(RaceQueries.DeleteBoothsByRaceIdQuery(), new { RaceId = raceId });
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateBoothQuery(),
+            booth,
+            cancellationToken: cancellationToken);
+
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(Booth));
+
+        return booth.Id;
     }
+
     public async Task<Booth?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _dapperHelper.QueryFirstOrDefaultAsync<Booth>(
+        return await _db.QueryFirstOrDefaultAsync<Booth>(
             BoothQueries.GetBoothByIdQuery(),
-            new { Id = id }
-        );
+            new { Id = id },
+            cancellationToken: cancellationToken);
     }
 
-    public async Task<bool> SubmitScoreAndReleaseAsync(
-    Guid boothId,
-    Guid teamId,
-    string organizerId,
-    int score,
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        //Cộng điểm tích lũy cho Team
-        var affectedScoreRows = await _dapperHelper.ExecuteAsync(
+        var booths = await _db.QueryAsync<Booth>(
+            RaceQueries.GetBoothsByRaceIdQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        return booths.ToArray();
+    }
+
+    public async Task<bool> UpdateAsync(Booth booth, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateBoothQuery(),
+            booth,
+            cancellationToken: cancellationToken);
+
+        return affectedRows >= 1;
+    }
+
+    public Task DeleteAsync(Guid boothId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return _db.ExecuteAsync(
+            RaceQueries.DeleteBoothByIdQuery(),
+            new { BoothId = boothId },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> SubmitScoreAndReleaseAsync(
+        Guid boothId,
+        Guid teamId,
+        Guid organizerId,
+        int score,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // 1. Cập nhật điểm cho Đội
+        await _db.ExecuteAsync(
             BoothQueries.UpdateTeamScoreQuery(),
-            new { Score = score, TeamId = teamId }
-        );
+            new { TeamId = teamId, Score = score },
+            cancellationToken: cancellationToken);
 
-        //Trả lại trạng thái trống cho Trạm
-        var affectedBoothRows = await _dapperHelper.ExecuteAsync(
+        // 2. Giải phóng trạng thái Trạm
+        await _db.ExecuteAsync(
             BoothQueries.ReleaseBoothStatusQuery(),
-            new { BoothId = boothId }
-        );
+            new { BoothId = boothId },
+            cancellationToken: cancellationToken);
 
-        //Nhật ký chấm điểm
-        var affectedLogRows = await _dapperHelper.ExecuteAsync(
+        // 3. Ghi Log nhập điểm
+        await _db.ExecuteAsync(
             BoothQueries.InsertScoringLogQuery(),
-            new
-            {
-                Id = Guid.NewGuid(),
-                BoothId = boothId,
-                TeamId = teamId,
-                OrganizerId = organizerId,
-                ScoreGiven = score
-            }
-        );
+            new { Id = Guid.NewGuid(), BoothId = boothId, TeamId = teamId, OrganizerId = organizerId, ScoreGiven = score },
+            cancellationToken: cancellationToken);
 
-        return affectedScoreRows > 0 && affectedBoothRows > 0 && affectedLogRows > 0;
+        return true;
     }
 }

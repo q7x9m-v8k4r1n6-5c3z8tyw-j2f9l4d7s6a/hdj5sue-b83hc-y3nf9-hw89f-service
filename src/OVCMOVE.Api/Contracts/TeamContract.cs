@@ -1,30 +1,35 @@
 ﻿namespace OVCMOVE.Api.Contracts;
 
-public class TeamContract
+public static class TeamContract
 {
-    //Request đầu vào cho API View List
-    public class GetTeamsRequest
+    /// <summary>
+    /// Request phân trang cho API lấy danh sách Teams
+    /// </summary>
+    public sealed class GetTeamsRequest
     {
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
+        public int PageIndex { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
     }
 
-    //Response đầu ra cho API View List
-    public class GetTeamsResponse
+    /// <summary>
+    /// Response trả về danh sách Teams
+    /// </summary>
+    public sealed class TeamListItemResponse
     {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public Guid UserId { get; set; }
-        public string DisplayName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string LeaderEmail { get; init; } = string.Empty;
+        public string Username { get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
     }
 
-    //Response đầu ra cho API Search
-    public class SearchTeamResponse
+    /// <summary>
+    /// Response trả về khi tìm kiếm Team (Search)
+    /// </summary>
+    public sealed class TeamSearchItemResponse
     {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string LeaderEmail { get; init; } = string.Empty;
     }
 }

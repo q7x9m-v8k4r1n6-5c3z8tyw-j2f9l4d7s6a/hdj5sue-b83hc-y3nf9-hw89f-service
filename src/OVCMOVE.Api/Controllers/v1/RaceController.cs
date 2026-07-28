@@ -1,121 +1,154 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
-using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Api.Mapping;
+using OVCMOVE.Api.Security;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
-using OVCMOVE.Application.Features.Races.Command.UpdateRace;
+using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
-using OVCMOVE.Application.Common;
-using OVCMOVE.Domain.Constants;
+using static OVCMOVE.Api.Contracts.RaceContract;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
-public class RaceController : BaseController<RaceController>
+[Route("api/v1/[controller]")]
+public class RaceController : BaseController
 {
-    public RaceController(ILogger<RaceController> logger, IMediator mediator, IMapper mapper)
-        : base(logger, mediator, mapper)
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web);
+
+    public RaceController(IMediator mediator)
+        : base(mediator)
     {
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesQuery query, CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesRequest request, CancellationToken cancellationToken)
     {
-        try
-        {
-            query ??= new GetAllRacesQuery();
-            var result = await _mediator.Send(query, cancellationToken);
-            return Ok(new ApiResponseModel<PagedResult<RaceItemResultModel>>(
-                APIContansts.StatusCode.Success,
-                APIContansts.StatusMessage.Success,
-                data: result));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while processing GetAllRaces: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var query = request.ToQuery();
+        var result = await _mediator.Send(query, cancellationToken);
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
-    [HttpGet("{raceId:guid}")]
-    public async Task<IActionResult> GetRaceDetail(Guid raceId, CancellationToken cancellationToken)
+    [HttpGet("{raceId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetRaceDetail([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _mediator.Send(
+            new GetRaceDetailQuery { RaceId = raceId },
+            cancellationToken);
+        if (result is null)
         {
-            var result = await _mediator.Send(new GetRaceDetailQuery { RaceId = raceId }, cancellationToken);
-            if (result is null)
-            {
-                return Ok(new ApiResponseModel<object>(
-                    APIContansts.StatusCode.NotFound,
-                    APIContansts.StatusMessage.NotFound));
-            }
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
+        }
 
-            return Ok(new ApiResponseModel<RaceDetailResultModel>(
-                APIContansts.StatusCode.Success,
-                APIContansts.StatusMessage.Success,
-                data: result));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while processing GetRaceDetail: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateRace([FromBody] RaceContract.UpsertRaceRequest request, CancellationToken cancellationToken)
+    [Consumes("multipart/form-data")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> CreateRace([FromForm] RaceMutationFormRequest form, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileError = form.CoverImage is null
+            ? null
+            : await ImageFileValidator.ValidateAsync(
+                form.CoverImage,
+                cancellationToken);
+        if (fileError is not null)
+        {
+            return BadRequest(ApiResponse.Error(
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                fileError));
+        }
+
+        var request = DeserializePayload<CreateNewRaceRequest>(form.Payload);
+        var command = request.ToCommand();
+        using var coverStream = form.CoverImage?.OpenReadStream();
+        if (form.CoverImage is not null && coverStream is not null)
+        {
+            command.CoverImage = new FileUploadModel(
+                coverStream,
+                form.CoverImage.FileName,
+                form.CoverImage.ContentType);
+        }
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(ApiResponse.Success(result));
+    }
+
+    [HttpPatch("{raceId:guid}")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> PatchRace(Guid raceId, [FromForm] RaceMutationFormRequest form, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileError = form.CoverImage is null
+            ? null
+            : await ImageFileValidator.ValidateAsync(
+                form.CoverImage,
+                cancellationToken);
+        if (fileError is not null)
+        {
+            return BadRequest(ApiResponse.Error(
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                fileError));
+        }
+
+        var request = DeserializePayload<PatchRaceRequest>(form.Payload);
+        var command = request.ToCommand(raceId);
+        using var coverStream = form.CoverImage?.OpenReadStream();
+        if (form.CoverImage is not null && coverStream is not null)
+        {
+            command.CoverImage = new FileUploadModel(
+                coverStream,
+                form.CoverImage.FileName,
+                form.CoverImage.ContentType);
+        }
+
+        var result = await _mediator.Send(command, cancellationToken);
+        if (result is null)
+        {
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
+        }
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    private static T DeserializePayload<T>(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            throw new ArgumentException("Payload không được để trống.");
+        }
+
         try
         {
-            var command = _mapper.Map<CreateRaceCommand>(request);
-            var result = await _mediator.Send(command, cancellationToken);
-
-            return Ok(new ApiResponseModel<Guid?>(
-                APIContansts.StatusCode.Success,
-                APIContansts.StatusMessage.Success,
-                data: result));
+            return JsonSerializer.Deserialize<T>(payload, JsonOptions)
+                ?? throw new ArgumentException("Payload không hợp lệ.");
         }
-        catch (Exception ex)
+        catch (JsonException exception)
         {
-            _logger.LogError("Error occurred while processing CreateRace: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
+            throw new ArgumentException(
+                "Payload JSON không hợp lệ.",
+                exception);
         }
     }
 
-    [HttpPut("{raceId:guid}")]
-    public async Task<IActionResult> UpdateRace(Guid raceId, [FromBody] RaceContract.UpsertRaceRequest request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var command = _mapper.Map<UpdateRaceCommand>(request);
-            command.RaceId = raceId;
-
-            var result = await _mediator.Send(command, cancellationToken);
-            if (result is null)
-            {
-                return Ok(new ApiResponseModel<object>(
-                    APIContansts.StatusCode.NotFound,
-                    APIContansts.StatusMessage.NotFound));
-            }
-
-            return Ok(new ApiResponseModel<RaceDetailResultModel>(
-                APIContansts.StatusCode.Success,
-                APIContansts.StatusMessage.Success,
-                data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Ok(new ApiResponseModel<object>(
-                APIContansts.StatusCode.BadRequest,
-                APIContansts.StatusMessage.BadRequest,
-                detailError: ex.Message));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while processing UpdateRace: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
-    }
 }

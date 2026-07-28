@@ -37,7 +37,7 @@ public class BoothController : ControllerBase
         {
             BoothID = request.BoothID,
             TeamID = request.TeamID,
-            OrganizerId = organizerId,
+            OrganizerId = Guid.Parse(organizerId),
             Score = request.Score
         };
 

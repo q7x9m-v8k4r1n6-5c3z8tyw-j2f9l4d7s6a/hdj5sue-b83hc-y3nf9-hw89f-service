@@ -1,42 +1,45 @@
-﻿using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Application.Common;
-using OVCMOVE.Application.Features.Organizers.Query.SearchOrganizer;
 using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Application.Features.Organizers.Query.SearchOrganizer;
 
 public class SearchOrganizerQueryHandler :
-    BaseQueryHandler<SearchOrganizerQueryHandler>,
-    IRequestHandler<SearchOrganizerQuery, List<SearchOrganizerResultModel>>
+    IRequestHandler<SearchOrganizerQuery,
+        IReadOnlyCollection<SearchOrganizerResultModel>>
 {
-    private readonly IMapper _mapper;
     private readonly IOrganizerRepository _organizerRepository;
 
     public SearchOrganizerQueryHandler(
-        ILogger<SearchOrganizerQueryHandler> logger,
-        IMapper mapper,
-        IOrganizerRepository organizerRepository) : base(logger)
+        IOrganizerRepository organizerRepository)
     {
-        _mapper = mapper;
         _organizerRepository = organizerRepository;
     }
 
-    public async Task<List<SearchOrganizerResultModel>> Handle(SearchOrganizerQuery request, CancellationToken cancellationToken)
+    /// <summary>Searches organizer accounts and maps them to the feature result.</summary>
+    public async Task<IReadOnlyCollection<SearchOrganizerResultModel>> Handle(
+        SearchOrganizerQuery request,
+        CancellationToken cancellationToken)
     {
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(request.Keyword))
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            throw new ApplicationValidationException(
+                "Từ khóa tìm kiếm không được để trống.");
+        }
 
-            var organizers = await _organizerRepository.SearchAsync(request.Keyword, cancellationToken);
-            return _mapper.Map<List<SearchOrganizerResultModel>>(organizers);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while handling SearchOrganizersQuery: {Message}", ex.Message);
-            throw;
-        }
+        var organizers = await _organizerRepository.SearchAsync(
+            request.Keyword.Trim(),
+            cancellationToken);
+        return organizers.Select(MapOrganizer).ToArray();
     }
+
+    private static SearchOrganizerResultModel MapOrganizer(User user) => new()
+    {
+        Id = user.Id,
+        DisplayName = user.DisplayName ?? string.Empty,
+        Email = user.LinkedEmail
+    };
 }

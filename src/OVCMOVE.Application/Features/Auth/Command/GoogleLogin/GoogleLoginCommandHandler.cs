@@ -1,92 +1,84 @@
 using MediatR;
-using Microsoft.Extensions.Logging;
-using AutoMapper;
-
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.DTOs.ResultModels;
-using OVCMOVE.Domain.Entities;
-using OVCMOVE.Domain.Constants;
+using OVCMOVE.Application.Features.Auth;
 
 namespace OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
 
-public class GoogleLoginCommandHandler : BaseCommandHandler<GoogleLoginCommandHandler>, IRequestHandler<GoogleLoginCommand, LoginResultModel>
+public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, LoginResultModel>
 {
-    private readonly IGoogleAuthService _googleAuthService; 
-    private readonly IUserRepository _userRepository;       
-    private readonly IRefreshTokenRepository _refreshTokenRepository; 
-    private readonly IJwtTokenGenerator _jwtTokenGenerator; 
+    private readonly IGoogleAuthService _googleAuthService;
+    private readonly IUserRepository _userRepository;
+    private readonly IUserAccessRepository _userAccessRepository;
+    private readonly AuthSessionIssuer _sessionIssuer;
 
     public GoogleLoginCommandHandler(
         IGoogleAuthService googleAuthService,
         IUserRepository userRepository,
-        IRefreshTokenRepository refreshTokenRepository,
-        IJwtTokenGenerator jwtTokenGenerator,
-        IMapper mapper,
-        ILogger<GoogleLoginCommandHandler> logger) : base(logger,mapper) 
+        IUserAccessRepository userAccessRepository,
+        AuthSessionIssuer sessionIssuer)
     {
         _googleAuthService = googleAuthService;
         _userRepository = userRepository;
-        _refreshTokenRepository = refreshTokenRepository;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _userAccessRepository = userAccessRepository;
+        _sessionIssuer = sessionIssuer;
     }
 
-    public async Task<LoginResultModel> Handle(GoogleLoginCommand request, CancellationToken cancellationToken) 
+    /// <summary>Authenticates an authorized user with a Google identity token.</summary>
+    public async Task<LoginResultModel> Handle(GoogleLoginCommand request, CancellationToken cancellationToken)
     {
-        try
+        if (string.IsNullOrWhiteSpace(request.IdToken))
         {
-            var googleUser = await _googleAuthService.ValidateGoogleTokenAsync(request.IdToken);
-            
-            if (googleUser is null || string.IsNullOrWhiteSpace(googleUser.Email))
-                throw new UnauthorizedAccessException("Xác thực Google thất bại hoặc Token đã hết hạn.");
+            throw new ApplicationValidationException(
+                "Google ID token không được để trống.");
+        }
 
-            var user = await _userRepository.GetByEmailAsync(googleUser.Email, cancellationToken);
+        var googleUser = await _googleAuthService.ValidateGoogleTokenAsync(
+            request.IdToken,
+            cancellationToken);
+        if (googleUser is null || string.IsNullOrWhiteSpace(googleUser.Email))
+        {
+            throw new UnauthorizedAccessException(
+                "Xác thực Google thất bại hoặc token đã hết hạn.");
+        }
 
-            if (user == null || user.Role != UserConstant.Role.Organizer)
-                throw new UnauthorizedAccessException("Email này chưa được cấp quyền Organizer."); 
+        var user = await _userRepository.GetByEmailAsync(
+            googleUser.Email,
+            cancellationToken)
+            ?? throw new UnauthorizedAccessException(
+                "Email này chưa được cấp quyền truy cập.");
 
-            if (string.IsNullOrWhiteSpace(user.DisplayName) && !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+        if (string.IsNullOrWhiteSpace(user.DisplayName) &&
+            !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+        {
+            var displayName = googleUser.DisplayName.Trim();
+            if (displayName.Length > 255)
             {
-                var displayName = googleUser.DisplayName.Trim();
-                await _userRepository.UpdateDisplayNameAsync(user.Id, displayName, cancellationToken);
-                user.DisplayName = displayName;
+                // External profile text must fit the stable Users column.
+                displayName = displayName[..255];
             }
 
-            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-            var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
-            var now = DateTime.UtcNow;
-            var sessionId = Guid.NewGuid();
-
-            var newRefreshTokenEntity = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                SessionId = sessionId,
-                FamilyId = sessionId,
-                TokenHash = _jwtTokenGenerator.HashRefreshToken(refreshToken),
-                ExpiryDate = now.AddDays(_jwtTokenGenerator.RefreshTokenExpirationDays),
-                IsRevoked = false,
-                CreatedAt = now
-            };
-            
-            await _refreshTokenRepository.CreateAsync(newRefreshTokenEntity, cancellationToken);
-
-            var expirationDate = DateTime.UtcNow.AddMinutes(_jwtTokenGenerator.AccessTokenExpirationMinutes);
-
-            return new LoginResultModel
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                AccessTokenExpiration = expirationDate,
-                UserId = user.Id
-            };
+            await _userRepository.UpdateDisplayNameAsync(
+                user.Id,
+                displayName,
+                cancellationToken);
+            user.DisplayName = displayName;
         }
-        catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)
+
+        var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
+            user.Id,
+            cancellationToken);
+        if (accessProfile.Roles.Count == 0)
         {
-            _logger.LogError(ex, $"Lỗi hệ thống khi xử lý: {ex.Message}."); //TODO: VIẾT LẠI LOG RIÊNG ĐỂ BIẾT CỤ THỂ LUÔN
-            throw;
+            throw new UnauthorizedAccessException(
+                "Email này chưa được gán role truy cập.");
         }
+
+        return await _sessionIssuer.IssueAsync(
+            user,
+            accessProfile,
+            cancellationToken);
     }
 }

@@ -1,5 +1,8 @@
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE.Application.Behaviors;
+using OVCMOVE.Application.Features.Auth;
+using OVCMOVE.Application.Features.Races.Command.CreateRace;
+using OVCMOVE.Application.Features.Races.Command.PatchRace;
 
 namespace OVCMOVE.Application;
 
@@ -10,10 +13,17 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(AssemblyReference.Assembly);
+
+            // Đăng ký Pipeline Behavior để tự động ghi log Audit người dùng
+            configuration.AddOpenBehavior(typeof(AuditActorBehavior<,>));
         });
 
-        services.AddAutoMapper(AssemblyReference.Assembly);
-        services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
+        // Đăng ký các Processor xử lý nghiệp vụ Patch & Security Session
+        services.AddScoped<BoothPatchProcessor>();
+        services.AddScoped<RaceTeamPatchProcessor>();
+        services.AddScoped<RaceOrganizerPatchProcessor>();
+        services.AddScoped<CreateRaceRelationValidator>();
+        services.AddScoped<AuthSessionIssuer>();
 
         return services;
     }

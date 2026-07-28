@@ -1,19 +1,29 @@
 using System.Text.Json;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Api.Middleware;
 
 public class GlobalExceptionMiddleware
 {
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web);
+
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    public GlobalExceptionMiddleware(
+        RequestDelegate next,
+        ILogger<GlobalExceptionMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
+    /// <summary>Executes the request and converts unhandled exceptions to one API error format.</summary>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -23,34 +33,82 @@ public class GlobalExceptionMiddleware
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Client ngắt kết nối trước khi API hoàn tất.");
-            
-            context.Response.StatusCode = 499; // 499 Client Closed Request
-            context.Response.ContentType = "application/json";
-            
-            var result = JsonSerializer.Serialize(new { message = "Client Closed Request" });
-            await context.Response.WriteAsync(result);
+            await WriteErrorAsync(
+                context,
+                499,
+                "Client Closed Request");
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Truy cập bị từ chối: {Message}", ex.Message);
-            
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/json";
-            
-            var result = JsonSerializer.Serialize(new { message = ex.Message });
-            await context.Response.WriteAsync(result);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.Unauthorized,
+                ApiStatus.Messages.Unauthorized,
+                ex.Message);
+        }
+        catch (ApplicationValidationException ex)
+        {
+            _logger.LogWarning("Yêu cầu không hợp lệ: {Message}", ex.Message);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                ex.Message);
+        }
+        catch (ApplicationNotFoundException ex)
+        {
+            _logger.LogInformation("Không tìm thấy dữ liệu: {Message}", ex.Message);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound,
+                ex.Message);
+        }
+        catch (ApplicationConflictException ex)
+        {
+            _logger.LogWarning("Xung đột cập nhật dữ liệu: {Message}", ex.Message);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.Conflict,
+                ApiStatus.Messages.Conflict,
+                ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Payload không hợp lệ: {Message}", ex.Message);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi hệ thống không mong muốn: {Message}", ex.Message);
-            
-            context.Response.StatusCode = StatusCodes.Status200OK; 
-            context.Response.ContentType = "application/json";
-
-            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-            var result = JsonSerializer.Serialize(new InternalServerErrorModel(ex.Message), options);
-            
-            await context.Response.WriteAsync(result);
+            var detail = _environment.IsDevelopment() ? ex.Message : string.Empty;
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.InternalServerError,
+                ApiStatus.Messages.InternalServerError,
+                detail);
         }
+    }
+
+    private static async Task WriteErrorAsync(
+        HttpContext context,
+        int statusCode,
+        string message,
+        string detailError = "")
+    {
+        if (context.Response.HasStarted)
+        {
+            return;
+        }
+
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+        var response = ApiResponse.Error(statusCode, message, detailError);
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
     }
 }

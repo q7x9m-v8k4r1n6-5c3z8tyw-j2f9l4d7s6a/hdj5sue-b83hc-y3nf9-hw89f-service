@@ -10,6 +10,8 @@ services:
       - OVCMOVE_DbConfig__SQLServer__ConnectionString=${OVCMOVE_DbConfig__SQLServer__ConnectionString}
       - OVCMOVE_ExternalServicesConfig__EmailService__Email=${OVCMOVE_ExternalServicesConfig__EmailService__Email}
       - OVCMOVE_ExternalServicesConfig__EmailService__Password=${OVCMOVE_ExternalServicesConfig__EmailService__Password}
+      - OVCMOVE_AzureBlobStorage__ConnectionString=${OVCMOVE_AzureBlobStorage__ConnectionString}
+      - OVCMOVE_AzureBlobStorage__ContainerName=${OVCMOVE_AzureBlobStorage__ContainerName}
       - OVCMOVE_JwtConfig__SecretKey=${OVCMOVE_JwtConfig__SecretKey}
       - OVCMOVE_JwtConfig__Issuer=${OVCMOVE_JwtConfig__Issuer}
       - OVCMOVE_JwtConfig__Audience=${OVCMOVE_JwtConfig__Audience}

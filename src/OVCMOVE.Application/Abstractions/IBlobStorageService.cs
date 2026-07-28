@@ -10,4 +10,12 @@ public interface IBlobStorageService
         string fileName,
         string contentType,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Best-effort removal used to compensate for a failed database write.
+    /// Returns false instead of masking the original failure.
+    /// </summary>
+    Task<bool> TryDeleteAsync(
+        string fileUrl,
+        CancellationToken cancellationToken = default);
 }

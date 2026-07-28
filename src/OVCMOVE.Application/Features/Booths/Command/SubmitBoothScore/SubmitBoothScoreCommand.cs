@@ -7,6 +7,6 @@ public class SubmitBoothScoreCommand : IRequest<bool>
 {
     public Guid BoothID { get; set; }
     public Guid TeamID { get; set; }
-    public string OrganizerId { get; set; } = string.Empty;
+    public Guid OrganizerId { get; set; } 
     public int Score { get; set; }
 }

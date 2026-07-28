@@ -1,27 +1,25 @@
-using Microsoft.Extensions.Logging;
-
 using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Domain.Entities; 
-using OVCMOVE.Domain.Constants; 
+using OVCMOVE.Domain.Entities;
+using OVCMOVE.Domain.Constants;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
+using OVCMOVE.Infrastructure.Persistence.Queries;
 using OVCMOVE.Infrastructure.Common;
-using OVCMOVE.Infrastructure.Helpers;
-using OVCMOVE.Infrastructure.Helpers.QueriesHelper;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
-public class UserRepository : BaseRepository<UserRepository>, IUserRepository
+public class UserRepository : IUserRepository
 {
-    public UserRepository(ILogger<UserRepository> logger, IDapperHelper dapperHelper) 
-        : base(logger, dapperHelper)
-    {
-    }
+    private readonly IDbExecutor _db;
+
+    public UserRepository(IDbExecutor db) =>
+        _db = db;
 
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
-        var sql = UserQueryHelper.GetByUsernameQuery();
-        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+        var sql = UserQueries.GetByUsernameQuery();
+        var user = await _db.QueryFirstOrDefaultAsync<User>(
             sql,
-            new { Username = username, Status = UserConstant.Status.Active },
+            new { Username = username, Status = UserConstants.Status.Active },
             cancellationToken: cancellationToken);
 
         return user;
@@ -29,10 +27,10 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        var sql = UserQueryHelper.GetByEmailQuery();
-        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+        var sql = UserQueries.GetByEmailQuery();
+        var user = await _db.QueryFirstOrDefaultAsync<User>(
             sql,
-            new { Email = email, Status = UserConstant.Status.Active },
+            new { LinkedEmail = email, Status = UserConstants.Status.Active },
             cancellationToken: cancellationToken);
 
         return user;
@@ -40,10 +38,10 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
 
     public async Task<User?> GetByEmailAnyStatusAsync(string email, CancellationToken cancellationToken = default)
     {
-        var sql = UserQueryHelper.GetByEmailAnyStatusQuery();
-        var user = await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+        var sql = UserQueries.GetByEmailAnyStatusQuery();
+        var user = await _db.QueryFirstOrDefaultAsync<User>(
             sql,
-            new { Email = email },
+            new { LinkedEmail = email },
             cancellationToken: cancellationToken);
 
         return user;
@@ -51,27 +49,39 @@ public class UserRepository : BaseRepository<UserRepository>, IUserRepository
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var sql = UserQueryHelper.GetByIdQuery();
-        var user =  await _dapperHelper.QueryFirstOrDefaultAsync<User>(
+        var sql = UserQueries.GetByIdQuery();
+        var user = await _db.QueryFirstOrDefaultAsync<User>(
             sql,
-            new { Id = id, Status = UserConstant.Status.Active },
+            new { Id = id, Status = UserConstants.Status.Active },
             cancellationToken: cancellationToken);
 
         return user;
-    } 
+    }
+
+    public async Task<User?> GetByShortNameAsync(string shortName, CancellationToken cancellationToken = default)
+    {
+        var sql = UserQueries.GetByShortNameQuery();
+        var user = await _db.QueryFirstOrDefaultAsync<User>(
+            sql,
+            new { ShortName = shortName },
+            cancellationToken: cancellationToken);
+
+        return user;
+    }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        await _dapperHelper.ExecuteAsync(
-            UserQueryHelper.AddUserQuery(),
+        var affectedRows = await _db.ExecuteAsync(
+            UserQueries.AddUserQuery(),
             user,
             cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(User));
     }
 
     public async Task UpdateDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default)
     {
-        await _dapperHelper.ExecuteAsync(
-            UserQueryHelper.UpdateDisplayNameQuery(),
+        await _db.ExecuteAsync(
+            UserQueries.UpdateDisplayNameQuery(),
             new { Id = id, DisplayName = displayName },
             cancellationToken: cancellationToken);
     }

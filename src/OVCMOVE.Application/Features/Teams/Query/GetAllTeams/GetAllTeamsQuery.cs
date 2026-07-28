@@ -3,8 +3,8 @@ using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 
-public class GetAllTeamsQuery : IRequest<PagedResult<GetAllTeamsResultModel>>
+public record GetAllTeamsQuery : IRequest<PagedResult<GetAllTeamsResultModel>>
 {
-    public int PageIndex { get; set; } = 1;
-    public int PageSize { get; set; } = 20; // Cố định 20 item mỗi trang 
+    public int PageIndex { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
 }

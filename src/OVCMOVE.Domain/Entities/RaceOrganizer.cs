@@ -1,13 +1,12 @@
-﻿using System;
-using OVCMOVE.Domain.Common;
+﻿using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;
 
 /// <summary>
-/// Domain entity: quan he giua Race va Organizer/BTC.
+/// Stores the relationship between a race and an organizer.
 /// </summary>
 public class RaceOrganizer : BaseEntity
 {
-    public Guid RaceID { get; set; }
-    public Guid OrganizerID { get; set; }
+    public Guid RaceId { get; set; }
+    public Guid OrganizerId { get; set; }
 }

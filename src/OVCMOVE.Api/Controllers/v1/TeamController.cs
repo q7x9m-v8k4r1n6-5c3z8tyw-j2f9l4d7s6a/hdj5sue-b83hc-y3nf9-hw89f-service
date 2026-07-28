@@ -1,74 +1,47 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
-using OVCMOVE.Api.Contracts; 
-using OVCMOVE.Application.Common;
+using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Security;
+using OVCMOVE.Api.Mapping;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
-using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
-public class TeamController : BaseController<TeamController>
+[Route("api/v1/[controller]")]
+public class TeamController : BaseController
 {
-    public TeamController(ILogger<TeamController> logger, IMediator mediator, IMapper mapper)
-        : base(logger, mediator, mapper)
+    public TeamController(IMediator mediator)
+        : base(mediator)
     {
     }
 
-    // Task View Teams
-    [HttpGet("view-list")]
-    public async Task<IActionResult> GetAllTeams([FromQuery] TeamContract.GetTeamsRequest request, CancellationToken cancellationToken)
+    [HttpGet]
+    [RequirePermission(PermissionCodes.TeamRead)]
+    public async Task<IActionResult> GetAllTeams(
+        [FromQuery] CommonContract.PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        var query = new GetAllTeamsQuery
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-      
-            var query = _mapper.Map<GetAllTeamsQuery>(request ?? new TeamContract.GetTeamsRequest());
-
-            var result = await _mediator.Send(query, cancellationToken);
-
-            var response = _mapper.Map<PagedResult<TeamContract.GetTeamsResponse>>(result);
-
-            return Ok(new ApiResponseModel<PagedResult<TeamContract.GetTeamsResponse>>
-            {
-                StatusCode = APIContansts.StatusCode.Success,
-                Message = APIContansts.StatusMessage.Success,
-                Data = response
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while processing GetAllTeams: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+            PageIndex = request.Page,
+            PageSize = request.PageSize
+        };
+        var result = await _mediator.Send(query, cancellationToken);
+        return Ok(ApiResponse.Success(result.ToResponse(
+            item => item.ToResponse())));
     }
-
-    // Thanh tìm kiếm Teams
     [HttpGet("search")]
+    [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> SearchTeams([FromQuery] string query, CancellationToken cancellationToken)
     {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var result = await _mediator.Send(new SearchTeamQuery(query), cancellationToken);
-
-            var response = _mapper.Map<List<TeamContract.SearchTeamResponse>>(result);
-
-            return Ok(new ApiResponseModel<List<TeamContract.SearchTeamResponse>>
-            {
-                StatusCode = APIContansts.StatusCode.Success,
-                Message = APIContansts.StatusMessage.Success,
-                Data = response
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error occurred while processing SearchTeams: {Message}", ex.Message);
-            return Ok(new InternalServerErrorModel(ex.Message));
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await _mediator.Send(
+            new SearchTeamQuery(query),
+            cancellationToken);
+        return Ok(ApiResponse.Success(
+            result.Select(item => item.ToResponse()).ToArray()));
     }
 }

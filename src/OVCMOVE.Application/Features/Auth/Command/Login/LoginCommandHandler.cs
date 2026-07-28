@@ -1,76 +1,64 @@
 using MediatR;
-using Microsoft.Extensions.Logging;
-using AutoMapper;
-
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
-using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Features.Auth;
 
 namespace OVCMOVE.Application.Features.Auth.Command.Login;
 
-public class LoginCommandHandler : BaseCommandHandler<LoginCommandHandler>, IRequestHandler<LoginCommand, LoginResultModel>
+public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResultModel>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IUserAccessRepository _userAccessRepository;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly AuthSessionIssuer _sessionIssuer;
 
     public LoginCommandHandler(
-        IUserRepository userRepository, 
-        IRefreshTokenRepository refreshTokenRepository, 
-        IJwtTokenGenerator jwtTokenGenerator,
-        IMapper mapper,
-        ILogger<LoginCommandHandler> logger) : base(logger, mapper) 
+        IUserRepository userRepository,
+        IUserAccessRepository userAccessRepository,
+        IPasswordHasher passwordHasher,
+        AuthSessionIssuer sessionIssuer)
     {
         _userRepository = userRepository;
-        _refreshTokenRepository = refreshTokenRepository;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _userAccessRepository = userAccessRepository;
+        _passwordHasher = passwordHasher;
+        _sessionIssuer = sessionIssuer;
     }
 
+    /// <summary>Authenticates a user with a username and hashed password.</summary>
     public async Task<LoginResultModel> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        try
+        if (string.IsNullOrWhiteSpace(request.Username) ||
+            string.IsNullOrWhiteSpace(request.Password))
         {
-            var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
-            
-            // * HÀM so sánh pass này LÀ TẠM THỜI VÀ CHƯA CÓ CƠ CHẾ HASH ĐỂ DỄ TESTING
-            if (user == null || user.PasswordHash != request.Password)
-                throw new UnauthorizedAccessException("Tên đăng nhập hoặc mật khẩu không đúng.");
-                
-            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-            var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
-            var now = DateTime.UtcNow;
-            var sessionId = Guid.NewGuid();
-
-            var refreshTokenEntity = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                SessionId = sessionId,
-                FamilyId = sessionId,
-                TokenHash = _jwtTokenGenerator.HashRefreshToken(refreshTokenString),
-                ExpiryDate = now.AddDays(_jwtTokenGenerator.RefreshTokenExpirationDays),
-                IsRevoked = false,
-                CreatedAt = now
-            };
-
-            await _refreshTokenRepository.CreateAsync(refreshTokenEntity, cancellationToken);
-
-            var expirationDate = DateTime.UtcNow.AddMinutes(_jwtTokenGenerator.AccessTokenExpirationMinutes);
-
-            return new LoginResultModel
-            {
-                AccessToken = accessToken,
-                AccessTokenExpiration = expirationDate,
-                RefreshToken = refreshTokenString,
-                UserId = user.Id
-            };
+            throw new ApplicationValidationException(
+                "Tên đăng nhập và mật khẩu không được để trống.");
         }
-        catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not OperationCanceledException)
+
+        var user = await _userRepository.GetByUsernameAsync(
+            request.Username.Trim(),
+            cancellationToken);
+
+        if (user?.PasswordHash is null ||
+            !_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
-            _logger.LogError(ex, "Lỗi hệ thống khi xử lý LoginCommand cho Username: {Username}", request.Username);
-            throw;
+            throw new UnauthorizedAccessException(
+                "Tên đăng nhập hoặc mật khẩu không đúng.");
         }
+
+        var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
+            user.Id,
+            cancellationToken);
+        if (accessProfile.Roles.Count == 0)
+        {
+            throw new UnauthorizedAccessException(
+                "Tài khoản chưa được gán role truy cập.");
+        }
+
+        return await _sessionIssuer.IssueAsync(
+            user,
+            accessProfile,
+            cancellationToken);
     }
 }

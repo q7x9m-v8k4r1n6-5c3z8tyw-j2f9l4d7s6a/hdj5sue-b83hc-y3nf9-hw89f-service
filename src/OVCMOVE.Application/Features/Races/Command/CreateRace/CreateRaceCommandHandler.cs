@@ -1,74 +1,139 @@
-﻿using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using MediatR;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Application.Features.Races.Command;
 
 namespace OVCMOVE.Application.Features.Races.Command.CreateRace;
 
 public class CreateRaceCommandHandler :
-    BaseCommandHandler<CreateRaceCommandHandler>,
-    IRequestHandler<CreateRaceCommand, Guid?>
+    IRequestHandler<CreateRaceCommand, Guid>
 {
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothRepository _boothRepository;
+    private readonly IBoothOrganizerRepository _boothOrganizerRepository;
     private readonly IRaceTeamRepository _raceTeamRepository;
     private readonly IRaceOrganizerRepository _raceOrganizerRepository;
+    private readonly IBlobStorageService _blobStorageService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly CreateRaceRelationValidator _relationValidator;
 
     public CreateRaceCommandHandler(
-        ILogger<CreateRaceCommandHandler> logger,
-        IMapper mapper,
         IRaceRepository raceRepository,
         IBoothRepository boothRepository,
+        IBoothOrganizerRepository boothOrganizerRepository,
         IRaceTeamRepository raceTeamRepository,
-        IRaceOrganizerRepository raceOrganizerRepository) : base(logger, mapper)
+        IRaceOrganizerRepository raceOrganizerRepository,
+        IBlobStorageService blobStorageService,
+        IUnitOfWork unitOfWork,
+        CreateRaceRelationValidator relationValidator)
     {
         _raceRepository = raceRepository;
         _boothRepository = boothRepository;
+        _boothOrganizerRepository = boothOrganizerRepository;
         _raceTeamRepository = raceTeamRepository;
         _raceOrganizerRepository = raceOrganizerRepository;
+        _blobStorageService = blobStorageService;
+        _unitOfWork = unitOfWork;
+        _relationValidator = relationValidator;
     }
 
-    public async Task<Guid?> Handle(CreateRaceCommand request, CancellationToken cancellationToken)
+    /// <summary>Creates a race and all selected relationships in one database transaction.</summary>
+    public async Task<Guid> Handle(CreateRaceCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        CreateRaceFactory.Validate(request);
+        await _relationValidator.ValidateAsync(request, cancellationToken);
 
-        // 1. Cấp phát xung ID chủ động - Siêu an toàn
         var raceId = Guid.NewGuid();
-        var race = RaceCommandMapper.BuildRace(
-            raceId,
-            request.RaceName,
-            request.TimeStart,
-            request.TimeEnd,
-            request.Place,
-            request.CoverUrl,
-            request.IsToggledLeaderboard,
-            request.IsHiddenPoint,
-            DateTime.UtcNow,
-            "system");
+        var now = DateTime.UtcNow;
+        var actor = request.GetActorOrSystem();
+        string? coverUrl = null;
 
-        var createdRaceId = await _raceRepository.CreateAsync(race, cancellationToken);
-        if (createdRaceId is null) return null;
-
-        // 2. Tạo từng Booth (Trạm) theo logic của em
-        foreach (var boothInput in request.Booth)
+        if (request.CoverImage is not null)
         {
-            await _boothRepository.CreateAsync(RaceCommandMapper.BuildBooth(raceId, boothInput), cancellationToken);
+            coverUrl = await _blobStorageService.UploadAsync(
+                request.CoverImage.Stream,
+                request.CoverImage.FileName,
+                request.CoverImage.ContentType,
+                cancellationToken);
         }
 
-        // 3. Tạo từng Team (Đội đua) theo logic của em
-        foreach (var teamInput in request.RaceTeam)
+        try
         {
-            await _raceTeamRepository.CreateAsync(RaceCommandMapper.BuildRaceTeam(raceId, teamInput), cancellationToken);
-        }
+            await _unitOfWork.BeginAsync(cancellationToken);
+            var race = CreateRaceFactory.CreateRace(
+                request,
+                raceId,
+                coverUrl,
+                actor,
+                now);
+            await _raceRepository.CreateAsync(
+                race,
+                cancellationToken);
 
-        // 4. Tạo từng Organizer (Ban tổ chức) theo logic của em
-        foreach (var organizerId in request.OrganizerId.Where(id => id.HasValue).Select(id => id!.Value))
+            foreach (var boothInput in request.Booths ?? [])
+            {
+                var booth = CreateRaceFactory.CreateBooth(
+                    boothInput,
+                    raceId,
+                    actor,
+                    now);
+                await _boothRepository.CreateAsync(
+                    booth,
+                    cancellationToken);
+
+                foreach (var organizerId in
+                         (boothInput.OrganizerIds ?? []).Distinct())
+                {
+                    await _boothOrganizerRepository.CreateAsync(
+                        CreateRaceFactory.CreateBoothOrganizer(
+                            booth.Id,
+                            organizerId,
+                            actor,
+                            now),
+                        cancellationToken);
+                }
+            }
+
+            foreach (var teamId in (request.TeamIds ?? []).Distinct())
+            {
+                await _raceTeamRepository.CreateAsync(
+                    CreateRaceFactory.CreateRaceTeam(
+                        raceId,
+                        teamId,
+                        actor,
+                        now),
+                    cancellationToken);
+            }
+
+            foreach (var organizerId in
+                     (request.OrganizerIds ?? []).Distinct())
+            {
+                await _raceOrganizerRepository.CreateAsync(
+                    CreateRaceFactory.CreateRaceOrganizer(
+                        raceId,
+                        organizerId,
+                        actor,
+                        now),
+                    cancellationToken);
+            }
+
+            // Do not delete the uploaded cover after an ambiguously canceled commit.
+            await _unitOfWork.CommitAsync(CancellationToken.None);
+            return raceId;
+        }
+        catch
         {
-            await _raceOrganizerRepository.CreateAsync(RaceCommandMapper.BuildRaceOrganizer(raceId, organizerId), cancellationToken);
-        }
+            await _unitOfWork.RollbackAsync(CancellationToken.None);
+            if (coverUrl is not null)
+            {
+                await _blobStorageService.TryDeleteAsync(
+                    coverUrl,
+                    CancellationToken.None);
+            }
 
-        return raceId;
+            throw;
+        }
     }
+
 }

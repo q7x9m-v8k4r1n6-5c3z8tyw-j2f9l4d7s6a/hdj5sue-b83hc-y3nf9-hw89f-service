@@ -34,6 +34,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.LinkedEmail),
+            new Claim("user_type", user.UserType),
             new Claim("short_name", string.IsNullOrWhiteSpace(user.ShortName)
                 ? OVCMOVE.Application.Common.ShortNameHelper.BuildBaseShortName(user.LinkedEmail)
                 : user.ShortName!),

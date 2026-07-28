@@ -35,6 +35,7 @@ public class TeamRepository : ITeamRepository
     }
 
     public async Task<(IReadOnlyCollection<User> Items, int TotalItems)> GetPageAsync(
+        string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -43,6 +44,7 @@ public class TeamRepository : ITeamRepository
 
         var parameters = new
         {
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
             UserType = UserConstants.UserType.Team,
             Offset = (page - 1) * pageSize,
             PageSize = pageSize
@@ -53,7 +55,7 @@ public class TeamRepository : ITeamRepository
             cancellationToken: cancellationToken);
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             TeamQueries.CountTeamsQuery(),
-            new { UserType = UserConstants.UserType.Team },
+            new { UserType = UserConstants.UserType.Team, Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim() },
             cancellationToken: cancellationToken);
         return (result.ToArray(), totalItems);
     }
@@ -74,5 +76,35 @@ public class TeamRepository : ITeamRepository
             parameters,
             cancellationToken: cancellationToken);
         return result.ToArray();
+    }
+
+    public Task<User?> GetByIdAsync(
+        Guid teamId,
+        CancellationToken cancellationToken = default) =>
+        _db.QueryFirstOrDefaultAsync<User>(
+            TeamQueries.GetTeamByIdQuery(),
+            new { TeamId = teamId, UserType = UserConstants.UserType.Team },
+            cancellationToken: cancellationToken);
+
+    public async Task<bool> UpdateAsync(
+        User team,
+        CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _db.ExecuteAsync(
+            TeamQueries.UpdateTeamQuery(),
+            new
+            {
+                team.Id,
+                team.Username,
+                LinkedEmail = team.LinkedEmail,
+                team.PasswordHash,
+                team.DisplayName,
+                team.Status,
+                team.ModifiedBy,
+                team.ModifiedAt,
+                UserType = UserConstants.UserType.Team,
+            },
+            cancellationToken: cancellationToken);
+        return affectedRows == 1;
     }
 }

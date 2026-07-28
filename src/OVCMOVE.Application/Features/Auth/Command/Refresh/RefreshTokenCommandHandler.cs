@@ -92,6 +92,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, L
                 _jwtTokenGenerator.AccessTokenExpirationMinutes),
             RefreshTokenExpiration = refreshTokenExpiration,
             UserId = user.Id,
+            UserType = user.UserType,
             Roles = accessProfile.Roles,
             Permissions = accessProfile.Permissions,
             Access = accessProfile.Access

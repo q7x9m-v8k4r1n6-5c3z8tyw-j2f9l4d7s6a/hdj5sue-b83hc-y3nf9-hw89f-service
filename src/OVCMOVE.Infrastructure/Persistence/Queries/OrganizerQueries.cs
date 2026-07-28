@@ -4,7 +4,7 @@ public static class OrganizerQueries
 {
     private const string UserColumns = @"
         [Id], [Username], [LinkedEmail], [UserType],
-        [DisplayName], [ShortName], [Status],
+        [DisplayName], [AvatarUrl], [ShortName], [Status],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]";
 
     public static string GetExistingIdsQuery() => @"
@@ -27,6 +27,7 @@ public static class OrganizerQueries
             U.[Id] AS [UserId],
             COALESCE(NULLIF(U.[DisplayName], N''), U.[LinkedEmail]) AS [DisplayName],
             U.[LinkedEmail] AS [Email],
+            U.[AvatarUrl],
             COALESCE(PrimaryRole.[Code], U.[UserType]) AS [Role],
             U.[Status]
         FROM [dbo].[Users] U
@@ -49,6 +50,11 @@ public static class OrganizerQueries
         ) PrimaryRole
         WHERE U.[UserType] = @UserType
           AND U.[IsDeleted] = 0
+          AND (
+              @Search IS NULL
+              OR U.[DisplayName] LIKE N'%' + @Search + N'%'
+              OR U.[LinkedEmail] LIKE N'%' + @Search + N'%'
+          )
         ORDER BY COALESCE(NULLIF(U.[DisplayName], N''), U.[LinkedEmail])
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
@@ -56,7 +62,12 @@ public static class OrganizerQueries
         SELECT COUNT(1)
         FROM [dbo].[Users]
         WHERE [UserType] = @UserType
-          AND [IsDeleted] = 0;";
+          AND [IsDeleted] = 0
+          AND (
+              @Search IS NULL
+              OR [DisplayName] LIKE N'%' + @Search + N'%'
+              OR [LinkedEmail] LIKE N'%' + @Search + N'%'
+          );";
 
     public static string SearchOrganizerQuery() => $@"
         SELECT TOP (20) {UserColumns}
@@ -84,4 +95,10 @@ public static class OrganizerQueries
         WHERE [Id] = @OrganizerId
           AND [UserType] = @UserType
           AND [IsDeleted] = 0;";
+
+    public static string UpdateOrganizerQuery() => @"
+        UPDATE [dbo].[Users]
+        SET [DisplayName] = @DisplayName, [Status] = @Status,
+            [ModifiedBy] = @ModifiedBy, [ModifiedAt] = @ModifiedAt
+        WHERE [Id] = @Id AND [UserType] = @UserType AND [IsDeleted] = 0;";
 }

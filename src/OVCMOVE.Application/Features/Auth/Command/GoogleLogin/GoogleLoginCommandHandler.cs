@@ -50,21 +50,23 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
             ?? throw new UnauthorizedAccessException(
                 "Email này chưa được cấp quyền truy cập.");
 
-        if (string.IsNullOrWhiteSpace(user.DisplayName) &&
-            !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+        if ((string.IsNullOrWhiteSpace(user.DisplayName) && !string.IsNullOrWhiteSpace(googleUser.DisplayName)) ||
+            (string.IsNullOrWhiteSpace(user.AvatarUrl) && !string.IsNullOrWhiteSpace(googleUser.AvatarUrl)))
         {
-            var displayName = googleUser.DisplayName.Trim();
-            if (displayName.Length > 255)
+            var displayName = googleUser.DisplayName?.Trim();
+            if (displayName is { Length: > 255 })
             {
                 // External profile text must fit the stable Users column.
                 displayName = displayName[..255];
             }
 
-            await _userRepository.UpdateDisplayNameAsync(
+            await _userRepository.UpdateGoogleProfileAsync(
                 user.Id,
                 displayName,
+                googleUser.AvatarUrl,
                 cancellationToken);
-            user.DisplayName = displayName;
+            user.DisplayName ??= displayName;
+            user.AvatarUrl ??= googleUser.AvatarUrl;
         }
 
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(

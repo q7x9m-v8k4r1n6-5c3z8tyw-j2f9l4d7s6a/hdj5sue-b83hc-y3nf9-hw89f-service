@@ -141,7 +141,8 @@ public static class RaceQueries
         SELECT
             OI.[Id],
             COALESCE(NULLIF(U.[DisplayName], N''), U.[LinkedEmail], N'') AS [DisplayName],
-            COALESCE(U.[LinkedEmail], N'') AS [Email]
+            COALESCE(U.[LinkedEmail], N'') AS [Email],
+            U.[AvatarUrl]
         FROM OrganizerIds OI
         LEFT JOIN [dbo].[Users] U ON U.[Id] = OI.[Id] AND U.[IsDeleted] = 0;";
 

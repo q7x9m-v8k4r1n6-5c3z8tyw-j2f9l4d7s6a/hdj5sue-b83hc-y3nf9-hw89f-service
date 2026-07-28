@@ -1,4 +1,6 @@
-﻿using OVCMOVE.Application.Abstractions.Repositories;
+﻿using System.Data;
+using Dapper;
+using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -139,23 +141,28 @@ public class RaceRepository : IRaceRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var parameters = new DynamicParameters(new
+        {
+            race.Id,
+            race.RaceName,
+            race.TimeStart,
+            race.TimeEnd,
+            race.Place,
+            race.Status,
+            race.IsToggledLeaderboard,
+            race.IsHiddenPoint,
+            race.CoverUrl,
+            race.ModifiedBy,
+            race.ModifiedAt
+        });
+        parameters.Add(
+            "ExpectedModifiedAt",
+            expectedModifiedAt,
+            DbType.DateTime2);
+
         var affectedRows = await _db.ExecuteAsync(
             RaceQueries.UpdateRaceQuery(),
-            new
-            {
-                race.Id,
-                race.RaceName,
-                race.TimeStart,
-                race.TimeEnd,
-                race.Place,
-                race.Status,
-                race.IsToggledLeaderboard,
-                race.IsHiddenPoint,
-                race.CoverUrl,
-                race.ModifiedBy,
-                race.ModifiedAt,
-                ExpectedModifiedAt = expectedModifiedAt
-            },
+            parameters,
             cancellationToken: cancellationToken);
         return affectedRows >= 1;
     }

@@ -23,6 +23,7 @@ public class GetAllOrganizersQueryHandler :
             request.Page,
             request.PageSize);
         var (organizers, totalItems) = await _organizerRepository.GetPageAsync(
+            request.Search,
             page,
             pageSize,
             cancellationToken);

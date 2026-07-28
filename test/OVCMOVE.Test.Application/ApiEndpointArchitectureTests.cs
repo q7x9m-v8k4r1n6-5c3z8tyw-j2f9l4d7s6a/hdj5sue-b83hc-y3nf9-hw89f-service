@@ -25,7 +25,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(OrganizerController),
             "api/v1/[controller]",
-            2
+            5
         },
         {
             typeof(RaceController),
@@ -35,7 +35,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(TeamController),
             "api/v1/[controller]",
-            2
+            7
         }
     };
 
@@ -44,7 +44,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(OrganizersController),
             "api/v1/admin/organizers",
-            3
+            4
         },
         {
             typeof(RbacAssignmentsController),

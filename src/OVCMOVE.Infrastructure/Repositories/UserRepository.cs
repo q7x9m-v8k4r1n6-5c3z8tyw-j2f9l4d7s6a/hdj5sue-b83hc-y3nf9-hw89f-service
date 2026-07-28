@@ -25,6 +25,14 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    public Task<User?> GetByUsernameAnyStatusAsync(
+        string username,
+        CancellationToken cancellationToken = default) =>
+        _db.QueryFirstOrDefaultAsync<User>(
+            UserQueries.GetByUsernameAnyStatusQuery(),
+            new { Username = username },
+            cancellationToken: cancellationToken);
+
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var sql = UserQueries.GetByEmailQuery();
@@ -84,5 +92,33 @@ public class UserRepository : IUserRepository
             UserQueries.UpdateDisplayNameQuery(),
             new { Id = id, DisplayName = displayName },
             cancellationToken: cancellationToken);
+    }
+
+    public async Task UpdateGoogleProfileAsync(
+        Guid id,
+        string? displayName,
+        string? avatarUrl,
+        CancellationToken cancellationToken = default)
+    {
+        await _db.ExecuteAsync(UserQueries.UpdateGoogleProfileQuery(), new
+        {
+            Id = id,
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName,
+            AvatarUrl = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl,
+        }, cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> SoftDeleteAsync(
+        Guid id,
+        string userType,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _db.ExecuteAsync(
+            UserQueries.SoftDeleteQuery(),
+            new { id, userType, modifiedBy, modifiedAt },
+            cancellationToken: cancellationToken);
+        return affectedRows == 1;
     }
 }

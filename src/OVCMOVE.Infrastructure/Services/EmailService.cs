@@ -17,6 +17,16 @@ public class EmailService : IEmailService
     }
 
     public async Task SendOrganizerCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
+        => await SendAsync(toEmail, subject, body, cancellationToken);
+
+    public async Task SendTeamCredentialsAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
+        => await SendAsync(toEmail, subject, body, cancellationToken);
+
+    private async Task SendAsync(
+        string toEmail,
+        string subject,
+        string body,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_emailConfig.Email) ||
             string.IsNullOrWhiteSpace(_emailConfig.Password))
@@ -24,15 +34,23 @@ public class EmailService : IEmailService
             throw new InvalidOperationException("Email service credentials are not configured.");
         }
 
+        var senderEmail = _emailConfig.Email.Trim();
+        if (!MailAddress.TryCreate(senderEmail, out var senderAddress) ||
+            !string.Equals(senderAddress.Address, senderEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "ExternalServicesConfig:EmailService:Email phải là một địa chỉ Gmail hợp lệ.");
+        }
+
         using var client = new SmtpClient("smtp.gmail.com", 587)
         {
             EnableSsl = true,
-            Credentials = new NetworkCredential(_emailConfig.Email, _emailConfig.Password)
+            Credentials = new NetworkCredential(senderEmail, _emailConfig.Password)
         };
 
         using var mail = new MailMessage
         {
-            From = new MailAddress(_emailConfig.Email, "OVCMOVE Admin"),
+            From = new MailAddress(senderAddress.Address, "OVC MOVE"),
             Subject = subject,
             Body = body,
             IsBodyHtml = true

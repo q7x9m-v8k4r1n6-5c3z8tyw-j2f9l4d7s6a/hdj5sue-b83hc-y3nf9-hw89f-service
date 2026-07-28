@@ -24,6 +24,7 @@ public class GetAllTeamsQueryHandler :
             request.Page,
             request.PageSize);
         var (teams, totalItems) = await _teamRepository.GetPageAsync(
+            request.Search,
             page,
             pageSize,
             cancellationToken);

@@ -8,6 +8,9 @@ public class RoleSummaryModel
     public string? Description { get; init; }
     public bool IsSystem { get; init; }
     public DateTime CreatedAt { get; init; }
+    public DateTime ModifiedAt { get; init; }
+    public int PermissionCount { get; init; }
+    public IReadOnlyCollection<Guid> PermissionIds { get; init; } = Array.Empty<Guid>();
 }
 
 public class PermissionSummaryModel

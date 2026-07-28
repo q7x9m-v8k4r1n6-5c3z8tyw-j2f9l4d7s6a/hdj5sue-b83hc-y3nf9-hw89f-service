@@ -39,6 +39,10 @@ public class AssignPermissionToRoleCommandHandler(
                 ModifiedBy = actor,
                 IsDeleted = false
             }, cancellationToken);
+
+            role.ModifiedAt = now;
+            role.ModifiedBy = actor;
+            await roleRepository.UpdateAsync(role, cancellationToken);
         }
 
         return new RolePermissionAssignmentModel

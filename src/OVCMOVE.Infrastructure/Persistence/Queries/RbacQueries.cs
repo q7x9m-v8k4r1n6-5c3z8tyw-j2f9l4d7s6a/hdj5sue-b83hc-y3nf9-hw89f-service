@@ -3,10 +3,23 @@ namespace OVCMOVE.Infrastructure.Persistence.Queries;
 public static class RbacQueries
 {
     public static string GetAllRolesQuery() => @"
-        SELECT [Id], [Name], [Code], [Description], [IsSystem], [CreatedAt]
-        FROM [dbo].[Roles]
-        WHERE [IsDeleted] = 0
-        ORDER BY [Name];";
+        SELECT
+            r.[Id],
+            r.[Name],
+            r.[Code],
+            r.[Description],
+            r.[IsSystem],
+            r.[CreatedAt],
+            r.[ModifiedAt],
+            (
+                SELECT COUNT(1)
+                FROM [dbo].[RolePermissions] rp
+                WHERE rp.[RoleId] = r.[Id]
+                  AND rp.[IsDeleted] = 0
+            ) AS [PermissionCount]
+        FROM [dbo].[Roles] r
+        WHERE r.[IsDeleted] = 0
+        ORDER BY r.[Name];";
 
     public static string GetRoleByIdQuery() => @"
         SELECT [Id], [Name], [Code], [Description], [IsSystem], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]

@@ -13,7 +13,7 @@ public static class OrganizerContractMapping
         this OrganizerContract.CreateOrganizerRequest request) => new()
         {
             Email = request.Email,
-            Role = request.Role
+            RoleIds = request.RoleIds
         };
 
     public static OrganizerContract.OrganizerResponse ToResponse(
@@ -41,6 +41,7 @@ public static class OrganizerContractMapping
             UserId = result.UserId,
             DisplayName = result.DisplayName,
             Email = result.Email,
+            AvatarUrl = result.AvatarUrl,
             Role = result.Role,
             Status = result.Status
         };
@@ -50,6 +51,7 @@ public static class OrganizerContractMapping
         {
             Id = result.Id,
             DisplayName = result.DisplayName,
-            Email = result.Email
+            Email = result.Email,
+            AvatarUrl = result.AvatarUrl
         };
 }

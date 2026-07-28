@@ -133,7 +133,10 @@ public class AuthController : BaseController
             HttpOnly = true,
             Expires = expiresAt,
             Secure = true,
-            SameSite = SameSiteMode.Lax,
+            // The SPA can be hosted on a different site from the API. The
+            // refresh request is credentialed, so its cookie must be allowed
+            // on cross-site XHR/fetch requests as well.
+            SameSite = SameSiteMode.None,
             Path = "/",
             MaxAge = maxAge > TimeSpan.Zero ? maxAge : TimeSpan.Zero
         };
@@ -153,7 +156,7 @@ public class AuthController : BaseController
         {
             Path = "/",
             Secure = true,
-            SameSite = SameSiteMode.Lax
+            SameSite = SameSiteMode.None
         };
 
         Response.Cookies.Delete(

@@ -150,6 +150,7 @@ public static class RaceContract
         public Guid Id { get; init; }
         public string DisplayName { get; init; } = string.Empty;
         public string Email { get; init; } = string.Empty;
+        public string? AvatarUrl { get; init; }
     }
 
     public sealed class TeamResponse

@@ -187,7 +187,8 @@ public static class RaceContractMapping
         {
             Id = result.Id,
             DisplayName = result.DisplayName,
-            Email = result.Email
+            Email = result.Email,
+            AvatarUrl = result.AvatarUrl
         };
 
     private static RaceContract.TeamResponse MapTeam(

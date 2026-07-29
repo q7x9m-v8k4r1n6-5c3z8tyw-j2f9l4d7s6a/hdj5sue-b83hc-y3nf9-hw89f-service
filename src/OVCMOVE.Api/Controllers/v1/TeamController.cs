@@ -153,7 +153,7 @@ public class TeamController : BaseController
     }
 
     [HttpGet("leaderboard")]
-    //[RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> GetLeaderboard(
         [FromQuery] TeamContract.TeamLeaderboardRequest request, 
         CancellationToken cancellationToken)

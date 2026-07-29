@@ -11,6 +11,7 @@ using OVCMOVE.Application.Features.Teams.Command.UpdateTeam;
 using OVCMOVE.Application.Features.Teams.Query.GetTeamDetail;
 using OVCMOVE.Application.Features.Teams.Command.DeleteTeam;
 using OVCMOVE.Application.Features.Teams.Command.ResetTeamPassword;
+using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -149,5 +150,23 @@ public class TeamController : BaseController
             cancellationToken);
         return Ok(ApiResponse.Success(
             result.Select(item => item.ToResponse()).ToArray()));
+    }
+
+    [HttpGet("leaderboard")]
+    //[RequirePermission(PermissionCodes.TeamRead)]
+    public async Task<IActionResult> GetLeaderboard(
+        [FromQuery] TeamContract.TeamLeaderboardRequest request, 
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = request.ToQuery();
+        var result = await _mediator.Send(
+            query, 
+            cancellationToken);
+        var response = result.Select(
+            item => item.ToResponse()).ToList();
+
+        return Ok(ApiResponse.Success(response));
     }
 }

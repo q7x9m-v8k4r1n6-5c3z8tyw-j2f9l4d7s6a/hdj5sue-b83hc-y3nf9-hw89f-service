@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 namespace OVCMOVE.Api.Contracts;
 
 public static class TeamContract
@@ -47,5 +48,16 @@ public static class TeamContract
         public Guid Id { get; init; }
         public string Name { get; init; } = string.Empty;
         public string LeaderEmail { get; init; } = string.Empty;
+    }
+
+    public class TeamLeaderboardRequest
+    {
+        [Required(ErrorMessage = "Thiếu RaceId để lấy bảng xếp hạng.")]
+        public Guid? RaceId { get; init; }
+    }
+    public class TeamLeaderboardResponse
+    {
+        public string DisplayName { get; init; } = string.Empty;
+        public int TotalScore { get; init; }
     }
 }

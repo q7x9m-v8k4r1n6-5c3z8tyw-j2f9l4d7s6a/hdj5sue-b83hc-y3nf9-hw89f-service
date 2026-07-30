@@ -5,6 +5,7 @@ using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -207,5 +208,17 @@ public static class RaceContractMapping
             Place = result.Place,
             Description = result.Description,
             OrganizerID = string.Join(',', result.OrganizerIds)
+        };
+
+    public static TeamLeaderboardQuery ToQuery (
+        this RaceContract.TeamLeaderboardRequest request) => new()
+        {
+            RaceId = request.RaceId
+        };
+    public static RaceContract.TeamLeaderboardResponse ToResponse(
+        this TeamLeaderboardResultModel result) => new()
+        {
+            DisplayName = result.DisplayName,
+            TotalScore = result.TotalScore
         };
 }

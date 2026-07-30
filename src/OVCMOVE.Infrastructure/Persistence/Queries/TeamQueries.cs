@@ -75,13 +75,4 @@ public static class TeamQueries
         WHERE [Id] = @Id
           AND [UserType] = @UserType
           AND [IsDeleted] = 0;";
-
-    public static string GetTeamLeaderboardQuery() => @"
-        SELECT 
-            u.DisplayName,
-            rt.TotalScore
-        FROM [dbo].[RaceTeam] rt
-        INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
-        WHERE rt.RaceId = @RaceId
-        ORDER BY rt.TotalScore DESC;";
 }

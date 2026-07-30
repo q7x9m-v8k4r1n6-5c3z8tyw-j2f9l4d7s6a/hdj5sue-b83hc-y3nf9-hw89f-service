@@ -1,19 +1,18 @@
 using MediatR;
 
 using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 
-namespace OVCMOVE.Application.Features.Teams.Query.GetTeamLeaderboard;
+namespace OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 
 public class TeamLeaderboardQueryHandler : 
     IRequestHandler<TeamLeaderboardQuery, List<TeamLeaderboardResultModel>>
 {
-    private readonly ITeamRepository _teamRepository;
+    private readonly IRaceRepository _raceRepository;
 
     public TeamLeaderboardQueryHandler(
-        ITeamRepository teamRepository) 
+        IRaceRepository raceRepository) 
     {
-        _teamRepository = teamRepository;
+        _raceRepository = raceRepository;
     }
 
     public async Task<List<TeamLeaderboardResultModel>> Handle(
@@ -21,6 +20,6 @@ public class TeamLeaderboardQueryHandler :
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await _teamRepository.GetLeaderboardAsync(request.RaceId, cancellationToken);
+        return await _raceRepository.GetLeaderboardAsync(request.RaceId, cancellationToken);
     }
 }

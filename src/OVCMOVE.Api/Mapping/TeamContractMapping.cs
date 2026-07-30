@@ -1,7 +1,6 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
-using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -23,16 +22,5 @@ public static class TeamContractMapping
             Id = result.Id,
             Name = result.Name,
             LeaderEmail = result.LeaderEmail
-        };
-    public static TeamLeaderboardQuery ToQuery (
-        this TeamContract.TeamLeaderboardRequest request) => new()
-        {
-            RaceId = request.RaceId
-        };
-    public static TeamContract.TeamLeaderboardResponse ToResponse(
-        this TeamLeaderboardResultModel result) => new()
-        {
-            DisplayName = result.DisplayName,
-            TotalScore = result.TotalScore
         };
 }

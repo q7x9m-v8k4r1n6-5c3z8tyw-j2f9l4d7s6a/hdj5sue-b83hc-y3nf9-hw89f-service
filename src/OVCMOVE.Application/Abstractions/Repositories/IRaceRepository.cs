@@ -1,4 +1,5 @@
 ﻿using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
@@ -16,5 +17,8 @@ public interface IRaceRepository
     Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,
+        CancellationToken cancellationToken = default);
+    Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
+        Guid? raceId, 
         CancellationToken cancellationToken = default);
 }

@@ -4,7 +4,6 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Rbac;
 using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
-using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Test.Application;
@@ -180,10 +179,6 @@ public class UseCaseValidationTests
 
         public Task<bool> UpdateAsync(
             User team,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-        public Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
-            Guid? raceId, 
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

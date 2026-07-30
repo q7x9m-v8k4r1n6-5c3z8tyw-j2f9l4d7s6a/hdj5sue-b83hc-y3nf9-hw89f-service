@@ -11,6 +11,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using static OVCMOVE.Api.Contracts.RaceContract;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -151,4 +152,21 @@ public class RaceController : BaseController
         }
     }
 
+    [HttpGet("leaderboard")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> GetLeaderboard(
+        [FromQuery] TeamLeaderboardRequest request, 
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = request.ToQuery();
+        var result = await _mediator.Send(
+            query, 
+            cancellationToken);
+        var response = result.Select(
+            item => item.ToResponse()).ToList();
+
+        return Ok(ApiResponse.Success(response));
+    }
 }

@@ -1,5 +1,4 @@
 ﻿using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE.Infrastructure.Persistence.Queries;
 using OVCMOVE.Domain.Entities;
@@ -107,17 +106,5 @@ public class TeamRepository : ITeamRepository
             },
             cancellationToken: cancellationToken);
         return affectedRows == 1;
-    }
-
-    public async Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
-        Guid? raceId, 
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        string sqlQuery = TeamQueries.GetTeamLeaderboardQuery();
-        var parameters = new { RaceId = raceId };
-        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
-        return result.ToList();
     }
 }

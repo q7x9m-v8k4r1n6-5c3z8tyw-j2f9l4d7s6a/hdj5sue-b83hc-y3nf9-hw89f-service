@@ -200,19 +200,23 @@ public static class RaceContract
         public string? CurrentOrganizerName { get; init; }
     }
 
-    public class BoothScoringLogRequest
+    public class ScoringLogRequest : PagedRequest
     {
-        [Required(ErrorMessage = "thiếu RaceId để lấy log lịch sử điểm")]
+        [Required(ErrorMessage = "Thiếu RaceId để lấy log lịch sử điểm")]
         public Guid? RaceId { get; init; }
-        public int? Limit {get; init;}
     }
-    public class BoothScoringLogResponse
+    public class ScoringLogResponse
     {
         public Guid LogId { get; init;}
-        public string BoothName {get; init;} = string.Empty;
+        public string? BoothName {get; init;} // null if actor != organizer
+        public string EventName {get; set;} = string.Empty;
         public string TeamName {get; init;}= string.Empty;
-        public string OrganizerName {get; init;} = string.Empty;
-        public int ScoreGiven {get; init;}
+        public string? ActorFullName {get; init;}
+        public string? ActorShortName {get; init;}
+        public int ScoreDelta {get; init;}
+        public int ScoreBefore {get; init;}
+        public int ScoreAfter {get; init;}
+        public string Reason {get; set;} = string.Empty;
         public DateTime CreatedAt {get; init;}
         public string CreatedBy {get; init;} = string.Empty;
     }

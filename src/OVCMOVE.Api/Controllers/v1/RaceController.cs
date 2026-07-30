@@ -188,10 +188,10 @@ public class RaceController : BaseController
         return Ok(ApiResponse.Success(response));
     }
 
-    [HttpGet("booth-scoring-log")]
+    [HttpGet("scoring-log")]
     [RequirePermission(PermissionCodes.RaceManage)]
-    public async Task<IActionResult> GetBoothScoringLog(
-        [FromQuery] BoothScoringLogRequest request, 
+    public async Task<IActionResult> GetScoringLog(
+        [FromQuery] ScoringLogRequest request, 
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -200,9 +200,7 @@ public class RaceController : BaseController
         var result = await _mediator.Send(
             query, 
             cancellationToken);
-        var response = result.Select(
-            item => item.ToResponse()).ToList();
 
-        return Ok(ApiResponse.Success(response));
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 }

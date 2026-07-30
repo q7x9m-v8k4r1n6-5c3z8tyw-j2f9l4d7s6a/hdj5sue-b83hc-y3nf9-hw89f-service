@@ -230,19 +230,32 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
         WHERE b.RaceId = @RaceId
         ORDER BY b.Name ASC;";
-    public static string GetBoothScoringLogQuery() => @"
-        SELECT TOP (@Limit)
+    public static string GetScoringLogByRaceIdQuery() => @"
+        SELECT
             log.Id AS LogId,
             b.Name AS BoothName,
+            log.EventCode,
+            log.EventName,
             tu.DisplayName AS TeamName,
-            ou.DisplayName AS OrganizerName,
-            log.ScoreGiven,
+            ou.DisplayName AS ActorFullName,
+            ou.ShortName AS ActorShortName,
+            log.Delta AS ScoreDelta,
+            log.ScoreBefore,
+            log.ScoreAfter,
+            log.ReasonCode,
+            log.Reason,
             log.CreatedAt,
             log.CreatedBy
-        FROM [dbo].[BoothScoringLog] log
-        INNER JOIN [dbo].[Booth] b  ON log.BoothId = b.Id
-        INNER JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
-        INNER JOIN [dbo].[Users] ou ON log.OrganizerId = ou.Id
+        FROM [dbo].[ScoringLog] log
+        LEFT JOIN [dbo].[Booth] b ON log.BoothId = b.Id
+        LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
+        LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
         WHERE log.RaceId = @RaceId
-        ORDER BY log.CreatedAt DESC;";
+        ORDER BY log.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
+
+    public static string CountScoringLogByRaceIdQuery() => @"
+        SELECT COUNT(1)
+        FROM [dbo].[ScoringLog]
+        WHERE RaceId = @RaceId;";
 }

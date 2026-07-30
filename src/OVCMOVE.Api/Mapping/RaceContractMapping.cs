@@ -7,7 +7,7 @@ using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
-using OVCMOVE.Application.Features.Races.Query.BoothScoringLog;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -243,22 +243,32 @@ public static class RaceContractMapping
             CurrentOrganizerName = result.CurrentOrganizerName
         };
 
-    public static BoothScoringLogQuery ToQuery(
-        this RaceContract.BoothScoringLogRequest request) => new()
+    public static ScoringLogQuery ToQuery(
+        this RaceContract.ScoringLogRequest request) => new()
         {
-            RaceId = request.RaceId,
-            Limit = request.Limit
+            RaceId = request.RaceId.GetValueOrDefault(), 
+            Page = request.Page,
+            PageSize = request.PageSize
         };
-
-    public static RaceContract.BoothScoringLogResponse ToResponse(
-        this BoothScoringLogResultModel result) => new()
+    
+    public static RaceContract.ScoringLogResponse ToResponse(
+        this ScoringLogResultModel result) => new()
         {
             LogId = result.LogId,
             BoothName = result.BoothName,
+            EventName = result.EventName,
             TeamName = result.TeamName,
-            OrganizerName = result.OrganizerName,
-            ScoreGiven = result.ScoreGiven,
+            ActorFullName = result.ActorFullName,
+            ActorShortName = result.ActorShortName,
+            ScoreDelta = result.ScoreDelta,
+            ScoreBefore = result.ScoreBefore,
+            ScoreAfter = result.ScoreAfter,
+            Reason = result.Reason,
             CreatedAt = result.CreatedAt,
             CreatedBy = result.CreatedBy
         };
+
+    public static CommonContract.PagedResponse<RaceContract.ScoringLogResponse> ToResponse(
+        this PagedResult<ScoringLogResultModel> result) =>
+        result.ToResponse(item => item.ToResponse());
 }

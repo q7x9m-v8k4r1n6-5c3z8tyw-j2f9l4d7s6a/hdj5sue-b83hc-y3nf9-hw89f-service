@@ -181,4 +181,22 @@ public static class RaceContract
         public string DisplayName { get; init; } = string.Empty;
         public int TotalScore { get; init; }
     }
+
+    public class BoothListRequest
+    {
+        [Required(ErrorMessage = "thiếu RaceId để lấy danh sách các booth")]
+        public Guid? RaceId { get; init; }
+    }
+
+    public class BoothListResponse
+    {
+        public Guid BoothId { get; init; }
+        public string BoothName { get; init; } = string.Empty;
+        public string BoothLocation {get; init; } = string.Empty;
+        public string Description {get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
+        public bool isHidden { get; init; } = false;
+        public string? CurrentTeamName { get; init; }
+        public string? CurrentOrganizerName { get; init; }
+    }
 }

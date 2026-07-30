@@ -214,4 +214,20 @@ public static class RaceQueries
         INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
         WHERE rt.RaceId = @RaceId
         ORDER BY rt.TotalScore DESC;";
+    public static string GetBoothListQuery() => @"
+        SELECT 
+            b.Id AS BoothId,
+            b.Name AS BoothName,
+            b.Place AS BoothLocation,
+            b.Description,
+            b.Status,
+            b.IsHidden,
+            tu.DisplayName AS CurrentTeamName,
+            ou.DisplayName AS CurrentOrganizerName
+        FROM [dbo].[Booth] b
+        LEFT JOIN [dbo].[Users] tu ON b.TeamId = tu.Id
+        LEFT JOIN [dbo].[BoothOrganizer] bo ON b.Id = bo.BoothId
+        LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
+        WHERE b.RaceId = @RaceId
+        ORDER BY b.Name ASC;";
 }

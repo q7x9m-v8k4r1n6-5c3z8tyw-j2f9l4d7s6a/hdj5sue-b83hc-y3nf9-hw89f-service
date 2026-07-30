@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -165,6 +166,18 @@ public class RaceRepository : IRaceRepository
             parameters,
             cancellationToken: cancellationToken);
         return affectedRows >= 1;
+    }
+
+    public async Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
+        Guid? raceId, 
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
+        var parameters = new { RaceId = raceId };
+        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        return result.ToList();
     }
 }
 

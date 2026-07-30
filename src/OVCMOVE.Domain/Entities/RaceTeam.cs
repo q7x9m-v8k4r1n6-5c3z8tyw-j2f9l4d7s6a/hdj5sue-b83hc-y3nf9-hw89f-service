@@ -9,4 +9,5 @@ public class RaceTeam : BaseEntity
 {
     public Guid RaceId { get; set; }
     public Guid TeamId { get; set; }
+    public int TotalScore {get; set; }
 }

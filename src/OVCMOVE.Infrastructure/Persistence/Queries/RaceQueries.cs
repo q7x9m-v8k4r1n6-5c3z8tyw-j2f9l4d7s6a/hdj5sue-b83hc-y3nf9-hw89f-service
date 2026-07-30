@@ -205,4 +205,13 @@ public static class RaceQueries
     public static string DeleteRaceOrganizerQuery() => @"
         DELETE FROM [dbo].[RaceOrganizer]
         WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
+
+    public static string GetTeamLeaderboardQuery() => @"
+        SELECT 
+            u.DisplayName,
+            rt.TotalScore
+        FROM [dbo].[RaceTeam] rt
+        INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
+        WHERE rt.RaceId = @RaceId
+        ORDER BY rt.TotalScore DESC;";
 }

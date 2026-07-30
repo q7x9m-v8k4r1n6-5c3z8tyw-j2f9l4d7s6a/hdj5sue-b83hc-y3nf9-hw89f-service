@@ -187,4 +187,20 @@ public class RaceController : BaseController
 
         return Ok(ApiResponse.Success(response));
     }
+
+    [HttpGet("scoring-log")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> GetScoringLog(
+        [FromQuery] ScoringLogRequest request, 
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = request.ToQuery();
+        var result = await _mediator.Send(
+            query, 
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
 }

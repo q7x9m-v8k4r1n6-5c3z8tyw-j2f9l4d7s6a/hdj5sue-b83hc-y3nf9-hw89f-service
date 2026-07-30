@@ -3,6 +3,7 @@ using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -191,6 +192,34 @@ public class RaceRepository : IRaceRepository
         var parameters = new { RaceId = raceId };
         var result = await _db.QueryAsync<BoothListResultModel>(sqlQuery, parameters);
         return result.ToList();
+    }
+
+    public async Task<(
+        IReadOnlyCollection<ScoringLogResultModel> Items, 
+        int TotalItems)> GetScoringLogPageByRaceIdAsync(
+            Guid raceId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var logs = await _db.QueryAsync<ScoringLogResultModel>(
+            RaceQueries.GetScoringLogByRaceIdQuery(),
+            new
+            {
+                RaceId = raceId,
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+
+        var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CountScoringLogByRaceIdQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        return (logs.ToArray(), totalItems);
     }
 }
 

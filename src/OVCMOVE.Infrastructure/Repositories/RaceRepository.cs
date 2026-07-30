@@ -2,6 +2,7 @@
 using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
+using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -177,6 +178,18 @@ public class RaceRepository : IRaceRepository
         string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
         var parameters = new { RaceId = raceId };
         var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        return result.ToList();
+    }
+
+    public async Task<List<BoothListResultModel>> GetBoothListAsync(
+        Guid? raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string sqlQuery = RaceQueries.GetBoothListQuery();
+        var parameters = new { RaceId = raceId };
+        var result = await _db.QueryAsync<BoothListResultModel>(sqlQuery, parameters);
         return result.ToList();
     }
 }

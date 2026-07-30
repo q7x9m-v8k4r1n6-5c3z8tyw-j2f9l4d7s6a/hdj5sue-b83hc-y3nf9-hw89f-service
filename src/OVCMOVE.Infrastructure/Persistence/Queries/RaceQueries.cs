@@ -230,4 +230,19 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
         WHERE b.RaceId = @RaceId
         ORDER BY b.Name ASC;";
+    public static string GetBoothScoringLogQuery() => @"
+        SELECT TOP (@Limit)
+            log.Id AS LogId,
+            b.Name AS BoothName,
+            tu.DisplayName AS TeamName,
+            ou.DisplayName AS OrganizerName,
+            log.ScoreGiven,
+            log.CreatedAt,
+            log.CreatedBy
+        FROM [dbo].[BoothScoringLog] log
+        INNER JOIN [dbo].[Booth] b  ON log.BoothId = b.Id
+        INNER JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
+        INNER JOIN [dbo].[Users] ou ON log.OrganizerId = ou.Id
+        WHERE log.RaceId = @RaceId
+        ORDER BY log.CreatedAt DESC;";
 }

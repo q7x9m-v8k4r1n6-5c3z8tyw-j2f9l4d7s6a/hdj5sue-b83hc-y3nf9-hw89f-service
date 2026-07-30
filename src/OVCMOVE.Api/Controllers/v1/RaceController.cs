@@ -187,4 +187,22 @@ public class RaceController : BaseController
 
         return Ok(ApiResponse.Success(response));
     }
+
+    [HttpGet("booth-scoring-log")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> GetBoothScoringLog(
+        [FromQuery] BoothScoringLogRequest request, 
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = request.ToQuery();
+        var result = await _mediator.Send(
+            query, 
+            cancellationToken);
+        var response = result.Select(
+            item => item.ToResponse()).ToList();
+
+        return Ok(ApiResponse.Success(response));
+    }
 }

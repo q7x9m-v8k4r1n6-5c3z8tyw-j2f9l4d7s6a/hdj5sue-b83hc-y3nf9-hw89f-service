@@ -2,6 +2,7 @@
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Features.Races.Query.BoothScoringLog;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
 
@@ -24,5 +25,9 @@ public interface IRaceRepository
         CancellationToken cancellationToken = default);
     Task<List<BoothListResultModel>> GetBoothListAsync(
         Guid? raceId, 
+        CancellationToken cancellationToken = default);
+    Task<List<BoothScoringLogResultModel>> GetBoothScoringLogAsync(
+        Guid? raceId, 
+        int? limit,
         CancellationToken cancellationToken = default);
 }

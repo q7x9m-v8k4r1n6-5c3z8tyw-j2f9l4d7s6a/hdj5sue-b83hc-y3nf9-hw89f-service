@@ -7,6 +7,7 @@ using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.BoothScoringLog;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -240,5 +241,24 @@ public static class RaceContractMapping
             isHidden = result.isHidden,
             CurrentTeamName = result.CurrentTeamName,
             CurrentOrganizerName = result.CurrentOrganizerName
+        };
+
+    public static BoothScoringLogQuery ToQuery(
+        this RaceContract.BoothScoringLogRequest request) => new()
+        {
+            RaceId = request.RaceId,
+            Limit = request.Limit
+        };
+
+    public static RaceContract.BoothScoringLogResponse ToResponse(
+        this BoothScoringLogResultModel result) => new()
+        {
+            LogId = result.LogId,
+            BoothName = result.BoothName,
+            TeamName = result.TeamName,
+            OrganizerName = result.OrganizerName,
+            ScoreGiven = result.ScoreGiven,
+            CreatedAt = result.CreatedAt,
+            CreatedBy = result.CreatedBy
         };
 }

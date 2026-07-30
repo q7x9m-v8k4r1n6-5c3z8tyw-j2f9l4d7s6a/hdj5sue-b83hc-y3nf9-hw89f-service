@@ -199,4 +199,21 @@ public static class RaceContract
         public string? CurrentTeamName { get; init; }
         public string? CurrentOrganizerName { get; init; }
     }
+
+    public class BoothScoringLogRequest
+    {
+        [Required(ErrorMessage = "thiếu RaceId để lấy log lịch sử điểm")]
+        public Guid? RaceId { get; init; }
+        public int? Limit {get; init;}
+    }
+    public class BoothScoringLogResponse
+    {
+        public Guid LogId { get; init;}
+        public string BoothName {get; init;} = string.Empty;
+        public string TeamName {get; init;}= string.Empty;
+        public string OrganizerName {get; init;} = string.Empty;
+        public int ScoreGiven {get; init;}
+        public DateTime CreatedAt {get; init;}
+        public string CreatedBy {get; init;} = string.Empty;
+    }
 }

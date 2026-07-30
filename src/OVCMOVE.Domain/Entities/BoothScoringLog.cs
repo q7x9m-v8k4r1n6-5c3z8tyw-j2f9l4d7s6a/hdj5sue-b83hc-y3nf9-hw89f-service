@@ -7,6 +7,7 @@ namespace OVCMOVE.Domain.Entities;
 /// </summary>
 public class BoothScoringLog : BaseEntity
 {
+    public Guid RaceId {get; set;}
     public Guid BoothId {get; set;}
     public Guid TeamId {get; set;}
     public Guid OrganizerId {get; set;}

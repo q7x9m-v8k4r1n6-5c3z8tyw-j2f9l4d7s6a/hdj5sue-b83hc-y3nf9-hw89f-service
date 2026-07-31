@@ -40,13 +40,14 @@ public sealed class BoothOrganizerRepository : IBoothOrganizerRepository
             cancellationToken);
     }
 
-    public async Task<BoothOrganizer?> GetByOrganizerIdAsync(
+    public async Task<BoothOrganizer?> GetByOrganizerAndRaceAsync(
     Guid organizerId,
+    Guid raceId,
     CancellationToken cancellationToken = default)
     {
         return await _db.QueryFirstOrDefaultAsync<BoothOrganizer>(
-            RaceQueries.GetBoothOrganizerByOrganizerIdQuery(),
-            new { OrganizerId = organizerId },
+            RaceQueries.GetBoothOrganizerByOrganizerAndRaceQuery(),
+            new { OrganizerId = organizerId, RaceId = raceId },
             cancellationToken);
     }
 }

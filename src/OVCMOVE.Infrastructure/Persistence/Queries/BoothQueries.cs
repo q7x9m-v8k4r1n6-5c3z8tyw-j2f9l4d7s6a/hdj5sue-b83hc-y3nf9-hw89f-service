@@ -8,17 +8,20 @@ public static class BoothQueries
     public static string GetBoothByIdQuery()
     {
         return @"
-            SELECT 
-                Id,
-                Name,
-                Place,
-                Description,
-                BoothOrganizerID,
-                RaceID,
-                IsHidden,
-                Status
-            FROM dbo.Booth
-            WHERE Id = @Id;
+            SELECT  
+            Id,
+            Name,
+            Place,
+            Description,
+            RaceID,
+            Status,
+            CreatedBy,
+            CreatedAt,
+            ModifiedBy,
+            ModifiedAt,
+            IsDeleted
+        FROM dbo.Booth
+        WHERE Id = @Id AND IsDeleted = 0;
         ";
     }
 
@@ -28,9 +31,11 @@ public static class BoothQueries
     public static string UpdateTeamScoreQuery()
     {
         return @"
-            UPDATE dbo.Teams
-            SET TotalScore = TotalScore + @Score
-            WHERE Id = @TeamId;
+            UPDATE rt
+            SET rt.TotalScore = rt.TotalScore + @Score
+            FROM dbo.RaceTeam rt
+            INNER JOIN dbo.Booth b ON b.RaceID = rt.RaceID
+            WHERE b.Id = @BoothId AND rt.TeamID = @TeamId;
         ";
     }
 
@@ -41,7 +46,7 @@ public static class BoothQueries
     {
         return @"
             UPDATE dbo.Booth
-            SET Status = 'Free'
+            SET Status = 'free'
             WHERE Id = @BoothId;
         ";
     }

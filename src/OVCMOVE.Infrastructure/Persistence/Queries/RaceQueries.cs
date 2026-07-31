@@ -204,4 +204,11 @@ public static class RaceQueries
     public static string DeleteRaceOrganizerQuery() => @"
         DELETE FROM [dbo].[RaceOrganizer]
         WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
+
+    public static string GetBoothOrganizerByOrganizerIdQuery() => @"
+    SELECT TOP 1
+        [Id], [BoothId], [OrganizerId],
+        [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+    FROM [dbo].[BoothOrganizer]
+    WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
 }

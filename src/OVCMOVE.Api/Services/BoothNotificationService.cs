@@ -19,10 +19,11 @@ public class BoothNotificationService : IBoothNotificationService
         Guid boothId,
         string status,
         Guid? teamId,
+        string? teamName,
         CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Group(raceId.ToString())
-            .ReceiveBoothStatusChanged(boothId, status, teamId);
+            .Group($"Booth_{boothId}")
+            .ReceiveBoothStatusChanged(boothId, status, teamId, teamName);
     }
 }

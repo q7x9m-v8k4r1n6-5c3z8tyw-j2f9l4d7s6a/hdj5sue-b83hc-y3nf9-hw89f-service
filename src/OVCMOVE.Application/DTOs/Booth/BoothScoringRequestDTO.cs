@@ -11,6 +11,6 @@ public class BoothScoringRequestDTO
     public Guid BoothID { get; set; }
 
     //Đồng bộ khoảng điểm từ 1 đến 100 giống Validator
-    [Range(1, 100, ErrorMessage = "Số điểm cộng mỗi lần phải từ 1 đến 100")]
+    [Range(0, 100, ErrorMessage = "Số điểm cộng mỗi lần phải từ 1 đến 100")]
     public int Score { get; set; }
 }

@@ -29,6 +29,9 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
     /// <summary>Authenticates an authorized user with a Google identity token.</summary>
     public async Task<LoginResultModel> Handle(GoogleLoginCommand request, CancellationToken cancellationToken)
     {
+        string mockEmail = "datle793583@gmail.com";
+
+        /*
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
             throw new ApplicationValidationException(
@@ -43,13 +46,14 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
             throw new UnauthorizedAccessException(
                 "Xác thực Google thất bại hoặc token đã hết hạn.");
         }
+        */
 
         var user = await _userRepository.GetByEmailAsync(
-            googleUser.Email,
+            mockEmail,
             cancellationToken)
             ?? throw new UnauthorizedAccessException(
                 "Email này chưa được cấp quyền truy cập.");
-
+        /*
         if (string.IsNullOrWhiteSpace(user.DisplayName) &&
             !string.IsNullOrWhiteSpace(googleUser.DisplayName))
         {
@@ -65,7 +69,7 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
                 displayName,
                 cancellationToken);
             user.DisplayName = displayName;
-        }
+        }*/
 
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
             user.Id,

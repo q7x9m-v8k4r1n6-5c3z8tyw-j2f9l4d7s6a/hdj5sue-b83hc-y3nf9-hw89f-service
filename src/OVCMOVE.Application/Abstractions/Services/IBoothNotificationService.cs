@@ -10,5 +10,6 @@ public interface IBoothNotificationService
         Guid boothId,
         string status,
         Guid? teamId,
+        string? teamName,
         CancellationToken cancellationToken = default);
 }

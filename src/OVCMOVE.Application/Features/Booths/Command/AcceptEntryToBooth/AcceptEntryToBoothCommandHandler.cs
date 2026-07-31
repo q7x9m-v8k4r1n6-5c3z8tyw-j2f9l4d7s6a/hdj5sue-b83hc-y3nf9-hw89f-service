@@ -3,16 +3,16 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Domain.Constants;
 
-namespace OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
+namespace OVCMOVE.Application.Features.Booths.Commands.AcceptEntryToBooth;
 
-public class RequestEntryToBoothCommandHandler
-    : IRequestHandler<RequestEntryToBoothCommand, (bool IsSuccess, string Message)>
+public class AcceptEntryToBoothCommandHandler
+    : IRequestHandler<AcceptEntryToBoothCommand, (bool IsSuccess, string Message)>
 {
     private readonly IBoothRepository _boothRepository;
     private readonly IBoothNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
 
-    public RequestEntryToBoothCommandHandler(
+    public AcceptEntryToBoothCommandHandler(
         IBoothRepository boothRepository,
         IBoothNotificationService notificationService,
         IUserRepository userRepository)
@@ -23,7 +23,7 @@ public class RequestEntryToBoothCommandHandler
     }
 
     public async Task<(bool IsSuccess, string Message)> Handle(
-        RequestEntryToBoothCommand request,
+        AcceptEntryToBoothCommand request,
         CancellationToken cancellationToken)
     {
         var booth = await _boothRepository.GetByIdAsync(request.BoothId, cancellationToken);
@@ -32,9 +32,12 @@ public class RequestEntryToBoothCommandHandler
             return (false, "Trạm thi đấu không tồn tại.");
         }
 
-        if (booth.Status == BoothConstants.BoothStatus.Occupied)
+        booth.Status = BoothConstants.BoothStatus.Occupied;
+
+        var isUpdated = await _boothRepository.UpdateAsync(booth, cancellationToken);
+        if (!isUpdated)
         {
-            return (false, "Trạm thi đấu đang có đội khác sử dụng.");
+            return (false, "Cập nhật trạng thái trạm thất bại.");
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);
@@ -45,11 +48,11 @@ public class RequestEntryToBoothCommandHandler
         await _notificationService.NotifyBoothStatusChangedAsync(
             booth.RaceId,
             request.BoothId,
-            "Pending",
+            BoothConstants.BoothStatus.Occupied,
             request.TeamId,
             teamName,
             cancellationToken);
 
-        return (true, "Đã gửi yêu cầu vào trạm. Vui lòng chờ Ban tổ chức xác nhận!");
+        return (true, "Đã chấp nhận cho đội vào trạm thành công!");
     }
 }

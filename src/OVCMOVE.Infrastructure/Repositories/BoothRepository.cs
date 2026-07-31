@@ -86,7 +86,7 @@ public class BoothRepository : IBoothRepository
         // 1. Cập nhật điểm cho Đội
         await _db.ExecuteAsync(
             BoothQueries.UpdateTeamScoreQuery(),
-            new { TeamId = teamId, Score = score },
+            new { BoothId= boothId, TeamId = teamId, Score = score },
             cancellationToken: cancellationToken);
 
         // 2. Giải phóng trạng thái Trạm

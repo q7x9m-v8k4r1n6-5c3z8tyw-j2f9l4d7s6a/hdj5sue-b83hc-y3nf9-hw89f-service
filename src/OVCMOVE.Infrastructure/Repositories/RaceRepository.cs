@@ -221,6 +221,57 @@ public class RaceRepository : IRaceRepository
 
         return (logs.ToArray(), totalItems);
     }
+
+    public Task<int?> GetRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return _db.QueryFirstOrDefaultAsync<int?>(
+            RaceQueries.GetRaceTeamScoreQuery(),
+            new { RaceId = raceId, TeamId = teamId },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> UpdateRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int totalScore,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateRaceTeamScoreQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                TotalScore = totalScore,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken: cancellationToken);
+
+        return affectedRows >= 1;
+    }
+
+    public async Task CreateScoringLogAsync(
+        ScoringLog log,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateScoringLogQuery(),
+            log,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
+    }
 }
 
 internal sealed class BoothOrganizerRow

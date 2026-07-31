@@ -31,4 +31,18 @@ public interface IRaceRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<int?> GetRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
+    Task<bool> UpdateRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int totalScore,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default);
+    Task CreateScoringLogAsync(
+        ScoringLog log,
+        CancellationToken cancellationToken = default);
 }

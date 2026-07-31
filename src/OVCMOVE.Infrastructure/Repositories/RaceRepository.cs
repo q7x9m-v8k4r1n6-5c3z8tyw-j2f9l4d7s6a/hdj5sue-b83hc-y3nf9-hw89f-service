@@ -177,7 +177,10 @@ public class RaceRepository : IRaceRepository
 
         string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
         var parameters = new { RaceId = raceId };
-        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(
+            sqlQuery,
+            parameters,
+            cancellationToken);
         return result.ToList();
     }
 

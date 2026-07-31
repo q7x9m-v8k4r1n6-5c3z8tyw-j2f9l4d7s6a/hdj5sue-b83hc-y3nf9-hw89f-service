@@ -207,13 +207,17 @@ public static class RaceQueries
         WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
 
     public static string GetTeamLeaderboardQuery() => @"
-        SELECT 
-            u.DisplayName,
+        SELECT
+            rt.TeamId,
+            RANK() OVER (ORDER BY rt.TotalScore DESC) AS [Rank],
+            COALESCE(NULLIF(u.DisplayName, N''), u.Username, u.LinkedEmail) AS DisplayName,
             rt.TotalScore
         FROM [dbo].[RaceTeam] rt
         INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
         WHERE rt.RaceId = @RaceId
-        ORDER BY rt.TotalScore DESC;";
+          AND rt.IsDeleted = 0
+          AND u.IsDeleted = 0
+        ORDER BY rt.TotalScore DESC, DisplayName, rt.TeamId;";
     public static string GetBoothListQuery() => @"
         SELECT 
             b.Id AS BoothId,

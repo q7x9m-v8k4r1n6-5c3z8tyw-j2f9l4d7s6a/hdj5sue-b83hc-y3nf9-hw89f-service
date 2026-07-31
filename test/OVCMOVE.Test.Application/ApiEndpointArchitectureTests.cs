@@ -35,7 +35,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(TeamController),
             "api/v1/[controller]",
-            7
+            9
         }
     };
 

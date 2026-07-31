@@ -1,12 +1,14 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
+using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -219,8 +221,30 @@ public static class RaceContractMapping
     public static RaceContract.TeamLeaderboardResponse ToResponse(
         this TeamLeaderboardResultModel result) => new()
         {
+            TeamId = result.TeamId,
             DisplayName = result.DisplayName,
             TotalScore = result.TotalScore
+        };
+
+    public static UpdateTeamScoreCommand ToCommand(
+        this RaceContract.UpdateTeamScoreRequest request,
+        Guid raceId,
+        Guid teamId) => new()
+        {
+            RaceId = raceId,
+            TeamId = teamId,
+            Delta = request.Delta,
+            Reason = request.Reason
+        };
+
+    public static RaceContract.UpdateTeamScoreResponse ToResponse(
+        this UpdateTeamScoreResult result) => new()
+        {
+            RaceId = result.RaceId,
+            TeamId = result.TeamId,
+            ScoreBefore = result.ScoreBefore,
+            ScoreAfter = result.ScoreAfter,
+            Delta = result.Delta
         };
 
     public static BoothListQuery ToQuery(
@@ -241,4 +265,33 @@ public static class RaceContractMapping
             CurrentTeamName = result.CurrentTeamName,
             CurrentOrganizerName = result.CurrentOrganizerName
         };
+
+    public static ScoringLogQuery ToQuery(
+        this RaceContract.ScoringLogRequest request) => new()
+        {
+            RaceId = request.RaceId.GetValueOrDefault(), 
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
+    
+    public static RaceContract.ScoringLogResponse ToResponse(
+        this ScoringLogResultModel result) => new()
+        {
+            LogId = result.LogId,
+            BoothName = result.BoothName,
+            EventName = result.EventName,
+            TeamName = result.TeamName,
+            ActorFullName = result.ActorFullName,
+            ActorShortName = result.ActorShortName,
+            ScoreDelta = result.ScoreDelta,
+            ScoreBefore = result.ScoreBefore,
+            ScoreAfter = result.ScoreAfter,
+            Reason = result.Reason,
+            CreatedAt = result.CreatedAt,
+            CreatedBy = result.CreatedBy
+        };
+
+    public static CommonContract.PagedResponse<RaceContract.ScoringLogResponse> ToResponse(
+        this PagedResult<ScoringLogResultModel> result) =>
+        result.ToResponse(item => item.ToResponse());
 }

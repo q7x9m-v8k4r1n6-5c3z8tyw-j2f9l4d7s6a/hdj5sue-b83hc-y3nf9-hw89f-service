@@ -1,4 +1,4 @@
-namespace OVCMOVE.Domain.Constants;
+﻿namespace OVCMOVE.Domain.Constants;
 
 public static class BoothConstants
 {

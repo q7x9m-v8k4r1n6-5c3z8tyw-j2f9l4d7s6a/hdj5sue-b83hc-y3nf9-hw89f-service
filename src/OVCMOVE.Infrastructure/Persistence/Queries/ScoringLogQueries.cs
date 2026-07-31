@@ -6,10 +6,10 @@ public static class ScoringLogQueries
         SELECT
             [Id],
             [BoothId],
-            [OrganizerId],
-            [ScoreGiven],
-            [ScoreAfterChange],
-            [Source],
+            [ActorId] AS [OrganizerId],
+            [Delta] AS [ScoreGiven],
+            [ScoreAfter] AS [ScoreAfterChange],
+            [EventCode] AS [Source],
             [Reason],
             [CreatedAt]
         FROM [dbo].[ScoringLog]
@@ -39,6 +39,6 @@ public static class ScoringLogQueries
            AND b.[IsDeleted] = 0
         WHERE sl.[RaceId] = @RaceId
           AND sl.[TeamId] = @TeamId
-          AND sl.[Source] = N'booth_completed'
+          AND sl.[ReasonCode] = N'BOOTH_COMPLETED'
           AND sl.[IsDeleted] = 0;";
 }

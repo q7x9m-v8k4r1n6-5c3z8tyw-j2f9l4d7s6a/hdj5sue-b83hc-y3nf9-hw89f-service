@@ -3,9 +3,12 @@ using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
 
-public class GetAllTeamsQuery : IRequest<PagedResult<GetAllTeamsResultModel>>
+/// <summary>
+/// Query lấy danh sách Teams hỗ trợ phân trang và tìm kiếm theo từ khóa.
+/// </summary>
+public record GetAllTeamsQuery : IRequest<PagedResult<GetAllTeamsResultModel>>
 {
-    public string? Search { get; set; }
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 20;
+    public string? Search { get; init; }
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
 }

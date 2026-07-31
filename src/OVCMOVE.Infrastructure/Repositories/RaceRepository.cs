@@ -3,6 +3,7 @@ using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -194,6 +195,85 @@ public class RaceRepository : IRaceRepository
         var parameters = new { RaceId = raceId };
         var result = await _db.QueryAsync<BoothListResultModel>(sqlQuery, parameters);
         return result.ToList();
+    }
+
+    public async Task<(
+        IReadOnlyCollection<ScoringLogResultModel> Items, 
+        int TotalItems)> GetScoringLogPageByRaceIdAsync(
+            Guid raceId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var logs = await _db.QueryAsync<ScoringLogResultModel>(
+            RaceQueries.GetScoringLogByRaceIdQuery(),
+            new
+            {
+                RaceId = raceId,
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+
+        var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CountScoringLogByRaceIdQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        return (logs.ToArray(), totalItems);
+    }
+
+    public Task<int?> GetRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return _db.QueryFirstOrDefaultAsync<int?>(
+            RaceQueries.GetRaceTeamScoreQuery(),
+            new { RaceId = raceId, TeamId = teamId },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> UpdateRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int totalScore,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateRaceTeamScoreQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                TotalScore = totalScore,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken: cancellationToken);
+
+        return affectedRows >= 1;
+    }
+
+    public async Task CreateScoringLogAsync(
+        ScoringLog log,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateScoringLogQuery(),
+            log,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
 }
 

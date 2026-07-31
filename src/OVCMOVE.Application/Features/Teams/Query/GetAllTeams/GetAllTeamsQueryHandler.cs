@@ -17,18 +17,25 @@ public class GetAllTeamsQueryHandler :
     }
 
     /// <summary>Returns one normalized page of team accounts.</summary>
-    public async Task<PagedResult<GetAllTeamsResultModel>> Handle(GetAllTeamsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<GetAllTeamsResultModel>> Handle(
+        GetAllTeamsQuery request,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // 1. Chuẩn hóa tham số phân trang
         var (page, pageSize) = Pagination.Normalize(
             request.Page,
             request.PageSize);
+
+        // 2. Lấy dữ liệu phân trang trực tiếp từ DB
         var (teams, totalItems) = await _teamRepository.GetPageAsync(
             request.Search,
             page,
             pageSize,
             cancellationToken);
 
+        // 3. Map dữ liệu và trả về PagedResult
         return new PagedResult<GetAllTeamsResultModel>
         {
             Items = teams.Select(MapTeam).ToArray(),

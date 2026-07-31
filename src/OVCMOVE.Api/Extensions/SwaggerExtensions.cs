@@ -48,6 +48,7 @@ public static class SwaggerExtensions
             var bearerSchemeReference = new OpenApiSecuritySchemeReference("Bearer", null, null);
 
             options.AddSecurityDefinition("Bearer", bearerScheme);
+
             options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
             {
                 [bearerSchemeReference] = []

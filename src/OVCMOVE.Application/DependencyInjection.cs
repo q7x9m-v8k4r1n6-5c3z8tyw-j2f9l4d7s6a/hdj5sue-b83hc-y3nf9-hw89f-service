@@ -13,9 +13,12 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(AssemblyReference.Assembly);
+
+            // Đăng ký Pipeline Behavior để tự động ghi log Audit người dùng
             configuration.AddOpenBehavior(typeof(AuditActorBehavior<,>));
         });
 
+        // Đăng ký các Processor xử lý nghiệp vụ Patch & Security Session
         services.AddScoped<BoothPatchProcessor>();
         services.AddScoped<RaceTeamPatchProcessor>();
         services.AddScoped<RaceOrganizerPatchProcessor>();

@@ -1,10 +1,8 @@
+﻿using System;
 using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE.Domain.Entities;
 
-/// <summary>
-/// Domain entity: Lịch sử thay đổi điểm số bởi Organizer tại từng Booth
-/// </summary>
 public class BoothScoringLog : BaseEntity
 {
     public Guid RaceId { get; set; }

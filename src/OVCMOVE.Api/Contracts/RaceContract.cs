@@ -178,8 +178,27 @@ public static class RaceContract
     }
     public class TeamLeaderboardResponse
     {
+        public Guid TeamId { get; init; }
         public string DisplayName { get; init; } = string.Empty;
         public int TotalScore { get; init; }
+    }
+
+    public class UpdateTeamScoreRequest
+    {
+        [Range(-10000, 10000, ErrorMessage = "Điểm điều chỉnh không hợp lệ.")]
+        public int Delta { get; init; }
+
+        [Required(ErrorMessage = "Thiếu lý do sửa điểm.")]
+        public string Reason { get; init; } = string.Empty;
+    }
+
+    public class UpdateTeamScoreResponse
+    {
+        public Guid RaceId { get; init; }
+        public Guid TeamId { get; init; }
+        public int ScoreBefore { get; init; }
+        public int ScoreAfter { get; init; }
+        public int Delta { get; init; }
     }
 
     public class BoothListRequest
@@ -198,5 +217,26 @@ public static class RaceContract
         public bool isHidden { get; init; } = false;
         public string? CurrentTeamName { get; init; }
         public string? CurrentOrganizerName { get; init; }
+    }
+
+    public class ScoringLogRequest : PagedRequest
+    {
+        [Required(ErrorMessage = "Thiếu RaceId để lấy log lịch sử điểm")]
+        public Guid? RaceId { get; init; }
+    }
+    public class ScoringLogResponse
+    {
+        public Guid LogId { get; init;}
+        public string? BoothName {get; init;} // null if actor != organizer
+        public string EventName {get; set;} = string.Empty;
+        public string TeamName {get; init;}= string.Empty;
+        public string? ActorFullName {get; init;}
+        public string? ActorShortName {get; init;}
+        public int ScoreDelta {get; init;}
+        public int ScoreBefore {get; init;}
+        public int ScoreAfter {get; init;}
+        public string Reason {get; set;} = string.Empty;
+        public DateTime CreatedAt {get; init;}
+        public string CreatedBy {get; init;} = string.Empty;
     }
 }

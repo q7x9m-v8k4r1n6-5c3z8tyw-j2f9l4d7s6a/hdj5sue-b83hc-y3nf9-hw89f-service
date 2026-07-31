@@ -1,4 +1,4 @@
-namespace OVCMOVE.Api.Contracts;
+﻿namespace OVCMOVE.Api.Contracts;
 
 public static class TeamContract
 {
@@ -58,6 +58,15 @@ public static class TeamContract
         public DateTime CreatedAt { get; init; }
     }
 
+    /// <summary>
+    /// Request phân trang cho API lấy danh sách Teams
+    /// </summary>
+    public sealed class GetTeamsRequest
+    {
+        public int PageIndex { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
+    }
+
     public sealed class CreateTeamRequest
     {
         public string DisplayName { get; init; } = string.Empty;
@@ -89,6 +98,9 @@ public static class TeamContract
         public string Status { get; init; } = string.Empty;
     }
 
+    /// <summary>
+    /// Response trả về danh sách Teams
+    /// </summary>
     public sealed class TeamListItemResponse
     {
         public Guid Id { get; init; }
@@ -98,6 +110,9 @@ public static class TeamContract
         public string Status { get; init; } = string.Empty;
     }
 
+    /// <summary>
+    /// Response trả về khi tìm kiếm Team (Search)
+    /// </summary>
     public sealed class TeamSearchItemResponse
     {
         public Guid Id { get; init; }

@@ -121,6 +121,7 @@ public class TeamController : BaseController
             ResetPassword = request.ResetPassword,
             Status = request.Status,
         }, cancellationToken);
+
         if (!updated)
         {
             return NotFound(ApiResponse.Error(
@@ -137,6 +138,7 @@ public class TeamController : BaseController
     {
         var deleted = await _mediator.Send(
             new DeleteTeamCommand { TeamId = teamId }, cancellationToken);
+
         return deleted
             ? Ok(ApiResponse.Success(new { Id = teamId }))
             : NotFound(ApiResponse.Error(
@@ -152,6 +154,7 @@ public class TeamController : BaseController
     {
         var reset = await _mediator.Send(
             new ResetTeamPasswordCommand { TeamId = teamId }, cancellationToken);
+
         return reset
             ? Ok(ApiResponse.Success(new { Id = teamId }))
             : NotFound(ApiResponse.Error(
@@ -176,6 +179,7 @@ public class TeamController : BaseController
         return Ok(ApiResponse.Success(result.ToResponse(
             item => item.ToResponse())));
     }
+
     [HttpGet("search")]
     [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> SearchTeams([FromQuery] string query, CancellationToken cancellationToken)
@@ -187,7 +191,6 @@ public class TeamController : BaseController
         return Ok(ApiResponse.Success(
             result.Select(item => item.ToResponse()).ToArray()));
     }
-
     private Guid GetCurrentTeamId()
     {
         var teamIdValue =

@@ -178,6 +178,8 @@ public static class RaceQueries
             [Name] = @Name,
             [Place] = @Place,
             [Description] = @Description,
+            [Status] = @Status,
+            [TeamId] = @TeamId,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id AND [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -233,5 +235,77 @@ public static class RaceQueries
         LEFT JOIN [dbo].[BoothOrganizer] bo ON b.Id = bo.BoothId
         LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
         WHERE b.RaceId = @RaceId
+          AND b.IsDeleted = 0
         ORDER BY b.Name ASC;";
+
+    public static string GetScoringLogByRaceIdQuery() => @"
+        SELECT
+            log.Id AS LogId,
+            b.Name AS BoothName,
+            log.EventCode,
+            log.EventName,
+            tu.DisplayName AS TeamName,
+            ou.DisplayName AS ActorFullName,
+            ou.ShortName AS ActorShortName,
+            log.Delta AS ScoreDelta,
+            log.ScoreBefore,
+            log.ScoreAfter,
+            log.ReasonCode,
+            log.Reason,
+            log.CreatedAt,
+            log.CreatedBy
+        FROM [dbo].[ScoringLog] log
+        LEFT JOIN [dbo].[Booth] b ON log.BoothId = b.Id
+        LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
+        LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
+        WHERE log.RaceId = @RaceId
+          AND log.IsDeleted = 0
+        ORDER BY log.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
+
+    public static string CountScoringLogByRaceIdQuery() => @"
+        SELECT COUNT(1)
+        FROM [dbo].[ScoringLog]
+        WHERE RaceId = @RaceId
+          AND IsDeleted = 0;";
+
+    public static string GetRaceTeamScoreQuery() => @"
+        SELECT [TotalScore]
+        FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
+    public static string UpdateRaceTeamScoreQuery() => @"
+        UPDATE [dbo].[RaceTeam]
+        SET
+            [TotalScore] = @TotalScore,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
+    public static string CreateScoringLogQuery() => @"
+        INSERT INTO [dbo].[ScoringLog]
+        (
+            [Id], [EventCode], [EventName], [RaceId], [TeamId],
+            [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
+            [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
+            [ModifiedBy], [ModifiedAt], [IsDeleted]
+        )
+        VALUES
+        (
+            @Id, @EventCode, @EventName, @RaceId, @TeamId,
+            @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter,
+            @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
+            @ModifiedBy, @ModifiedAt, @IsDeleted
+        );";
+
+    public static string GetBoothOrganizerByOrganizerIdQuery() => @"
+        SELECT TOP 1
+            [Id], [BoothId], [OrganizerId],
+            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+        FROM [dbo].[BoothOrganizer]
+        WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
 }

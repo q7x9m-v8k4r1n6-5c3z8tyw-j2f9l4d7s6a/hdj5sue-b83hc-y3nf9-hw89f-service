@@ -1,6 +1,7 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
 using TeamLeaderboardFeature =
@@ -116,6 +117,35 @@ public class TeamLeaderboardQueryHandlerTests
 
         public Task<List<BoothListResultModel>> GetBoothListAsync(
             Guid? raceId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<(
+            IReadOnlyCollection<ScoringLogResultModel> Items,
+            int TotalItems)> GetScoringLogPageByRaceIdAsync(
+                Guid raceId,
+                int page,
+                int pageSize,
+                CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<int?> GetRaceTeamScoreAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> UpdateRaceTeamScoreAsync(
+            Guid raceId,
+            Guid teamId,
+            int totalScore,
+            string modifiedBy,
+            DateTime modifiedAt,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task CreateScoringLogAsync(
+            ScoringLog log,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

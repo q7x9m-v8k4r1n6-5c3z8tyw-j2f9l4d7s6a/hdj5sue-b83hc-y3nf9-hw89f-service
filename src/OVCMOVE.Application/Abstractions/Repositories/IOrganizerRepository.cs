@@ -9,7 +9,9 @@ public interface IOrganizerRepository
         IEnumerable<Guid> organizerIds,
         CancellationToken cancellationToken = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<User?> GetByIdAsync(Guid organizerId, CancellationToken cancellationToken = default);
     Task<(IReadOnlyCollection<GetAllOrganizersResultModel> Items, int TotalItems)> GetPageAsync(
+        string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
@@ -17,4 +19,5 @@ public interface IOrganizerRepository
         string keyword,
         CancellationToken cancellationToken = default);
     Task<bool> ChangeStatusAsync(Guid organizerId, string status, CancellationToken cancellationToken = default);
+    Task<bool> UpdateAsync(User organizer, CancellationToken cancellationToken = default);
 }

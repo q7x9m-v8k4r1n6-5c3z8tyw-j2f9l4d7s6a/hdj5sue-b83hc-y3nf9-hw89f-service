@@ -40,6 +40,7 @@ public class SearchOrganizerQueryHandler :
     {
         Id = user.Id,
         DisplayName = user.DisplayName ?? string.Empty,
-        Email = user.LinkedEmail
+        Email = user.LinkedEmail,
+        AvatarUrl = user.AvatarUrl
     };
 }

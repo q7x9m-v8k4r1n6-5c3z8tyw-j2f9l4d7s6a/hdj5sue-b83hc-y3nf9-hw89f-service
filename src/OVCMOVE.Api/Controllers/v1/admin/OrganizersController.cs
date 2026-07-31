@@ -5,6 +5,7 @@ using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Features.Organizers.Command.ChangeOrganizerStatus;
+using OVCMOVE.Application.Features.Rbac.Roles.Query.GetAllRoles;
 using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Api.Controllers.v1.Admin;
@@ -26,6 +27,20 @@ public class OrganizersController : BaseController
             request.ToCommand(),
             cancellationToken);
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    [HttpGet("roles")]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
+    public async Task<IActionResult> GetAssignableRoles(CancellationToken cancellationToken)
+    {
+        var roles = await _mediator.Send(new GetAllRolesQuery(), cancellationToken);
+        return Ok(ApiResponse.Success(roles.Select(role => new
+        {
+            role.Id,
+            role.Name,
+            role.Code,
+            role.Description,
+        }).ToArray()));
     }
 
     [HttpPatch("{organizerId:guid}/deactivate")]

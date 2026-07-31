@@ -7,4 +7,4 @@ public interface IGoogleAuthService
         CancellationToken cancellationToken = default);
 }
 
-public sealed record GoogleUserProfile(string Email, string? DisplayName);
+public sealed record GoogleUserProfile(string Email, string? DisplayName, string? AvatarUrl);

@@ -38,20 +38,6 @@ internal static class CreateOrganizerFactory
             "Email organizer không đúng định dạng.");
     }
 
-    /// <summary>Validates and converts the public role input to its stored code.</summary>
-    internal static string NormalizeRole(string? role) =>
-        (role ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            UserConstants.RoleCode.Organizer =>
-                UserConstants.RoleCode.Organizer,
-            UserConstants.RoleCode.Admin =>
-                UserConstants.RoleCode.Admin,
-            "administrator" =>
-                UserConstants.RoleCode.Admin,
-            _ => throw new ApplicationValidationException(
-                "Role phải là Organizer hoặc Administrator.")
-        };
-
     /// <summary>Creates the data-only user entity representing an organizer.</summary>
     internal static User CreateUser(
         string email,

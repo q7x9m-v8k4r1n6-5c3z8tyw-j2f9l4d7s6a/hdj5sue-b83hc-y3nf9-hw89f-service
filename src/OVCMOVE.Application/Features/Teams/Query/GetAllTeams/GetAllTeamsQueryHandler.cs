@@ -30,6 +30,7 @@ public class GetAllTeamsQueryHandler :
 
         // 2. Lấy dữ liệu phân trang trực tiếp từ DB
         var (teams, totalItems) = await _teamRepository.GetPageAsync(
+            request.Search,
             page,
             pageSize,
             cancellationToken);

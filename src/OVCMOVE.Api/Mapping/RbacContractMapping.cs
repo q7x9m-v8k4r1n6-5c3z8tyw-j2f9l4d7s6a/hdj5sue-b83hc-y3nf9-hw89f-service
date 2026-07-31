@@ -61,7 +61,10 @@ public static class RbacContractMapping
             Code = result.Code,
             Description = result.Description,
             IsSystem = result.IsSystem,
-            CreatedAt = result.CreatedAt
+            CreatedAt = result.CreatedAt,
+            ModifiedAt = result.ModifiedAt,
+            PermissionCount = result.PermissionCount,
+            PermissionIds = result.PermissionIds
         };
 
     public static RbacContract.PermissionResponse ToResponse(

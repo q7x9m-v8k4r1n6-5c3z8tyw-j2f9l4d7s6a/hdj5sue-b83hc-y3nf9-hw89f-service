@@ -1,4 +1,9 @@
-﻿using OVCMOVE.Application.Abstractions.Repositories;
+﻿using System.Data;
+using Dapper;
+using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
+using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -139,25 +144,82 @@ public class RaceRepository : IRaceRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var parameters = new DynamicParameters(new
+        {
+            race.Id,
+            race.RaceName,
+            race.TimeStart,
+            race.TimeEnd,
+            race.Place,
+            race.Status,
+            race.IsToggledLeaderboard,
+            race.IsHiddenPoint,
+            race.CoverUrl,
+            race.ModifiedBy,
+            race.ModifiedAt
+        });
+        parameters.Add(
+            "ExpectedModifiedAt",
+            expectedModifiedAt,
+            DbType.DateTime2);
+
         var affectedRows = await _db.ExecuteAsync(
             RaceQueries.UpdateRaceQuery(),
-            new
-            {
-                race.Id,
-                race.RaceName,
-                race.TimeStart,
-                race.TimeEnd,
-                race.Place,
-                race.Status,
-                race.IsToggledLeaderboard,
-                race.IsHiddenPoint,
-                race.CoverUrl,
-                race.ModifiedBy,
-                race.ModifiedAt,
-                ExpectedModifiedAt = expectedModifiedAt
-            },
+            parameters,
             cancellationToken: cancellationToken);
         return affectedRows >= 1;
+    }
+
+    public async Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
+        Guid? raceId, 
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
+        var parameters = new { RaceId = raceId };
+        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        return result.ToList();
+    }
+
+    public async Task<List<BoothListResultModel>> GetBoothListAsync(
+        Guid? raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string sqlQuery = RaceQueries.GetBoothListQuery();
+        var parameters = new { RaceId = raceId };
+        var result = await _db.QueryAsync<BoothListResultModel>(sqlQuery, parameters);
+        return result.ToList();
+    }
+
+    public async Task<(
+        IReadOnlyCollection<ScoringLogResultModel> Items, 
+        int TotalItems)> GetScoringLogPageByRaceIdAsync(
+            Guid raceId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var logs = await _db.QueryAsync<ScoringLogResultModel>(
+            RaceQueries.GetScoringLogByRaceIdQuery(),
+            new
+            {
+                RaceId = raceId,
+                Offset = (page - 1) * pageSize,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+
+        var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CountScoringLogByRaceIdQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        return (logs.ToArray(), totalItems);
     }
 }
 

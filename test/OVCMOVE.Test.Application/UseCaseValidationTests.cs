@@ -161,6 +161,7 @@ public class UseCaseValidationTests
         public Task<(
             IReadOnlyCollection<User> Items,
             int TotalItems)> GetPageAsync(
+            string? search,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default) =>
@@ -168,6 +169,16 @@ public class UseCaseValidationTests
 
         public Task<IReadOnlyCollection<User>> SearchAsync(
             string keyword,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<User?> GetByIdAsync(
+            Guid teamId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> UpdateAsync(
+            User team,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
@@ -186,9 +197,15 @@ public class UseCaseValidationTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<User?> GetByIdAsync(
+            Guid organizerId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<(
             IReadOnlyCollection<GetAllOrganizersResultModel> Items,
             int TotalItems)> GetPageAsync(
+            string? search,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default) =>
@@ -202,6 +219,11 @@ public class UseCaseValidationTests
         public Task<bool> ChangeStatusAsync(
             Guid organizerId,
             string status,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> UpdateAsync(
+            User organizer,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

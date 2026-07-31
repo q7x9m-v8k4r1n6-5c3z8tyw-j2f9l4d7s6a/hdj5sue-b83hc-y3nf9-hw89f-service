@@ -29,6 +29,7 @@ public class GetAllOrganizersQueryHandler :
 
         // 2. Phân trang trực tiếp từ SQL/DB (Cực kỳ nhanh)
         var (organizers, totalItems) = await _organizerRepository.GetPageAsync(
+            request.Search,
             page,
             pageSize,
             cancellationToken);

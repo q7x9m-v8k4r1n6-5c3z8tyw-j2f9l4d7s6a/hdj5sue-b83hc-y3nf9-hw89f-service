@@ -7,7 +7,7 @@ using OVCMOVE.Infrastructure.Persistence.Queries;
 namespace OVCMOVE.Infrastructure.Repositories;
 
 /// <summary>
-/// Repository quản lý truy vấn dữ liệu Team từ Database sử dụng Dapper IDbExecutor.
+/// Repository quản lý truy vấn dữ liệu Team/User từ Database sử dụng Dapper IDbExecutor.
 /// </summary>
 public class TeamRepository : ITeamRepository
 {
@@ -17,7 +17,7 @@ public class TeamRepository : ITeamRepository
         _db = db;
 
     /// <summary>
-    /// Lấy danh sách ID Team đã tồn tại trong hệ thống (dùng cho Validate).
+    /// Lấy danh sách ID Team đã tồn tại trong hệ thống (dùng cho Validate hàng loạt).
     /// </summary>
     public async Task<IReadOnlyCollection<Guid>> GetExistingIdsAsync(
         IEnumerable<Guid> teamIds,
@@ -42,9 +42,10 @@ public class TeamRepository : ITeamRepository
     }
 
     /// <summary>
-    /// Lấy danh sách Team theo trang (Phân trang dưới SQL).
+    /// Lấy danh sách Team theo trang kết hợp tìm kiếm từ khóa (Phân trang dưới SQL).
     /// </summary>
     public async Task<(IReadOnlyCollection<User> Items, int TotalItems)> GetPageAsync(
+        string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -53,6 +54,7 @@ public class TeamRepository : ITeamRepository
 
         var parameters = new
         {
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
             UserType = UserConstants.UserType.Team,
             Offset = (page - 1) * pageSize,
             PageSize = pageSize
@@ -65,7 +67,11 @@ public class TeamRepository : ITeamRepository
 
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             TeamQueries.CountTeamsQuery(),
-            new { UserType = UserConstants.UserType.Team },
+            new
+            {
+                UserType = UserConstants.UserType.Team,
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+            },
             cancellationToken: cancellationToken);
 
         return (result.ToArray(), totalItems);
@@ -92,5 +98,46 @@ public class TeamRepository : ITeamRepository
             cancellationToken: cancellationToken);
 
         return result.ToArray();
+    }
+
+    /// <summary>
+    /// Lấy thông tin chi tiết một Team theo ID.
+    /// </summary>
+    public Task<User?> GetByIdAsync(
+        Guid teamId,
+        CancellationToken cancellationToken = default) =>
+        _db.QueryFirstOrDefaultAsync<User>(
+            TeamQueries.GetTeamByIdQuery(),
+            new
+            {
+                TeamId = teamId,
+                UserType = UserConstants.UserType.Team
+            },
+            cancellationToken: cancellationToken);
+
+    /// <summary>
+    /// Cập nhật thông tin Team vào CSDL.
+    /// </summary>
+    public async Task<bool> UpdateAsync(
+        User team,
+        CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _db.ExecuteAsync(
+            TeamQueries.UpdateTeamQuery(),
+            new
+            {
+                team.Id,
+                team.Username,
+                LinkedEmail = team.LinkedEmail,
+                team.PasswordHash,
+                team.DisplayName,
+                team.Status,
+                team.ModifiedBy,
+                team.ModifiedAt,
+                UserType = UserConstants.UserType.Team,
+            },
+            cancellationToken: cancellationToken);
+
+        return affectedRows == 1;
     }
 }

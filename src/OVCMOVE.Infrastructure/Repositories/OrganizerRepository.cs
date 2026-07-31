@@ -50,9 +50,16 @@ public class OrganizerRepository : IOrganizerRepository
             cancellationToken: cancellationToken);
     }
 
+    public Task<User?> GetByIdAsync(Guid organizerId, CancellationToken cancellationToken = default) =>
+        _db.QueryFirstOrDefaultAsync<User>(
+            OrganizerQueries.GetOrganizerByIdQuery(),
+            new { OrganizerId = organizerId, UserType = UserConstants.UserType.Organizer },
+            cancellationToken: cancellationToken);
+
     public async Task<(
         IReadOnlyCollection<GetAllOrganizersResultModel> Items,
         int TotalItems)> GetPageAsync(
+        string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -62,6 +69,7 @@ public class OrganizerRepository : IOrganizerRepository
             OrganizerQueries.GetAllOrganizersQuery(),
             new
             {
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
                 UserType = UserConstants.UserType.Organizer,
                 Offset = (page - 1) * pageSize,
                 PageSize = pageSize
@@ -69,7 +77,7 @@ public class OrganizerRepository : IOrganizerRepository
             cancellationToken: cancellationToken);
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             OrganizerQueries.CountOrganizersQuery(),
-            new { UserType = UserConstants.UserType.Organizer },
+            new { UserType = UserConstants.UserType.Organizer, Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim() },
             cancellationToken: cancellationToken);
         return (result.ToArray(), totalItems);
     }
@@ -111,4 +119,11 @@ public class OrganizerRepository : IOrganizerRepository
             cancellationToken: cancellationToken);
         return affectedRows >= 1;
     }
+
+    public async Task<bool> UpdateAsync(User organizer, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(OrganizerQueries.UpdateOrganizerQuery(), new
+        {
+            organizer.Id, organizer.DisplayName, organizer.Status, organizer.ModifiedBy, organizer.ModifiedAt,
+            UserType = UserConstants.UserType.Organizer,
+        }, cancellationToken: cancellationToken) == 1;
 }

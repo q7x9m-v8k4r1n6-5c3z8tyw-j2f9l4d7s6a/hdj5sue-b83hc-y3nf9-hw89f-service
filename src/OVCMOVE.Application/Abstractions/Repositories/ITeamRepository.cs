@@ -15,17 +15,32 @@ public interface ITeamRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lấy danh sách phân trang.
+    /// Lấy danh sách phân trang kết hợp tìm kiếm theo từ khóa.
     /// </summary>
     Task<(IReadOnlyCollection<User> Items, int TotalItems)> GetPageAsync(
+        string? search,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Tìm kiếm theo từ khóa.
+    /// Tìm kiếm danh sách Team theo từ khóa.
     /// </summary>
     Task<IReadOnlyCollection<User>> SearchAsync(
         string keyword,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lấy thông tin chi tiết một Team theo ID.
+    /// </summary>
+    Task<User?> GetByIdAsync(
+        Guid teamId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cập nhật thông tin Team vào CSDL.
+    /// </summary>
+    Task<bool> UpdateAsync(
+        User team,
         CancellationToken cancellationToken = default);
 }

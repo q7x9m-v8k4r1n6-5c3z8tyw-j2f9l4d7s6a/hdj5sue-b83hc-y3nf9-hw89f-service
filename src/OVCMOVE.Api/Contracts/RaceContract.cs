@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
+
 using static OVCMOVE.Api.Contracts.CommonContract;
 
 namespace OVCMOVE.Api.Contracts;
@@ -150,6 +152,7 @@ public static class RaceContract
         public Guid Id { get; init; }
         public string DisplayName { get; init; } = string.Empty;
         public string Email { get; init; } = string.Empty;
+        public string? AvatarUrl { get; init; }
     }
 
     public sealed class TeamResponse
@@ -166,5 +169,55 @@ public static class RaceContract
         public string Place { get; init; } = string.Empty;
         public string Description { get; init; } = string.Empty;
         public string OrganizerID { get; init; } = string.Empty;
+    }
+
+    public class TeamLeaderboardRequest
+    {
+        [Required(ErrorMessage = "Thiếu RaceId để lấy bảng xếp hạng.")]
+        public Guid? RaceId { get; init; }
+    }
+    public class TeamLeaderboardResponse
+    {
+        public string DisplayName { get; init; } = string.Empty;
+        public int TotalScore { get; init; }
+    }
+
+    public class BoothListRequest
+    {
+        [Required(ErrorMessage = "thiếu RaceId để lấy danh sách các booth")]
+        public Guid? RaceId { get; init; }
+    }
+
+    public class BoothListResponse
+    {
+        public Guid BoothId { get; init; }
+        public string BoothName { get; init; } = string.Empty;
+        public string BoothLocation {get; init; } = string.Empty;
+        public string Description {get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
+        public bool isHidden { get; init; } = false;
+        public string? CurrentTeamName { get; init; }
+        public string? CurrentOrganizerName { get; init; }
+    }
+
+    public class ScoringLogRequest : PagedRequest
+    {
+        [Required(ErrorMessage = "Thiếu RaceId để lấy log lịch sử điểm")]
+        public Guid? RaceId { get; init; }
+    }
+    public class ScoringLogResponse
+    {
+        public Guid LogId { get; init;}
+        public string? BoothName {get; init;} // null if actor != organizer
+        public string EventName {get; set;} = string.Empty;
+        public string TeamName {get; init;}= string.Empty;
+        public string? ActorFullName {get; init;}
+        public string? ActorShortName {get; init;}
+        public int ScoreDelta {get; init;}
+        public int ScoreBefore {get; init;}
+        public int ScoreAfter {get; init;}
+        public string Reason {get; set;} = string.Empty;
+        public DateTime CreatedAt {get; init;}
+        public string CreatedBy {get; init;} = string.Empty;
     }
 }

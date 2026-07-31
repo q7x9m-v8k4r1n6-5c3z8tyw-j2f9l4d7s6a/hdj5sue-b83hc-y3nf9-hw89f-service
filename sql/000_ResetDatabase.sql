@@ -104,6 +104,7 @@ BEGIN TRY
         [UserType] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Users_UserType] DEFAULT (N'team'),
         [DisplayName] NVARCHAR(255) NULL,
+        [AvatarUrl] NVARCHAR(2048) NULL,
         [ShortName] NVARCHAR(100) NULL,
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Users_Status] DEFAULT (N'active'),

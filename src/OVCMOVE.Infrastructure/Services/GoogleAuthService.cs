@@ -37,7 +37,7 @@ public class GoogleAuthService : IGoogleAuthService
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             cancellationToken.ThrowIfCancellationRequested();
 
-            return new GoogleUserProfile(payload.Email, payload.Name);
+            return new GoogleUserProfile(payload.Email, payload.Name, payload.Picture);
         }
         catch (InvalidJwtException ex)
         {

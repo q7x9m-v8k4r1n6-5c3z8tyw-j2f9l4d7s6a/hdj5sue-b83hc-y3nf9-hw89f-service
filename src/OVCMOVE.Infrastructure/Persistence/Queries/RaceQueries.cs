@@ -141,7 +141,8 @@ public static class RaceQueries
         SELECT
             OI.[Id],
             COALESCE(NULLIF(U.[DisplayName], N''), U.[LinkedEmail], N'') AS [DisplayName],
-            COALESCE(U.[LinkedEmail], N'') AS [Email]
+            COALESCE(U.[LinkedEmail], N'') AS [Email],
+            U.[AvatarUrl]
         FROM OrganizerIds OI
         LEFT JOIN [dbo].[Users] U ON U.[Id] = OI.[Id] AND U.[IsDeleted] = 0;";
 
@@ -205,10 +206,65 @@ public static class RaceQueries
         DELETE FROM [dbo].[RaceOrganizer]
         WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
 
+    public static string GetTeamLeaderboardQuery() => @"
+        SELECT 
+            u.DisplayName,
+            rt.TotalScore
+        FROM [dbo].[RaceTeam] rt
+        INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
+        WHERE rt.RaceId = @RaceId
+        ORDER BY rt.TotalScore DESC;";
+
+    public static string GetBoothListQuery() => @"
+        SELECT 
+            b.Id AS BoothId,
+            b.Name AS BoothName,
+            b.Place AS BoothLocation,
+            b.Description,
+            b.Status,
+            b.IsHidden,
+            tu.DisplayName AS CurrentTeamName,
+            ou.DisplayName AS CurrentOrganizerName
+        FROM [dbo].[Booth] b
+        LEFT JOIN [dbo].[Users] tu ON b.TeamId = tu.Id
+        LEFT JOIN [dbo].[BoothOrganizer] bo ON b.Id = bo.BoothId
+        LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
+        WHERE b.RaceId = @RaceId
+        ORDER BY b.Name ASC;";
+
+    public static string GetScoringLogByRaceIdQuery() => @"
+        SELECT
+            log.Id AS LogId,
+            b.Name AS BoothName,
+            log.EventCode,
+            log.EventName,
+            tu.DisplayName AS TeamName,
+            ou.DisplayName AS ActorFullName,
+            ou.ShortName AS ActorShortName,
+            log.Delta AS ScoreDelta,
+            log.ScoreBefore,
+            log.ScoreAfter,
+            log.ReasonCode,
+            log.Reason,
+            log.CreatedAt,
+            log.CreatedBy
+        FROM [dbo].[ScoringLog] log
+        LEFT JOIN [dbo].[Booth] b ON log.BoothId = b.Id
+        LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
+        LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
+        WHERE log.RaceId = @RaceId
+        ORDER BY log.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
+
+    public static string CountScoringLogByRaceIdQuery() => @"
+        SELECT COUNT(1)
+        FROM [dbo].[ScoringLog]
+        WHERE RaceId = @RaceId;";
+
     public static string GetBoothOrganizerByOrganizerIdQuery() => @"
-    SELECT TOP 1
-        [Id], [BoothId], [OrganizerId],
-        [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
-    FROM [dbo].[BoothOrganizer]
-    WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
+        SELECT TOP 1
+            [Id], [BoothId], [OrganizerId],
+            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+        FROM [dbo].[BoothOrganizer]
+        WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
 }

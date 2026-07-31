@@ -29,9 +29,6 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
     /// <summary>Authenticates an authorized user with a Google identity token.</summary>
     public async Task<LoginResultModel> Handle(GoogleLoginCommand request, CancellationToken cancellationToken)
     {
-        string mockEmail = "datle793583@gmail.com";
-
-        /*
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
             throw new ApplicationValidationException(
@@ -41,39 +38,43 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
         var googleUser = await _googleAuthService.ValidateGoogleTokenAsync(
             request.IdToken,
             cancellationToken);
+
         if (googleUser is null || string.IsNullOrWhiteSpace(googleUser.Email))
         {
             throw new UnauthorizedAccessException(
                 "Xác thực Google thất bại hoặc token đã hết hạn.");
         }
-        */
 
         var user = await _userRepository.GetByEmailAsync(
-            mockEmail,
+            googleUser.Email,
             cancellationToken)
             ?? throw new UnauthorizedAccessException(
                 "Email này chưa được cấp quyền truy cập.");
-        /*
-        if (string.IsNullOrWhiteSpace(user.DisplayName) &&
-            !string.IsNullOrWhiteSpace(googleUser.DisplayName))
+
+        if ((string.IsNullOrWhiteSpace(user.DisplayName) && !string.IsNullOrWhiteSpace(googleUser.DisplayName)) ||
+            (string.IsNullOrWhiteSpace(user.AvatarUrl) && !string.IsNullOrWhiteSpace(googleUser.AvatarUrl)))
         {
-            var displayName = googleUser.DisplayName.Trim();
-            if (displayName.Length > 255)
+            var displayName = googleUser.DisplayName?.Trim();
+            if (displayName is { Length: > 255 })
             {
                 // External profile text must fit the stable Users column.
                 displayName = displayName[..255];
             }
 
-            await _userRepository.UpdateDisplayNameAsync(
+            await _userRepository.UpdateGoogleProfileAsync(
                 user.Id,
                 displayName,
+                googleUser.AvatarUrl,
                 cancellationToken);
-            user.DisplayName = displayName;
-        }*/
+
+            user.DisplayName ??= displayName;
+            user.AvatarUrl ??= googleUser.AvatarUrl;
+        }
 
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
             user.Id,
             cancellationToken);
+
         if (accessProfile.Roles.Count == 0)
         {
             throw new UnauthorizedAccessException(

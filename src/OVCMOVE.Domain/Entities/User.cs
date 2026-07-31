@@ -18,6 +18,7 @@ public class User : BaseEntity
     public string UserType { get; set; } = string.Empty;
 
     public string? DisplayName { get; set; }
+    public string? AvatarUrl { get; set; }
     public string? ShortName { get; set; }
     public string Status { get; set; } = string.Empty;
 }

@@ -42,7 +42,11 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
         cancellationToken.ThrowIfCancellationRequested();
 
         var email = CreateOrganizerFactory.NormalizeEmail(request.Email);
-        var role = CreateOrganizerFactory.NormalizeRole(request.Role);
+        var roleIds = request.RoleIds.Distinct().ToArray();
+        if (roleIds.Length == 0)
+        {
+            throw new ApplicationValidationException("Vui lòng chọn ít nhất một vai trò.");
+        }
         var actor = request.GetActorOrSystem();
 
         if (await _organizerRepo.GetByEmailAsync(email, cancellationToken)
@@ -58,11 +62,13 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
                 "Email đã được liên kết với một người dùng khác.");
         }
 
-        var roleEntity = await _roleRepository.GetByCodeAsync(
-            role,
-            cancellationToken)
-            ?? throw new ApplicationNotFoundException(
-                $"Không tìm thấy role '{role}'.");
+        var roles = new List<Domain.Entities.Role>();
+        foreach (var roleId in roleIds)
+        {
+            var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken)
+                ?? throw new ApplicationNotFoundException("Vai trò được chọn không tồn tại.");
+            roles.Add(role);
+        }
         var now = DateTime.UtcNow;
         var shortName = await ShortNameHelper.GenerateUniqueAsync(
             email,
@@ -79,13 +85,12 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
         try
         {
             await _userRepo.AddAsync(user, cancellationToken);
-            await _userRoleRepository.CreateAsync(
-                CreateOrganizerFactory.CreateUserRole(
-                    user.Id,
-                    roleEntity.Id,
-                    actor,
-                    now),
-                cancellationToken);
+            foreach (var role in roles)
+            {
+                await _userRoleRepository.CreateAsync(
+                    CreateOrganizerFactory.CreateUserRole(user.Id, role.Id, actor, now),
+                    cancellationToken);
+            }
             // Do not leave commit outcome ambiguous after a client disconnect.
             await _unitOfWork.CommitAsync(CancellationToken.None);
         }
@@ -97,9 +102,11 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
 
         await TrySendOrganizerCreatedEmailAsync(
             user,
-            role,
+            string.Join(", ", roles.Select(item => item.Name)),
             cancellationToken);
-        return CreateOrganizerFactory.CreateResponse(user, role);
+        return CreateOrganizerFactory.CreateResponse(
+            user,
+            string.Join(", ", roles.Select(item => item.Code)));
     }
 
     private async Task TrySendOrganizerCreatedEmailAsync(
@@ -109,14 +116,12 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
     {
         try
         {
-            var subject = "OVCMOVE organizer account created";
-            var body = $"""
-                <p>Hello,</p>
-                <p>Your OVCMOVE organizer account has been created.</p>
-                <p><strong>Email:</strong> {user.LinkedEmail}</p>
-                <p><strong>Role:</strong> {role}</p>
-                <p><strong>Status:</strong> {user.Status}</p>
-                """;
+            var subject = AccountEmailTemplate.Subject("Tài khoản Ban tổ chức MOVE đã được tạo");
+            var body = AccountEmailTemplate.Build(
+                "Tài khoản Ban tổ chức đã sẵn sàng",
+                user.DisplayName ?? user.LinkedEmail,
+                "tài khoản MOVE của bạn đã được tạo thành công.",
+                [("Email", user.LinkedEmail), ("Vai trò", role), ("Trạng thái", user.Status)]);
 
             await _emailService.SendOrganizerCredentialsAsync(
                 user.LinkedEmail,

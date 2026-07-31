@@ -64,7 +64,8 @@ public class UpdateRoleCommandHandler(
             Code = role.Code,
             Description = role.Description,
             IsSystem = role.IsSystem,
-            CreatedAt = role.CreatedAt
+            CreatedAt = role.CreatedAt,
+            ModifiedAt = role.ModifiedAt
         };
     }
 }

@@ -263,10 +263,15 @@ public static class RaceQueries
         FROM [dbo].[ScoringLog]
         WHERE RaceId = @RaceId;";
 
-    public static string GetBoothOrganizerByOrganizerIdQuery() => @"
-        SELECT TOP 1
-            [Id], [BoothId], [OrganizerId],
-            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
-        FROM [dbo].[BoothOrganizer]
-        WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
+    public static string GetBoothOrganizerByOrganizerAndRaceQuery() => @"
+    SELECT TOP 1
+        BO.[Id], BO.[BoothId], BO.[OrganizerId],
+        BO.[CreatedBy], BO.[CreatedAt], BO.[ModifiedBy], BO.[ModifiedAt], BO.[IsDeleted]
+    FROM [dbo].[BoothOrganizer] BO
+    INNER JOIN [dbo].[Booth] B
+        ON B.[Id] = BO.[BoothId]
+       AND B.[IsDeleted] = 0
+    WHERE BO.[OrganizerId] = @OrganizerId
+      AND B.[RaceID] = @RaceId
+      AND BO.[IsDeleted] = 0;";
 }

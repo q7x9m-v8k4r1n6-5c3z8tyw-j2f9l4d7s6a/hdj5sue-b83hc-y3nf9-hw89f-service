@@ -38,6 +38,7 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
         var googleUser = await _googleAuthService.ValidateGoogleTokenAsync(
             request.IdToken,
             cancellationToken);
+
         if (googleUser is null || string.IsNullOrWhiteSpace(googleUser.Email))
         {
             throw new UnauthorizedAccessException(
@@ -65,6 +66,7 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
                 displayName,
                 googleUser.AvatarUrl,
                 cancellationToken);
+
             user.DisplayName ??= displayName;
             user.AvatarUrl ??= googleUser.AvatarUrl;
         }
@@ -72,6 +74,7 @@ public class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginCommand, Log
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
             user.Id,
             cancellationToken);
+
         if (accessProfile.Roles.Count == 0)
         {
             throw new UnauthorizedAccessException(

@@ -178,6 +178,8 @@ public static class RaceQueries
             [Name] = @Name,
             [Place] = @Place,
             [Description] = @Description,
+            [Status] = @Status,
+            [TeamId] = @TeamId,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id AND [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -214,6 +216,7 @@ public static class RaceQueries
         INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
         WHERE rt.RaceId = @RaceId
         ORDER BY rt.TotalScore DESC;";
+
     public static string GetBoothListQuery() => @"
         SELECT 
             b.Id AS BoothId,
@@ -230,6 +233,7 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
         WHERE b.RaceId = @RaceId
         ORDER BY b.Name ASC;";
+
     public static string GetScoringLogByRaceIdQuery() => @"
         SELECT
             log.Id AS LogId,
@@ -258,4 +262,11 @@ public static class RaceQueries
         SELECT COUNT(1)
         FROM [dbo].[ScoringLog]
         WHERE RaceId = @RaceId;";
+
+    public static string GetBoothOrganizerByOrganizerIdQuery() => @"
+        SELECT TOP 1
+            [Id], [BoothId], [OrganizerId],
+            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+        FROM [dbo].[BoothOrganizer]
+        WHERE [OrganizerId] = @OrganizerId AND [IsDeleted] = 0;";
 }

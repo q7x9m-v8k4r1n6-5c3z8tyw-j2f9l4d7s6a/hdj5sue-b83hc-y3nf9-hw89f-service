@@ -11,4 +11,8 @@ public interface IBoothOrganizerRepository
     Task DeleteByBoothIdAsync(
         Guid boothId,
         CancellationToken cancellationToken = default);
+
+    Task<BoothOrganizer?> GetByOrganizerIdAsync(
+        Guid organizerId,
+        CancellationToken cancellationToken = default);
 }

@@ -16,18 +16,25 @@ public class GetAllOrganizersQueryHandler :
     }
 
     /// <summary>Returns one normalized page of organizer accounts.</summary>
-    public async Task<PagedResult<GetAllOrganizersResultModel>> Handle(GetAllOrganizersQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<GetAllOrganizersResultModel>> Handle(
+        GetAllOrganizersQuery request,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // 1. Chuẩn hóa số trang (Tránh số âm hoặc số quá lớn)
         var (page, pageSize) = Pagination.Normalize(
             request.Page,
             request.PageSize);
+
+        // 2. Phân trang trực tiếp từ SQL/DB (Cực kỳ nhanh)
         var (organizers, totalItems) = await _organizerRepository.GetPageAsync(
             request.Search,
             page,
             pageSize,
             cancellationToken);
 
+        // 3. Trả về kết quả PagedResult
         return new PagedResult<GetAllOrganizersResultModel>
         {
             Items = organizers,
@@ -36,5 +43,4 @@ public class GetAllOrganizersQueryHandler :
             PageSize = pageSize
         };
     }
-
 }

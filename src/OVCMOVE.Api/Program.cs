@@ -3,6 +3,7 @@ using DotNetEnv;
 using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Middleware;
 using OVCMOVE.Api.Services;
+using OVCMOVE.API.Hubs;
 using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure;
@@ -40,13 +41,16 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddRbacAuthorization();
 builder.Services.AddCustomCors(builder.Configuration);
 
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IBoothNotificationService, BoothNotificationService>();
+
 var app = builder.Build();
 
 app.UseSwaggerDocumentation();
 
-app.UseHttpsRedirection();
-
 app.UseCors("AllowFrontend");
+
+app.UseHttpsRedirection();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -55,5 +59,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<BoothHub>("/api/v1/hubs/booth");
 
 app.Run();

@@ -25,7 +25,7 @@ public class GetAllTeamsQueryHandler :
 
         // 1. Chuẩn hóa tham số phân trang
         var (page, pageSize) = Pagination.Normalize(
-            request.PageIndex,
+            request.Page,
             request.PageSize);
 
         // 2. Lấy dữ liệu phân trang trực tiếp từ DB

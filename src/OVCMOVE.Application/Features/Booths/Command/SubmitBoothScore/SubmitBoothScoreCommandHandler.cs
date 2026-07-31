@@ -19,6 +19,10 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
             request.TeamID,
             request.OrganizerId,
             request.Score,
+            request.EventCode,
+            request.EventName,
+            request.ReasonCode,
+            request.Reason,
             cancellationToken
         );
     }

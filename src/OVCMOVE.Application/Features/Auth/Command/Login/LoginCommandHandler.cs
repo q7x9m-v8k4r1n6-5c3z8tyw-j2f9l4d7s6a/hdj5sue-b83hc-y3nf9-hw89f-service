@@ -35,18 +35,16 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResultMode
             throw new ApplicationValidationException(
                 "Tên đăng nhập và mật khẩu không được để trống.");
         }
-
         var user = await _userRepository.GetByUsernameAsync(
             request.Username.Trim(),
             cancellationToken);
-        /*
+        
         if (user?.PasswordHash is null ||
             !_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             throw new UnauthorizedAccessException(
                 "Tên đăng nhập hoặc mật khẩu không đúng.");
         }
-        */
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
             user.Id,
             cancellationToken);

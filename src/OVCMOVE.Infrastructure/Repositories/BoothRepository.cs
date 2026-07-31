@@ -79,26 +79,55 @@ public class BoothRepository : IBoothRepository
         Guid teamId,
         Guid organizerId,
         int score,
+        string eventCode = "BOOTH",
+        string eventName = "Chấm điểm trạm",
+        string reasonCode = "BOOTH_COMPLETED",
+        string reason = "Hoàn thành thử thách tại trạm",
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // 1. Cập nhật điểm cho Đội
-        await _db.ExecuteAsync(
-            BoothQueries.UpdateTeamScoreQuery(),
-            new { BoothId= boothId, TeamId = teamId, Score = score },
+        // 1. Lấy thông tin Booth để truy vết RaceId
+        var booth = await GetByIdAsync(boothId, cancellationToken);
+        if (booth is null) return false;
+
+        var currentScore = await _db.QueryFirstOrDefaultAsync<int>(
+            "SELECT ISNULL(TotalScore, 0) FROM dbo.RaceTeam WHERE RaceID = @RaceId AND TeamID = @TeamId;",
+            new { RaceId = booth.RaceId, TeamId = teamId },
             cancellationToken: cancellationToken);
 
-        // 2. Giải phóng trạng thái Trạm
+        int scoreBefore = currentScore;
+        int scoreAfter = scoreBefore + score;
+
+        await _db.ExecuteAsync(
+            BoothQueries.UpdateTeamScoreQuery(),
+            new { BoothId = boothId, TeamId = teamId, Score = score },
+            cancellationToken: cancellationToken);
+
         await _db.ExecuteAsync(
             BoothQueries.ReleaseBoothStatusQuery(),
             new { BoothId = boothId },
             cancellationToken: cancellationToken);
 
-        // 3. Ghi Log nhập điểm
         await _db.ExecuteAsync(
             BoothQueries.InsertScoringLogQuery(),
-            new { Id = Guid.NewGuid(), BoothId = boothId, TeamId = teamId, OrganizerId = organizerId, ScoreGiven = score },
+            new
+            {
+                Id = Guid.NewGuid(),
+                EventCode = eventCode,
+                EventName = eventName,
+                RaceId = booth.RaceId,
+                TeamId = teamId,
+                ActorId = organizerId,
+                BoothId = boothId,
+                Delta = score,
+                ScoreBefore = scoreBefore,
+                ScoreAfter = scoreAfter,
+                ReasonCode = reasonCode,
+                Reason = reason,
+                CreatedBy = organizerId.ToString(),
+                ModifiedBy = organizerId.ToString()
+            },
             cancellationToken: cancellationToken);
 
         return true;

@@ -9,19 +9,19 @@ public static class BoothQueries
     {
         return @"
             SELECT  
-            Id,
-            Name,
-            Place,
-            Description,
-            RaceID,
-            Status,
-            CreatedBy,
-            CreatedAt,
-            ModifiedBy,
-            ModifiedAt,
-            IsDeleted
-        FROM dbo.Booth
-        WHERE Id = @Id AND IsDeleted = 0;
+                Id,
+                Name,
+                Place,
+                Description,
+                RaceID,
+                Status,
+                CreatedBy,
+                CreatedAt,
+                ModifiedBy,
+                ModifiedAt,
+                IsDeleted
+            FROM dbo.Booth
+            WHERE Id = @Id AND IsDeleted = 0;
         ";
     }
 
@@ -52,13 +52,25 @@ public static class BoothQueries
     }
 
     /// <summary>
-    /// Ghi lại danh sách nhập điểm
+    /// Ghi nhật ký chấm điểm vào bảng ScoringLog mới
     /// </summary>
     public static string InsertScoringLogQuery()
     {
         return @"
-        INSERT INTO dbo.BoothScoringLogs (Id, BoothId, TeamId, OrganizerId, ScoreGiven, CreatedAt)
-        VALUES (@Id, @BoothId, @TeamId, @OrganizerId, @ScoreGiven, GETDATE());
-    ";
+            INSERT INTO [dbo].[ScoringLog]
+            (
+                [Id], [EventCode], [EventName], [RaceId], [TeamId], 
+                [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter], 
+                [ReasonCode], [Reason], [CreatedBy], [CreatedAt], 
+                [ModifiedBy], [ModifiedAt], [IsDeleted]
+            )
+            VALUES
+            (
+                @Id, @EventCode, @EventName, @RaceId, @TeamId, 
+                @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter, 
+                @ReasonCode, @Reason, @CreatedBy, GETUTCDATE(), 
+                @ModifiedBy, GETUTCDATE(), 0
+            );
+        ";
     }
 }

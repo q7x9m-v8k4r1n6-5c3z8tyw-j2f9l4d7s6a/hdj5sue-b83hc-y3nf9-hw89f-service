@@ -6,4 +6,9 @@ public interface IBoothHubClient
     /// Phát sự kiện đổi trạng thái trạm về cho tất cả App/Web đang xem bản đồ
     /// </summary>
     Task ReceiveBoothStatusChanged(Guid boothId, string status, Guid? teamId, string? teamName);
+
+    /// <summary>
+    /// Phát sự kiện điểm của một đội trong trận đấu vừa thay đổi.
+    /// </summary>
+    Task ReceiveRaceScoreChanged(Guid raceId, Guid teamId, int delta);
 }

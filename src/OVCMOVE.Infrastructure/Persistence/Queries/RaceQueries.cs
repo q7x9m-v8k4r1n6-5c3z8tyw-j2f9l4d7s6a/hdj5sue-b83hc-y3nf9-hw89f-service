@@ -210,11 +210,14 @@ public static class RaceQueries
 
     public static string GetTeamLeaderboardQuery() => @"
         SELECT 
+            u.Id AS TeamId,
             u.DisplayName,
             rt.TotalScore
         FROM [dbo].[RaceTeam] rt
         INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
         WHERE rt.RaceId = @RaceId
+          AND rt.IsDeleted = 0
+          AND u.IsDeleted = 0
         ORDER BY rt.TotalScore DESC;";
 
     public static string GetBoothListQuery() => @"
@@ -232,6 +235,7 @@ public static class RaceQueries
         LEFT JOIN [dbo].[BoothOrganizer] bo ON b.Id = bo.BoothId
         LEFT JOIN [dbo].[Users] ou ON bo.OrganizerId = ou.Id
         WHERE b.RaceId = @RaceId
+          AND b.IsDeleted = 0
         ORDER BY b.Name ASC;";
 
     public static string GetScoringLogByRaceIdQuery() => @"
@@ -255,13 +259,48 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
         LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
         WHERE log.RaceId = @RaceId
+          AND log.IsDeleted = 0
         ORDER BY log.CreatedAt DESC
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
     public static string CountScoringLogByRaceIdQuery() => @"
         SELECT COUNT(1)
         FROM [dbo].[ScoringLog]
-        WHERE RaceId = @RaceId;";
+        WHERE RaceId = @RaceId
+          AND IsDeleted = 0;";
+
+    public static string GetRaceTeamScoreQuery() => @"
+        SELECT [TotalScore]
+        FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
+    public static string UpdateRaceTeamScoreQuery() => @"
+        UPDATE [dbo].[RaceTeam]
+        SET
+            [TotalScore] = @TotalScore,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
+    public static string CreateScoringLogQuery() => @"
+        INSERT INTO [dbo].[ScoringLog]
+        (
+            [Id], [EventCode], [EventName], [RaceId], [TeamId],
+            [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
+            [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
+            [ModifiedBy], [ModifiedAt], [IsDeleted]
+        )
+        VALUES
+        (
+            @Id, @EventCode, @EventName, @RaceId, @TeamId,
+            @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter,
+            @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
+            @ModifiedBy, @ModifiedAt, @IsDeleted
+        );";
 
     public static string GetBoothOrganizerByOrganizerIdQuery() => @"
         SELECT TOP 1

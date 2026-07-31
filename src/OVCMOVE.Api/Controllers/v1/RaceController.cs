@@ -188,6 +188,29 @@ public class RaceController : BaseController
         return Ok(ApiResponse.Success(response));
     }
 
+    [HttpPatch("{raceId:guid}/teams/{teamId:guid}/score")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> UpdateTeamScore(
+        [FromRoute] Guid raceId,
+        [FromRoute] Guid teamId,
+        [FromBody] UpdateTeamScoreRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _mediator.Send(
+            request.ToCommand(raceId, teamId),
+            cancellationToken);
+        if (result is null)
+        {
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
+        }
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
     [HttpGet("scoring-log")]
     [RequirePermission(PermissionCodes.RaceManage)]
     public async Task<IActionResult> GetScoringLog(

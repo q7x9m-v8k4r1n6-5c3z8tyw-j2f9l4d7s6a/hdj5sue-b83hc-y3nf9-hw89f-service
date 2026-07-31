@@ -12,4 +12,10 @@ public interface IBoothNotificationService
         Guid? teamId,
         string? teamName,
         CancellationToken cancellationToken = default);
+
+    Task NotifyRaceScoreChangedAsync(
+        Guid raceId,
+        Guid teamId,
+        int delta,
+        CancellationToken cancellationToken = default);
 }

@@ -181,6 +181,11 @@ BEGIN TRY
         [Description] NVARCHAR(500) NOT NULL
             CONSTRAINT [DF_Booth_Description] DEFAULT (N''),
         [RaceID] UNIQUEIDENTIFIER NOT NULL,
+        [TeamId] UNIQUEIDENTIFIER NULL,
+        [IsHidden] BIT NOT NULL
+            CONSTRAINT [DF_Booth_IsHidden] DEFAULT (0),
+        [Status] NVARCHAR(50) NOT NULL
+            CONSTRAINT [DF_Booth_Status] DEFAULT (N'free'),
         [CreatedBy] NVARCHAR(100) NULL,
         [CreatedAt] DATETIME2(7) NOT NULL
             CONSTRAINT [DF_Booth_CreatedAt] DEFAULT (SYSUTCDATETIME()),
@@ -230,6 +235,8 @@ BEGIN TRY
             CONSTRAINT [DF_RaceTeam_Id] DEFAULT (NEWID()),
         [RaceID] UNIQUEIDENTIFIER NOT NULL,
         [TeamID] UNIQUEIDENTIFIER NOT NULL,
+        [TotalScore] INT NOT NULL
+            CONSTRAINT [DF_RaceTeam_TotalScore] DEFAULT (0),
         [CreatedBy] NVARCHAR(100) NULL,
         [CreatedAt] DATETIME2(7) NOT NULL
             CONSTRAINT [DF_RaceTeam_CreatedAt] DEFAULT (SYSUTCDATETIME()),
@@ -244,6 +251,41 @@ BEGIN TRY
         CREATE UNIQUE INDEX [UX_RaceTeam_RaceID_TeamID]
             ON [dbo].[RaceTeam] ([RaceID], [TeamID])
             WHERE [IsDeleted] = 0;
+    ';
+
+    CREATE TABLE [dbo].[ScoringLog]
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL
+            CONSTRAINT [PK_ScoringLog] PRIMARY KEY
+            CONSTRAINT [DF_ScoringLog_Id] DEFAULT (NEWID()),
+        [EventCode] NVARCHAR(100) NOT NULL
+            CONSTRAINT [DF_ScoringLog_EventCode] DEFAULT (N''),
+        [EventName] NVARCHAR(255) NOT NULL
+            CONSTRAINT [DF_ScoringLog_EventName] DEFAULT (N''),
+        [RaceId] UNIQUEIDENTIFIER NOT NULL,
+        [TeamId] UNIQUEIDENTIFIER NOT NULL,
+        [ActorId] UNIQUEIDENTIFIER NULL,
+        [BoothId] UNIQUEIDENTIFIER NULL,
+        [Delta] INT NOT NULL,
+        [ScoreBefore] INT NOT NULL,
+        [ScoreAfter] INT NOT NULL,
+        [ReasonCode] NVARCHAR(100) NOT NULL
+            CONSTRAINT [DF_ScoringLog_ReasonCode] DEFAULT (N''),
+        [Reason] NVARCHAR(500) NOT NULL
+            CONSTRAINT [DF_ScoringLog_Reason] DEFAULT (N''),
+        [CreatedBy] NVARCHAR(100) NULL,
+        [CreatedAt] DATETIME2(7) NOT NULL
+            CONSTRAINT [DF_ScoringLog_CreatedAt] DEFAULT (SYSUTCDATETIME()),
+        [ModifiedBy] NVARCHAR(100) NULL,
+        [ModifiedAt] DATETIME2(7) NOT NULL
+            CONSTRAINT [DF_ScoringLog_ModifiedAt] DEFAULT (SYSUTCDATETIME()),
+        [IsDeleted] BIT NOT NULL
+            CONSTRAINT [DF_ScoringLog_IsDeleted] DEFAULT (0)
+    );
+
+    EXEC sys.sp_executesql N'
+        CREATE INDEX [IX_ScoringLog_RaceId_CreatedAt]
+            ON [dbo].[ScoringLog] ([RaceId], [CreatedAt] DESC);
     ';
 
     CREATE TABLE [dbo].[RaceOrganizer]

@@ -30,7 +30,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(RaceController),
             "api/v1/[controller]",
-            7
+            8
         },
         {
             typeof(TeamController),

@@ -178,8 +178,27 @@ public static class RaceContract
     }
     public class TeamLeaderboardResponse
     {
+        public Guid TeamId { get; init; }
         public string DisplayName { get; init; } = string.Empty;
         public int TotalScore { get; init; }
+    }
+
+    public class UpdateTeamScoreRequest
+    {
+        [Range(-10000, 10000, ErrorMessage = "Điểm điều chỉnh không hợp lệ.")]
+        public int Delta { get; init; }
+
+        [Required(ErrorMessage = "Thiếu lý do sửa điểm.")]
+        public string Reason { get; init; } = string.Empty;
+    }
+
+    public class UpdateTeamScoreResponse
+    {
+        public Guid RaceId { get; init; }
+        public Guid TeamId { get; init; }
+        public int ScoreBefore { get; init; }
+        public int ScoreAfter { get; init; }
+        public int Delta { get; init; }
     }
 
     public class BoothListRequest

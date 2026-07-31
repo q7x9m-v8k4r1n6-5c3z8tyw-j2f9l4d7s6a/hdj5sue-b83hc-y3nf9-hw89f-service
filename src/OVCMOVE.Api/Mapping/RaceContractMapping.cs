@@ -1,6 +1,7 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
+using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Race;
@@ -220,8 +221,30 @@ public static class RaceContractMapping
     public static RaceContract.TeamLeaderboardResponse ToResponse(
         this TeamLeaderboardResultModel result) => new()
         {
+            TeamId = result.TeamId,
             DisplayName = result.DisplayName,
             TotalScore = result.TotalScore
+        };
+
+    public static UpdateTeamScoreCommand ToCommand(
+        this RaceContract.UpdateTeamScoreRequest request,
+        Guid raceId,
+        Guid teamId) => new()
+        {
+            RaceId = raceId,
+            TeamId = teamId,
+            Delta = request.Delta,
+            Reason = request.Reason
+        };
+
+    public static RaceContract.UpdateTeamScoreResponse ToResponse(
+        this UpdateTeamScoreResult result) => new()
+        {
+            RaceId = result.RaceId,
+            TeamId = result.TeamId,
+            ScoreBefore = result.ScoreBefore,
+            ScoreAfter = result.ScoreAfter,
+            Delta = result.Delta
         };
 
     public static BoothListQuery ToQuery(

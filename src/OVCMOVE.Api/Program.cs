@@ -60,6 +60,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHub<BoothHub>("/hubs/booth");
+app.MapHub<BoothHub>("/api/v1/hubs/booth");
 
 app.Run();

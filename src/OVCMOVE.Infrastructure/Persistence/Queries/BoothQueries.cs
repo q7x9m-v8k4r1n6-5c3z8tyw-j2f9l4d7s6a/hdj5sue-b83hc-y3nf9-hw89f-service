@@ -46,7 +46,7 @@ public static class BoothQueries
     {
         return @"
             UPDATE dbo.Booth
-            SET Status = 'free'
+            SET Status = 'free', TeamId = NULL
             WHERE Id = @BoothId;
         ";
     }

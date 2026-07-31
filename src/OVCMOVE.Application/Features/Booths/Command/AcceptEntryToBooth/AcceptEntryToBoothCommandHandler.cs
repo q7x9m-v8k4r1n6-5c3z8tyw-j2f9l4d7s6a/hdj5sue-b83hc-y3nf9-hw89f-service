@@ -23,8 +23,8 @@ public class AcceptEntryToBoothCommandHandler
     }
 
     public async Task<(bool IsSuccess, string Message)> Handle(
-        AcceptEntryToBoothCommand request,
-        CancellationToken cancellationToken)
+    AcceptEntryToBoothCommand request,
+    CancellationToken cancellationToken)
     {
         var booth = await _boothRepository.GetByIdAsync(request.BoothId, cancellationToken);
         if (booth == null)
@@ -33,6 +33,7 @@ public class AcceptEntryToBoothCommandHandler
         }
 
         booth.Status = BoothConstants.BoothStatus.Occupied;
+        booth.TeamId = request.TeamId;
 
         var isUpdated = await _boothRepository.UpdateAsync(booth, cancellationToken);
         if (!isUpdated)

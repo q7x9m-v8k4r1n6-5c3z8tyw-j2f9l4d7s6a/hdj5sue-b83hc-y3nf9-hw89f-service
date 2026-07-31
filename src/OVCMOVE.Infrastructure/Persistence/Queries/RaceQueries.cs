@@ -178,6 +178,8 @@ public static class RaceQueries
             [Name] = @Name,
             [Place] = @Place,
             [Description] = @Description,
+            [Status] = @Status,
+            [TeamId] = @TeamId,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id AND [RaceID] = @RaceId AND [IsDeleted] = 0;";

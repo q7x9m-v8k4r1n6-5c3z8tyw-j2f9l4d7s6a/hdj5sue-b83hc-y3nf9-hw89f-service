@@ -1,4 +1,5 @@
-﻿using OVCMOVE.Domain.Entities;
+﻿using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
+using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
 
@@ -17,13 +18,6 @@ public interface IBoothRepository
     /// Xử lý chấm điểm cho Đội chơi, ghi ScoringLog chi tiết và giải phóng trạng thái Trạm.
     /// </summary>
     Task<bool> SubmitScoreAndReleaseAsync(
-        Guid boothId,
-        Guid teamId,
-        Guid organizerId,
-        int score,
-        string eventCode = "BOOTH",
-        string eventName = "Chấm điểm trạm",
-        string reasonCode = "BOOTH_COMPLETED",
-        string reason = "Hoàn thành thử thách tại trạm",
-        CancellationToken cancellationToken = default);
+    SubmitBoothScoreModel model,
+    CancellationToken cancellationToken = default);
 }

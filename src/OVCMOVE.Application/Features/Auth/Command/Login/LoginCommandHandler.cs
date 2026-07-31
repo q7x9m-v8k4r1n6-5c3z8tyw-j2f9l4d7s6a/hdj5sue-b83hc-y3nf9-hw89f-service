@@ -45,6 +45,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResultMode
             throw new UnauthorizedAccessException(
                 "Tên đăng nhập hoặc mật khẩu không đúng.");
         }
+        
         var accessProfile = await _userAccessRepository.GetAccessProfileAsync(
             user.Id,
             cancellationToken);

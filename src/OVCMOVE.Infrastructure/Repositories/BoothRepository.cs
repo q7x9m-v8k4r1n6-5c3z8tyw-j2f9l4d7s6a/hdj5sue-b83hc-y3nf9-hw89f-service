@@ -1,4 +1,5 @@
 ﻿using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Persistence.Dapper;
@@ -75,38 +76,30 @@ public class BoothRepository : IBoothRepository
     }
 
     public async Task<bool> SubmitScoreAndReleaseAsync(
-        Guid boothId,
-        Guid teamId,
-        Guid organizerId,
-        int score,
-        string eventCode = "BOOTH",
-        string eventName = "Chấm điểm trạm",
-        string reasonCode = "BOOTH_COMPLETED",
-        string reason = "Hoàn thành thử thách tại trạm",
-        CancellationToken cancellationToken = default)
+    SubmitBoothScoreModel model,
+    CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // 1. Lấy thông tin Booth để truy vết RaceId
-        var booth = await GetByIdAsync(boothId, cancellationToken);
+        var booth = await GetByIdAsync(model.BoothId, cancellationToken);
         if (booth is null) return false;
 
         var currentScore = await _db.QueryFirstOrDefaultAsync<int>(
             "SELECT ISNULL(TotalScore, 0) FROM dbo.RaceTeam WHERE RaceID = @RaceId AND TeamID = @TeamId;",
-            new { RaceId = booth.RaceId, TeamId = teamId },
+            new { RaceId = booth.RaceId, TeamId = model.TeamId },
             cancellationToken: cancellationToken);
 
-        int scoreBefore = currentScore;
-        int scoreAfter = scoreBefore + score;
+        var scoreBefore = currentScore;
+        var scoreAfter = scoreBefore + model.Score;
 
         await _db.ExecuteAsync(
             BoothQueries.UpdateTeamScoreQuery(),
-            new { BoothId = boothId, TeamId = teamId, Score = score },
+            new { BoothId = model.BoothId, TeamId = model.TeamId, Score = model.Score },
             cancellationToken: cancellationToken);
 
         await _db.ExecuteAsync(
             BoothQueries.ReleaseBoothStatusQuery(),
-            new { BoothId = boothId },
+            new { BoothId = model.BoothId },
             cancellationToken: cancellationToken);
 
         await _db.ExecuteAsync(
@@ -114,19 +107,19 @@ public class BoothRepository : IBoothRepository
             new
             {
                 Id = Guid.NewGuid(),
-                EventCode = eventCode,
-                EventName = eventName,
+                EventCode = model.EventCode,
+                EventName = model.EventName,
                 RaceId = booth.RaceId,
-                TeamId = teamId,
-                ActorId = organizerId,
-                BoothId = boothId,
-                Delta = score,
+                TeamId = model.TeamId,
+                ActorId = model.OrganizerId,
+                BoothId = model.BoothId,
+                Delta = model.Score,
                 ScoreBefore = scoreBefore,
                 ScoreAfter = scoreAfter,
-                ReasonCode = reasonCode,
-                Reason = reason,
-                CreatedBy = organizerId.ToString(),
-                ModifiedBy = organizerId.ToString()
+                ReasonCode = model.ReasonCode,
+                Reason = model.Reason,
+                CreatedBy = model.OrganizerId.ToString(),
+                ModifiedBy = model.OrganizerId.ToString()
             },
             cancellationToken: cancellationToken);
 

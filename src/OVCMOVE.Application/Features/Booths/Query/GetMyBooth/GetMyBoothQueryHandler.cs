@@ -18,13 +18,10 @@ namespace OVCMOVE.Application.Features.Booths.Query.GetMyBooth
 
         public async Task<Guid?> Handle(GetMyBoothQuery request, CancellationToken cancellationToken)
         {
-            var assignment = await _boothOrganizerRepository.GetByOrganizerIdAsync(request.OrganizerId, cancellationToken);
-            if (assignment is null) return null;
+            var assignment = await _boothOrganizerRepository.GetByOrganizerAndRaceAsync(
+                request.OrganizerId, request.RaceId, cancellationToken);
 
-            var booth = await _boothRepository.GetByIdAsync(assignment.BoothId, cancellationToken);
-            if (booth is null || booth.RaceId != request.RaceId) return null;
-
-            return booth.Id;
+            return assignment?.BoothId;
         }
     }
 }

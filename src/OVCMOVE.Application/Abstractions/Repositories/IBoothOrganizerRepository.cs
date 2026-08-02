@@ -12,7 +12,8 @@ public interface IBoothOrganizerRepository
         Guid boothId,
         CancellationToken cancellationToken = default);
 
-    Task<BoothOrganizer?> GetByOrganizerIdAsync(
-        Guid organizerId,
-        CancellationToken cancellationToken = default);
+    Task<BoothOrganizer?> GetByOrganizerAndRaceAsync(
+    Guid organizerId,
+    Guid raceId,
+    CancellationToken cancellationToken = default);
 }

@@ -25,6 +25,10 @@ public class BoothNotificationService : IBoothNotificationService
         await _hubContext.Clients
             .Group($"Booth_{boothId}")
             .ReceiveBoothStatusChanged(boothId, status, teamId, teamName);
+
+        await _hubContext.Clients
+            .Group($"Race_{raceId}")
+            .ReceiveBoothStatusChanged(boothId, status, teamId, teamName);
     }
 
     public async Task NotifyRaceScoreChangedAsync(

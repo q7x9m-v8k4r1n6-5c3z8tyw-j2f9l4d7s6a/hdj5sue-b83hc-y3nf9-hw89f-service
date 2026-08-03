@@ -8,15 +8,30 @@ public class GetRaceDetailQueryHandler :
     IRequestHandler<GetRaceDetailQuery, RaceDetailResultModel?>
 {
     private readonly IRaceRepository _raceRepository;
+    private readonly IRaceTeamRepository _raceTeamRepository;
 
-    public GetRaceDetailQueryHandler(IRaceRepository raceRepository)
+    public GetRaceDetailQueryHandler(
+        IRaceRepository raceRepository,
+        IRaceTeamRepository raceTeamRepository)
     {
         _raceRepository = raceRepository;
+        _raceTeamRepository = raceTeamRepository;
     }
 
     /// <summary>Returns the complete race view or null when the race is missing.</summary>
-    public Task<RaceDetailResultModel?> Handle(GetRaceDetailQuery request, CancellationToken cancellationToken)
+    public async Task<RaceDetailResultModel?> Handle(GetRaceDetailQuery request, CancellationToken cancellationToken)
     {
-        return _raceRepository.GetDetailAsync(request.RaceId, cancellationToken);
+        if (request.TeamId.HasValue)
+        {
+            var assignedTeamIds = await _raceTeamRepository.GetTeamIdsByRaceIdAsync(
+                request.RaceId,
+                cancellationToken);
+            if (!assignedTeamIds.Contains(request.TeamId.Value))
+            {
+                return null;
+            }
+        }
+
+        return await _raceRepository.GetDetailAsync(request.RaceId, cancellationToken);
     }
 }

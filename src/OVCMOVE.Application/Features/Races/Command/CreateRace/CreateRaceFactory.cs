@@ -44,6 +44,7 @@ internal static class CreateRaceFactory
             Place = request.Place.Trim(),
             Status = RaceConstants.RaceStatus.Draft,
             CoverUrl = coverUrl,
+            Rules = request.Rules?.Trim() ?? string.Empty,
             IsToggledLeaderboard = request.IsToggledLeaderboard,
             IsHiddenPoint = request.IsHiddenPoint,
             CreatedAt = now,

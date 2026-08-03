@@ -102,23 +102,23 @@ public class BoothController : ControllerBase
 
     [HttpGet("my-booth")]
     [RequirePermission(PermissionCodes.OrganizerRead)]
-    public async Task<IActionResult> GetMyBooth(
-        [FromQuery] Guid raceId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyBooth([FromQuery] Guid raceId, CancellationToken cancellationToken)
     {
-        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                          ?? User.FindFirstValue("sub")
-                          ?? string.Empty;
+        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? string.Empty;
 
-        var boothId = await _mediator.Send(
+        var result = await _mediator.Send(
             new GetMyBoothQuery { RaceId = raceId, OrganizerId = Guid.Parse(organizerId) },
             cancellationToken);
 
-        if (boothId is null)
-            return NotFound(ApiResponse.Error(
-                ApiStatus.Codes.NotFound,
-                "Bạn chưa được gán vào trạm nào trong trận đấu này."));
+        if (result is null)
+            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trạm nào trong trận đấu này."));
 
-        return Ok(ApiResponse.Success(new { BoothId = boothId }));
+        return Ok(ApiResponse.Success(new
+        {
+            BoothId = result.BoothId,
+            Name = result.Name,
+            Place = result.Place,
+            Description = result.Description
+        }));
     }
 }

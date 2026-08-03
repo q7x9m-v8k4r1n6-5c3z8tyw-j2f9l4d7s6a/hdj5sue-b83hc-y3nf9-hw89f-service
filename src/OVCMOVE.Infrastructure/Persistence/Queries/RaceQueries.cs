@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl,
+            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @Rules,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -27,6 +27,7 @@ public static class RaceQueries
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
             [CoverUrl] = @CoverUrl,
+            [Rules] = @Rules,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id
@@ -313,4 +314,13 @@ public static class RaceQueries
     WHERE BO.[OrganizerId] = @OrganizerId
       AND B.[RaceID] = @RaceId
       AND BO.[IsDeleted] = 0;";
+    public static string CheckTeamInRaceQuery() => @"
+    SELECT CASE WHEN EXISTS (
+        SELECT 1 FROM dbo.RaceTeam
+        WHERE RaceID = @RaceId AND TeamID = @TeamId AND IsDeleted = 0
+    ) THEN 1 ELSE 0 END;";
+    public static string GetRaceRulesQuery() => @"
+    SELECT [Rules]
+    FROM [dbo].[Race]
+    WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 }

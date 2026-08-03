@@ -9,15 +9,18 @@ public class RequestEntryToBoothCommandHandler
     : IRequestHandler<RequestEntryToBoothCommand, (bool IsSuccess, string Message)>
 {
     private readonly IBoothRepository _boothRepository;
+    private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
 
     public RequestEntryToBoothCommandHandler(
         IBoothRepository boothRepository,
+        IRaceRepository raceRepository,
         IBoothNotificationService notificationService,
         IUserRepository userRepository)
     {
         _boothRepository = boothRepository;
+        _raceRepository = raceRepository;
         _notificationService = notificationService;
         _userRepository = userRepository;
     }
@@ -35,6 +38,13 @@ public class RequestEntryToBoothCommandHandler
         if (booth.Status == BoothConstants.BoothStatus.Occupied)
         {
             return (false, "Trạm thi đấu đang có đội khác sử dụng.");
+        }
+
+        var isTeamInRace = await _raceRepository.IsTeamInRaceAsync(
+            booth.RaceId, request.TeamId, cancellationToken);
+        if (!isTeamInRace)
+        {
+            return (false, "Đội của bạn không tham gia trận đấu này. Vui lòng kiểm tra lại mã QR.");
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);

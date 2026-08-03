@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
@@ -11,7 +10,10 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
+using System.Security.Claims;
+using System.Text.Json;
 using static OVCMOVE.Api.Contracts.RaceContract;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -225,5 +227,20 @@ public class RaceController : BaseController
             cancellationToken);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+    [HttpGet("{raceId:guid}/rules")]
+    [RequirePermission(PermissionCodes.TeamRead)]
+    public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
+    {
+        var teamId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? string.Empty;
+
+        var rules = await _mediator.Send(
+            new GetRaceRulesQuery { RaceId = raceId, TeamId = Guid.Parse(teamId) },
+            cancellationToken);
+
+        if (rules is null)
+            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trận đấu này."));
+
+        return Ok(ApiResponse.Success(new { Rules = rules }));
     }
 }

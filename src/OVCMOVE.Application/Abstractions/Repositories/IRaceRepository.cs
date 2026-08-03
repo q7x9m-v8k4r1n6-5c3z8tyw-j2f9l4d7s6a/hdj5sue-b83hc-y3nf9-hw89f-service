@@ -45,4 +45,9 @@ public interface IRaceRepository
     Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default);
+    Task<bool> IsTeamInRaceAsync(
+    Guid raceId,
+    Guid teamId,
+    CancellationToken cancellationToken = default);
+    Task<string?> GetRulesAsync(Guid raceId, CancellationToken cancellationToken = default);
 }

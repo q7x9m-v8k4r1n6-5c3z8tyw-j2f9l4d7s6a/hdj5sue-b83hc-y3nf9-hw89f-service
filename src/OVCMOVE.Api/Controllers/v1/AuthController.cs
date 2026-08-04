@@ -23,11 +23,9 @@ public class AuthController : BaseController
     private const string ProductionRefreshTokenCookieName = "__Host-refreshToken";
     private const string LegacyRefreshTokenCookieName = "refreshToken";
     private string RefreshTokenCookieName => ProductionRefreshTokenCookieName;
-    private readonly ILoginLockoutService _lockoutService; // Inject service
 
-    public AuthController(IMediator mediator, ILoginLockoutService lockoutService) : base(mediator)
+    public AuthController(IMediator mediator) : base(mediator)
     {
-        _lockoutService = lockoutService;
     }
 
     [HttpGet("me")]
@@ -57,20 +55,23 @@ public class AuthController : BaseController
     [HttpPost("login")]
     [AllowAnonymous]
     [DisableRateLimiting]
-    public async Task<IActionResult> Login([FromBody] AuthContract.LoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login(
+        [FromBody] AuthContract.LoginRequest request,
+        [FromServices] ILoginLockoutService lockoutService,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var username = request.Username;
-        _lockoutService.EnsureNotLockedOut(ipAddress, username);
+        lockoutService.EnsureNotLockedOut(ipAddress, username);
 
         try
         {
             var command = request.ToCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            _lockoutService.ResetLockout(ipAddress, username);
+            lockoutService.ResetLockout(ipAddress, username);
             
             SetRefreshTokenCookie(
                 result.RefreshToken,
@@ -81,7 +82,7 @@ public class AuthController : BaseController
         }
         catch (UnauthorizedAccessException)
         {
-            _lockoutService.RecordFailedAttempt(ipAddress, username);
+            lockoutService.RecordFailedAttempt(ipAddress, username);
             throw;
         }
     }

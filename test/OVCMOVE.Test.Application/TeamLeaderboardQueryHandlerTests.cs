@@ -1,4 +1,5 @@
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
@@ -12,6 +13,68 @@ namespace OVCMOVE.Test.Application;
 
 public class TeamLeaderboardQueryHandlerTests
 {
+    [Fact]
+    public async Task ScoreHistory_UsesCurrentTeamFilterAndMapsSharedAdminLog()
+    {
+        var raceId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var boothId = Guid.NewGuid();
+        var organizerId = Guid.NewGuid();
+        var repository = new RaceRepositoryStub(
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            [
+                new ScoringLogResultModel
+                {
+                    LogId = Guid.NewGuid(),
+                    BoothId = boothId,
+                    ActorId = organizerId,
+                    EventCode = "BOOTH",
+                    ReasonCode = "BOOTH_COMPLETED",
+                    ScoreDelta = 30,
+                    ScoreAfter = 130,
+                    Reason = "Completed booth",
+                    CreatedAt = DateTime.UtcNow
+                }
+            ],
+            100);
+        var handler = new ScoreHistoryQueryHandler(repository);
+
+        var result = await handler.Handle(
+            new ScoreHistoryQuery(raceId, teamId, 0, 500),
+            CancellationToken.None);
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(teamId, repository.LastScoringLogTeamId);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(100, result.PageSize);
+        Assert.Equal(boothId, item.BoothId);
+        Assert.Equal(organizerId, item.OrganizerId);
+        Assert.Equal(30, item.ScoreGiven);
+        Assert.Equal(130, item.ScoreAfterChange);
+        Assert.Equal("booth_completed", item.Source);
+    }
+
+    [Fact]
+    public async Task ScoreHistory_RejectsTeamOutsideRace()
+    {
+        var raceId = Guid.NewGuid();
+        var repository = new RaceRepositoryStub(
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            currentScore: null);
+        var handler = new ScoreHistoryQueryHandler(repository);
+
+        await Assert.ThrowsAsync<ApplicationNotFoundException>(() =>
+            handler.Handle(
+                new ScoreHistoryQuery(raceId, Guid.NewGuid()),
+                CancellationToken.None));
+
+        Assert.Null(repository.LastScoringLogTeamId);
+    }
+
     [Theory]
     [InlineData(false, false, 0, null)]
     [InlineData(true, false, 2, 75)]
@@ -47,11 +110,10 @@ public class TeamLeaderboardQueryHandlerTests
                     DisplayName = "Other",
                     TotalScore = 75
                 }
-            ]);
+            ],
+            (3, 2));
         var handler = new TeamLeaderboardFeature.TeamLeaderboardQueryHandler(
-            raceRepository,
-            new ScoringLogRepositoryStub(
-                new CompletedBoothStats(3, 2)));
+            raceRepository);
 
         var result = await handler.Handle(
             new TeamLeaderboardFeature.TeamLeaderboardQuery(
@@ -79,9 +141,14 @@ public class TeamLeaderboardQueryHandlerTests
 
     private sealed class RaceRepositoryStub(
         Race race,
-        List<TeamLeaderboardResultModel> leaderboard)
+        List<TeamLeaderboardResultModel> leaderboard,
+        (int CompletedRegularBooths, int CompletedHiddenBooths) stats,
+        IReadOnlyCollection<ScoringLogResultModel>? scoringLogs = null,
+        int? currentScore = 0)
         : IRaceRepository
     {
+        public Guid? LastScoringLogTeamId { get; private set; }
+
         public Task<Race?> GetByIdAsync(
             Guid raceId,
             CancellationToken cancellationToken = default) =>
@@ -124,16 +191,30 @@ public class TeamLeaderboardQueryHandlerTests
             IReadOnlyCollection<ScoringLogResultModel> Items,
             int TotalItems)> GetScoringLogPageByRaceIdAsync(
                 Guid raceId,
+                Guid? teamId,
                 int page,
                 int pageSize,
+                CancellationToken cancellationToken = default)
+        {
+            LastScoringLogTeamId = teamId;
+            return Task.FromResult((
+                scoringLogs ?? Array.Empty<ScoringLogResultModel>(),
+                scoringLogs?.Count ?? 0));
+        }
+
+        public Task<(
+            int CompletedRegularBooths,
+            int CompletedHiddenBooths)> GetCompletedBoothStatsAsync(
+                Guid raceId,
+                Guid teamId,
                 CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            Task.FromResult(stats);
 
         public Task<int?> GetRaceTeamScoreAsync(
             Guid raceId,
             Guid teamId,
             CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            Task.FromResult(currentScore);
 
         public Task<bool> UpdateRaceTeamScoreAsync(
             Guid raceId,
@@ -150,23 +231,4 @@ public class TeamLeaderboardQueryHandlerTests
             throw new NotSupportedException();
     }
 
-    private sealed class ScoringLogRepositoryStub(
-        CompletedBoothStats stats) : IScoringLogRepository
-    {
-        public Task<CompletedBoothStats> GetCompletedBoothStatsAsync(
-            Guid raceId,
-            Guid teamId,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(stats);
-
-        public Task<(
-            IReadOnlyCollection<ScoreHistoryItemResultModel> Items,
-            int TotalItems)> GetPageAsync(
-                Guid raceId,
-                Guid teamId,
-                int page,
-                int pageSize,
-                CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
 }

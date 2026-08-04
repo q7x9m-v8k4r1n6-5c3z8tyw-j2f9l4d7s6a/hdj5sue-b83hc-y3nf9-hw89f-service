@@ -45,13 +45,11 @@ public static class SwaggerExtensions
                 BearerFormat = "JWT"
             };
 
-            var bearerSchemeReference = new OpenApiSecuritySchemeReference("Bearer", null, null);
-
             options.AddSecurityDefinition("Bearer", bearerScheme);
 
-            options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
             {
-                [bearerSchemeReference] = []
+                [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
             });
         });
 

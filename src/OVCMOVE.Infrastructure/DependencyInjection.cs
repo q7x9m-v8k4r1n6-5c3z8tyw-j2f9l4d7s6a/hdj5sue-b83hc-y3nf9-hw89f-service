@@ -74,7 +74,6 @@ public static class DependencyInjection
         services.AddScoped<IBoothRepository, BoothRepository>();
         services.AddScoped<IBoothOrganizerRepository, BoothOrganizerRepository>();
         services.AddScoped<IRaceTeamRepository, RaceTeamRepository>();
-        services.AddScoped<IScoringLogRepository, ScoringLogRepository>();
         services.AddScoped<IRaceOrganizerRepository, RaceOrganizerRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IOrganizerRepository, OrganizerRepository>();

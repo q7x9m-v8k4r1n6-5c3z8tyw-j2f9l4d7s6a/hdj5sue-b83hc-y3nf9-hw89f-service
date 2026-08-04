@@ -96,4 +96,28 @@ public class QueryContractTests
             sql,
             StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void BoothCompletionCheck_IsTransactionSafeAndTeamScoped()
+    {
+        var sql = BoothQueries.HasCompletedBoothQuery();
+
+        Assert.Contains("UPDLOCK", sql);
+        Assert.Contains("HOLDLOCK", sql);
+        Assert.Contains("[RaceId] = @RaceId", sql);
+        Assert.Contains("[TeamId] = @TeamId", sql);
+        Assert.Contains("[BoothId] = @BoothId", sql);
+        Assert.Contains("[ReasonCode] = N'BOOTH_COMPLETED'", sql);
+        Assert.Contains("[IsDeleted] = 0", sql);
+    }
+
+    [Fact]
+    public void BoothScoring_RequiresAnActiveRaceTeamMembership()
+    {
+        var sql = BoothQueries.GetRaceTeamScoreQuery();
+
+        Assert.Contains("[RaceID] = @RaceId", sql);
+        Assert.Contains("[TeamID] = @TeamId", sql);
+        Assert.Contains("[IsDeleted] = 0", sql);
+    }
 }

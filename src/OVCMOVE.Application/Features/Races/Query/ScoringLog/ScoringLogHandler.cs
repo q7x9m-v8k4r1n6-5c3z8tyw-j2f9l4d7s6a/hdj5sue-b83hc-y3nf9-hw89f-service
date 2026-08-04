@@ -25,7 +25,8 @@ public class ScoringLogQueryHandler :
             request.PageSize);
             
         var (items, totalItems) = await _raceRepository.GetScoringLogPageByRaceIdAsync(
-            request.RaceId, 
+            request.RaceId,
+            null,
             page, 
             pageSize, 
             cancellationToken);

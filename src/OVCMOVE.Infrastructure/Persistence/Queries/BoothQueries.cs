@@ -2,6 +2,28 @@
 
 public static class BoothQueries
 {
+    public static string HasCompletedBoothQuery() => @"
+        SELECT CAST(
+            CASE WHEN EXISTS
+            (
+                SELECT 1
+                FROM [dbo].[ScoringLog] WITH (UPDLOCK, HOLDLOCK)
+                WHERE [RaceId] = @RaceId
+                  AND [TeamId] = @TeamId
+                  AND [BoothId] = @BoothId
+                  AND [ReasonCode] = N'BOOTH_COMPLETED'
+                  AND [IsDeleted] = 0
+            )
+            THEN 1 ELSE 0 END
+            AS BIT);";
+
+    public static string GetRaceTeamScoreQuery() => @"
+        SELECT [TotalScore]
+        FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
     /// <summary>
     /// Query lấy thông tin chi tiết của Trạm theo Id
     /// </summary>

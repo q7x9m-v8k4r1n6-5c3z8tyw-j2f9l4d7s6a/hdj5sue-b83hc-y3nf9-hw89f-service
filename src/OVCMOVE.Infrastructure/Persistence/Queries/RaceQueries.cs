@@ -211,7 +211,7 @@ public static class RaceQueries
     public static string GetTeamLeaderboardQuery() => @"
         SELECT
             rt.TeamId,
-            RANK() OVER (ORDER BY rt.TotalScore DESC) AS [Rank],
+            CAST(RANK() OVER (ORDER BY rt.TotalScore DESC) AS INT) AS [Rank],
             COALESCE(NULLIF(u.DisplayName, N''), u.Username, u.LinkedEmail) AS DisplayName,
             rt.TotalScore
         FROM [dbo].[RaceTeam] rt
@@ -241,6 +241,8 @@ public static class RaceQueries
     public static string GetScoringLogByRaceIdQuery() => @"
         SELECT
             log.Id AS LogId,
+            log.BoothId,
+            log.ActorId,
             b.Name AS BoothName,
             log.EventCode,
             log.EventName,
@@ -259,15 +261,33 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
         LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
         WHERE log.RaceId = @RaceId
+          AND (@TeamId IS NULL OR log.TeamId = @TeamId)
           AND log.IsDeleted = 0
-        ORDER BY log.CreatedAt DESC
+        ORDER BY log.CreatedAt DESC, log.Id DESC
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
     public static string CountScoringLogByRaceIdQuery() => @"
         SELECT COUNT(1)
         FROM [dbo].[ScoringLog]
         WHERE RaceId = @RaceId
+          AND (@TeamId IS NULL OR TeamId = @TeamId)
           AND IsDeleted = 0;";
+
+    public static string GetCompletedBoothStatsQuery() => @"
+        SELECT
+            COUNT(DISTINCT CASE WHEN b.[IsHidden] = 0 THEN log.[BoothId] END)
+                AS [CompletedRegularBooths],
+            COUNT(DISTINCT CASE WHEN b.[IsHidden] = 1 THEN log.[BoothId] END)
+                AS [CompletedHiddenBooths]
+        FROM [dbo].[ScoringLog] log
+        INNER JOIN [dbo].[Booth] b
+            ON b.[Id] = log.[BoothId]
+           AND b.[RaceId] = log.[RaceId]
+           AND b.[IsDeleted] = 0
+        WHERE log.[RaceId] = @RaceId
+          AND log.[TeamId] = @TeamId
+          AND log.[ReasonCode] = N'BOOTH_COMPLETED'
+          AND log.[IsDeleted] = 0;";
 
     public static string GetRaceTeamScoreQuery() => @"
         SELECT [TotalScore]

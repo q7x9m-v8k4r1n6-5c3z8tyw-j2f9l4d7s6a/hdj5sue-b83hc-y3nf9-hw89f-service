@@ -5,8 +5,7 @@ using OVCMOVE.Application.Common;
 namespace OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 
 public sealed class TeamLeaderboardQueryHandler(
-    IRaceRepository raceRepository,
-    IScoringLogRepository scoringLogRepository)
+    IRaceRepository raceRepository)
     : IRequestHandler<TeamLeaderboardQuery, TeamLeaderboardResultModel>
 {
     public async Task<TeamLeaderboardResultModel> Handle(
@@ -28,7 +27,7 @@ public sealed class TeamLeaderboardQueryHandler(
             ?? throw new ApplicationNotFoundException(
                 "Đội không tham gia giải đua này.");
 
-        var boothStats = await scoringLogRepository.GetCompletedBoothStatsAsync(
+        var boothStats = await raceRepository.GetCompletedBoothStatsAsync(
             request.RaceId,
             request.TeamId,
             cancellationToken);

@@ -8,6 +8,7 @@ using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure;
 using OVCMOVE.Move2026.Plugin;
+using OVCMOVE.Api.Services.LoginLockoutService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,13 @@ builder.Configuration
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+#region --- Race Limit ---
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ILoginLockoutService, LoginLockoutService>(); // Đổi Scoped -> Singleton
+builder.Services.AddCustomRateLimiting();
+#endregion --- ---
+
 builder.Services.AddMove2026Plugin();
 builder.Services.AddApiControllers();
 builder.Services.AddSwaggerDocumentation();
@@ -47,19 +55,16 @@ builder.Services.AddScoped<IBoothNotificationService, BoothNotificationService>(
 var app = builder.Build();
 
 app.UseSwaggerDocumentation();
-
 app.UseCors("AllowFrontend");
-
 app.UseHttpsRedirection();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseRateLimiter();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.MapHub<BoothHub>("/api/v1/hubs/booth");
 
 app.Run();

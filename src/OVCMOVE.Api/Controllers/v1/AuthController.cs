@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 using OVCMOVE.Api.Security;
@@ -12,6 +13,7 @@ using OVCMOVE.Application.Features.Auth.Query.GetMe;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
+using OVCMOVE.Api.Services.LoginLockoutService;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -21,9 +23,11 @@ public class AuthController : BaseController
     private const string ProductionRefreshTokenCookieName = "__Host-refreshToken";
     private const string LegacyRefreshTokenCookieName = "refreshToken";
     private string RefreshTokenCookieName => ProductionRefreshTokenCookieName;
+    private readonly ILoginLockoutService _lockoutService; // Inject service
 
-    public AuthController(IMediator mediator) : base(mediator)
+    public AuthController(IMediator mediator, ILoginLockoutService lockoutService) : base(mediator)
     {
+        _lockoutService = lockoutService;
     }
 
     [HttpGet("me")]
@@ -55,14 +59,29 @@ public class AuthController : BaseController
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var command = request.ToCommand();
-        var result = await _mediator.Send(command, cancellationToken);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var username = request.Username;
+        _lockoutService.EnsureNotLockedOut(ipAddress, username);
 
-        SetRefreshTokenCookie(
-            result.RefreshToken,
-            result.RefreshTokenExpiration);
+        try
+        {
+            var command = request.ToCommand();
+            var result = await _mediator.Send(command, cancellationToken);
 
-        return Ok(ApiResponse.Success(result.ToResponse()));
+            _lockoutService.ResetLockout(ipAddress, username);
+            
+            SetRefreshTokenCookie(
+                result.RefreshToken,
+                result.RefreshTokenExpiration);
+
+            return Ok(
+                ApiResponse.Success(result.ToResponse()));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _lockoutService.RecordFailedAttempt(ipAddress, username);
+            throw;
+        }
     }
 
     [HttpPost("logout")]
@@ -108,6 +127,7 @@ public class AuthController : BaseController
 
     [HttpPost("google-login")]
     [AllowAnonymous]
+    [EnableRateLimiting("InternalApiPolicy")]
     public async Task<IActionResult> GoogleLogin([FromBody] AuthContract.GoogleLoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

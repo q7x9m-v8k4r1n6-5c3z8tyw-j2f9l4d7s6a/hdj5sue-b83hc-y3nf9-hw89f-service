@@ -24,7 +24,8 @@ public static class CorsExtension
                 policy.WithOrigins(cleanedOrigins)
                       .AllowAnyHeader()
                       .AllowAnyMethod()
-                      .AllowCredentials();
+                      .AllowCredentials()
+                      .WithExposedHeaders("Retry-After"); // dùng cho rate-limit
             });
         });
 

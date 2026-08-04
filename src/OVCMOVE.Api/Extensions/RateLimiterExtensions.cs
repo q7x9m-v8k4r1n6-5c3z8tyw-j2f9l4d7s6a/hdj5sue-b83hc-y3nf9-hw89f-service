@@ -13,35 +13,38 @@ public static class RateLimiterExtensions
     {
         services.AddRateLimiter(options =>
         {
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.RejectionStatusCode = ApiStatus.Codes.TooManyRequests;
 
-            // Xử lý Custom Response chuẩn JSON khi user bị chặn
             options.OnRejected = async (context, cancellationToken) =>
             {
-                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.StatusCode = ApiStatus.Codes.TooManyRequests;
                 context.HttpContext.Response.ContentType = "application/json";
                 
-                // Trả về header báo thời gian chờ 5s
-                context.HttpContext.Response.Headers.RetryAfter = "5";
+                int retryAfterSeconds = 5;
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+                {
+                    retryAfterSeconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
+                }
+
+                context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString();
 
                 var response = ApiResponse.Error(
-                    StatusCodes.Status429TooManyRequests,
-                    "Too Many Requests",
-                    "Bạn thao tác quá nhanh. Vui lòng đợi 5 giây trước khi thử lại.");
+                    ApiStatus.Codes.TooManyRequests, 
+                    ApiStatus.Messages.TooManyRequests,
+                    $"Bạn thao tác quá nhanh. Vui lòng đợi {retryAfterSeconds} giây trước khi thử lại.");
 
                 await context.HttpContext.Response.WriteAsync(
                     JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
                     cancellationToken);
             };
 
-            // Định nghĩa thuật toán Sliding Window Counter
             options.AddSlidingWindowLimiter(InternalApiPolicy, limiterOptions =>
             {
-                limiterOptions.PermitLimit = 60; // 60 requests
-                limiterOptions.Window = TimeSpan.FromMinutes(1); // Trong 1 phút
-                limiterOptions.SegmentsPerWindow = 6; // Chia nhỏ mỗi 10s trượt 1 lần
+                limiterOptions.PermitLimit = 60;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.SegmentsPerWindow = 6;
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                limiterOptions.QueueLimit = 0; // Vượt 60 req là ném lỗi 429 luôn, không bắt hàng đợi
+                limiterOptions.QueueLimit = 0;
             });
         });
 

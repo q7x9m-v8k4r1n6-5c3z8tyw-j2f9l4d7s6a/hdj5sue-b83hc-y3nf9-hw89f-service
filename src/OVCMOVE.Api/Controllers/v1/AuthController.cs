@@ -104,6 +104,7 @@ public class AuthController : BaseController
 
     [HttpPost("refresh-token")]
     [AllowAnonymous]
+    [DisableRateLimiting]
     public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

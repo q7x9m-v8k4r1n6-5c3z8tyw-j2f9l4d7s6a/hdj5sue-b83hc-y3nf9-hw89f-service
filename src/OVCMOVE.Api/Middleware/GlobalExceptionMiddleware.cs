@@ -95,6 +95,7 @@ public class GlobalExceptionMiddleware
         catch (ApplicationRateLimitException ex)
         {
             _logger.LogWarning("Phát hiện spam request: {Message}", ex.Message);
+            context.Response.Headers.RetryAfter = ex.RetryAfterSeconds.ToString();
             await WriteErrorAsync(
                 context,
                 ApiStatus.Codes.TooManyRequests, 

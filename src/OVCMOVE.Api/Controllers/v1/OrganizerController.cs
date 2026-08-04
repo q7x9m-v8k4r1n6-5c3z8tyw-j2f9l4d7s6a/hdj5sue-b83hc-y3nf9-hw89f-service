@@ -63,7 +63,7 @@ public class OrganizerController : BaseController
     }
 
     [HttpPut("{organizerId:guid}")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
     public async Task<IActionResult> UpdateOrganizer(Guid organizerId, [FromBody] OrganizerContract.UpdateOrganizerRequest request, CancellationToken cancellationToken)
     {
         var updated = await _mediator.Send(new UpdateOrganizerCommand { OrganizerId = organizerId, DisplayName = request.DisplayName, RoleIds = request.RoleIds, Status = request.Status }, cancellationToken);
@@ -71,7 +71,7 @@ public class OrganizerController : BaseController
     }
 
     [HttpDelete("{organizerId:guid}")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.OrganizerManageAccounts)]
     public async Task<IActionResult> DeleteOrganizer(
         Guid organizerId,
         CancellationToken cancellationToken)

@@ -28,7 +28,7 @@ public class BoothController : ControllerBase
     /// Khi Đội quét QR xong, Organizer bấm các nút để cộng điểm 
     /// </summary>
     [HttpPost("submit-score")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.BoothScoreSubmit)]
     public async Task<IActionResult> SubmitScore(
         [FromBody] BoothScoringRequestDTO request,
         CancellationToken cancellationToken)
@@ -58,7 +58,7 @@ public class BoothController : ControllerBase
     /// API: Check-in Đội đua vào Trạm (Entry)
     /// </summary>
     [HttpPost("entry")]
-    [RequirePermission(PermissionCodes.TeamRead)] // Đội đua quét QR vào trạm
+    [RequirePermission(PermissionCodes.BoothEntryRequest)] // Đội đua quét QR vào trạm
     public async Task<IActionResult> Entry(
         [FromBody] EntryToBoothDto request,
         CancellationToken cancellationToken)
@@ -81,7 +81,7 @@ public class BoothController : ControllerBase
     /// API: Ban tổ chức (Organizer) duyệt cho Đội thi vào trạm
     /// </summary>
     [HttpPost("accept-entry")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.BoothEntryManage)]
     public async Task<IActionResult> AcceptEntry(
         [FromBody] AcceptEntryToBoothDto request,
         CancellationToken cancellationToken)
@@ -101,7 +101,7 @@ public class BoothController : ControllerBase
     }
 
     [HttpGet("my-booth")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.BoothRead)]
     public async Task<IActionResult> GetMyBooth(
         [FromQuery] Guid raceId,
         CancellationToken cancellationToken)

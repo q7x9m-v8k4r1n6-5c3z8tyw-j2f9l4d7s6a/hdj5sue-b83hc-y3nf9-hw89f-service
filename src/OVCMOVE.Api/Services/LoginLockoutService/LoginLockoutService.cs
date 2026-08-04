@@ -6,7 +6,7 @@ namespace OVCMOVE.Api.Services.LoginLockoutService;
 public class LoginLockoutService(IMemoryCache cache) : ILoginLockoutService
 {
     private const int MaxFailedAttemptsBeforeWait = 5;
-    private const int MaxFailedAttemptsBeforeBan = 20;
+    private const int MaxFailedAttemptsBeforeBan = 21;
     private const int BaseWaitTimeSeconds = 15;
     private const int WaitTimeMultiplier = 2;
 

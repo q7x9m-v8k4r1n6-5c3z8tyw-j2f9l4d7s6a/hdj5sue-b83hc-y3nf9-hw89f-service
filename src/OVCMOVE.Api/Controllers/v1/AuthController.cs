@@ -32,6 +32,7 @@ public class AuthController : BaseController
 
     [HttpGet("me")]
     [RequirePermission(PermissionCodes.AuthProfileRead)]
+    [DisableRateLimiting]
     public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
     {
         var userIdString = User.FindFirst(
@@ -55,6 +56,7 @@ public class AuthController : BaseController
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [DisableRateLimiting]
     public async Task<IActionResult> Login([FromBody] AuthContract.LoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

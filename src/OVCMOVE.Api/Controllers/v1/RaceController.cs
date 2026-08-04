@@ -30,7 +30,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet]
-    [Authorize]
+    [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -45,7 +45,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("{raceId}")]
-    [Authorize]
+    [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceDetail([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -181,7 +181,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("leaderboard")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetLeaderboard(
         [FromQuery] TeamLeaderboardRequest request, 
         CancellationToken cancellationToken)
@@ -199,7 +199,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("booth-list")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.BoothRead)]
     public async Task<IActionResult> GetBoothList(
         [FromQuery] BoothListRequest request, 
         CancellationToken cancellationToken)
@@ -217,7 +217,7 @@ public class RaceController : BaseController
     }
 
     [HttpPatch("{raceId:guid}/teams/{teamId:guid}/score")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceScoreManage)]
     public async Task<IActionResult> UpdateTeamScore(
         [FromRoute] Guid raceId,
         [FromRoute] Guid teamId,
@@ -240,7 +240,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("scoring-log")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetScoringLog(
         [FromQuery] ScoringLogRequest request, 
         CancellationToken cancellationToken)

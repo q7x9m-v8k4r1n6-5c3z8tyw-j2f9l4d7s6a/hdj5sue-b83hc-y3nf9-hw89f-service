@@ -19,7 +19,8 @@ public static class RaceContractMapping
         this RaceContract.GetAllRacesRequest request) => new()
         {
             Page = request.Page,
-            PageSize = request.PageSize
+            PageSize = request.PageSize,
+            TeamId = request.TeamId
         };
 
     /// <summary>Maps the create-race API contract to its application command.</summary>

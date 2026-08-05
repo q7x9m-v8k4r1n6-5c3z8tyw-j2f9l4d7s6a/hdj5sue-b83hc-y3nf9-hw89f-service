@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
@@ -12,8 +14,7 @@ using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
 using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
-using System.Security.Claims;
-using System.Text.Json;
+using OVCMOVE.Domain.Constants;
 using static OVCMOVE.Api.Contracts.RaceContract;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -30,22 +31,33 @@ public class RaceController : BaseController
     }
 
     [HttpGet]
-    [AllowAnonymous]
+    [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetAllRaces([FromQuery] GetAllRacesRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (IsCurrentUserTeam())
+        {
+            request.TeamId = GetCurrentUserId() ?? Guid.Empty;
+        }
+
         var query = request.ToQuery();
         var result = await _mediator.Send(query, cancellationToken);
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     [HttpGet("{raceId}")]
-    [AllowAnonymous]
+    [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceDetail([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var result = await _mediator.Send(
-            new GetRaceDetailQuery { RaceId = raceId },
+            new GetRaceDetailQuery
+            {
+                RaceId = raceId,
+                TeamId = IsCurrentUserTeam()
+                    ? GetCurrentUserId() ?? Guid.Empty
+                    : null
+            },
             cancellationToken);
         if (result is null)
         {
@@ -134,64 +146,38 @@ public class RaceController : BaseController
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
-    private static T DeserializePayload<T>(string payload)
-    {
-        if (string.IsNullOrWhiteSpace(payload))
-        {
-            throw new ArgumentException("Payload không được để trống.");
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(payload, JsonOptions)
-                ?? throw new ArgumentException("Payload không hợp lệ.");
-        }
-        catch (JsonException exception)
-        {
-            throw new ArgumentException(
-                "Payload JSON không hợp lệ.",
-                exception);
-        }
-    }
-
     [HttpGet("leaderboard")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetLeaderboard(
-        [FromQuery] TeamLeaderboardRequest request, 
+        [FromQuery] TeamLeaderboardRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var query = request.ToQuery();
-        var result = await _mediator.Send(
-            query, 
-            cancellationToken);
-        var response = result.Select(
-            item => item.ToResponse()).ToList();
+        var result = await _mediator.Send(query, cancellationToken);
+        var response = result.Select(item => item.ToResponse()).ToList();
 
         return Ok(ApiResponse.Success(response));
     }
 
     [HttpGet("booth-list")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.BoothRead)]
     public async Task<IActionResult> GetBoothList(
-        [FromQuery] BoothListRequest request, 
+        [FromQuery] BoothListRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var query = request.ToQuery();
-        var result = await _mediator.Send(
-            query, 
-            cancellationToken);
-        var response = result.Select(
-            item => item.ToResponse()).ToList();
+        var result = await _mediator.Send(query, cancellationToken);
+        var response = result.Select(item => item.ToResponse()).ToList();
 
         return Ok(ApiResponse.Success(response));
     }
 
     [HttpPatch("{raceId:guid}/teams/{teamId:guid}/score")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceScoreManage)]
     public async Task<IActionResult> UpdateTeamScore(
         [FromRoute] Guid raceId,
         [FromRoute] Guid teamId,
@@ -214,28 +200,28 @@ public class RaceController : BaseController
     }
 
     [HttpGet("scoring-log")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetScoringLog(
-        [FromQuery] ScoringLogRequest request, 
+        [FromQuery] ScoringLogRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var query = request.ToQuery();
-        var result = await _mediator.Send(
-            query, 
-            cancellationToken);
+        var result = await _mediator.Send(query, cancellationToken);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
+
     [HttpGet("{raceId:guid}/rules")]
     [RequirePermission(PermissionCodes.TeamRead)]
     public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
-        var teamId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? string.Empty;
+        cancellationToken.ThrowIfCancellationRequested();
+        var teamId = GetCurrentUserId() ?? Guid.Empty;
 
         var rules = await _mediator.Send(
-            new GetRaceRulesQuery { RaceId = raceId, TeamId = Guid.Parse(teamId) },
+            new GetRaceRulesQuery { RaceId = raceId, TeamId = teamId },
             cancellationToken);
 
         if (rules is null)
@@ -243,14 +229,51 @@ public class RaceController : BaseController
 
         return Ok(ApiResponse.Success(new { Rules = rules }));
     }
+
     [HttpGet("{raceId:guid}/rules/admin")]
     [RequirePermission(PermissionCodes.RaceManage)]
     public async Task<IActionResult> GetAdminRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var rules = await _mediator.Send(
             new GetAdminRaceRulesQuery { RaceId = raceId },
             cancellationToken);
 
         return Ok(ApiResponse.Success(new { Rules = rules }));
+    }
+
+    private Guid? GetCurrentUserId()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("sub");
+        return Guid.TryParse(userId, out var currentUserId)
+            ? currentUserId
+            : null;
+    }
+
+    private bool IsCurrentUserTeam() =>
+        string.Equals(
+            User.FindFirstValue("user_type"),
+            UserConstants.UserType.Team,
+            StringComparison.OrdinalIgnoreCase);
+
+    private static T DeserializePayload<T>(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            throw new ArgumentException("Payload không được để trống.");
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(payload, JsonOptions)
+                ?? throw new ArgumentException("Payload không hợp lệ.");
+        }
+        catch (JsonException exception)
+        {
+            throw new ArgumentException(
+                "Payload JSON không hợp lệ.",
+                exception);
+        }
     }
 }

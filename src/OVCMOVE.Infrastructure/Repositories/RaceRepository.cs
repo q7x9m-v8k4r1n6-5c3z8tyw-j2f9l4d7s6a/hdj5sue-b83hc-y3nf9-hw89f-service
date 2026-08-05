@@ -36,6 +36,7 @@ public class RaceRepository : IRaceRepository
         int TotalItems)> GetPageAsync(
         int page,
         int pageSize,
+        Guid? teamId,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -45,11 +46,13 @@ public class RaceRepository : IRaceRepository
             new
             {
                 Offset = (page - 1) * pageSize,
-                PageSize = pageSize
+                PageSize = pageSize,
+                TeamId = teamId
             },
             cancellationToken: cancellationToken);
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             RaceQueries.CountRacesQuery(),
+            new { TeamId = teamId },
             cancellationToken: cancellationToken);
 
         return (races.ToArray(), totalItems);

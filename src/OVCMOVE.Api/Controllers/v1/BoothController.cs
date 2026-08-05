@@ -28,12 +28,11 @@ public class BoothController : ControllerBase
     /// Khi Đội quét QR xong, Organizer bấm các nút để cộng điểm 
     /// </summary>
     [HttpPost("submit-score")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.BoothScoreSubmit)]
     public async Task<IActionResult> SubmitScore(
         [FromBody] BoothScoringRequestDTO request,
         CancellationToken cancellationToken)
     {
-        //Tự động lấy ID của Organizer từ Token đăng nhập
         var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                           ?? User.FindFirstValue("sub")
                           ?? string.Empty;
@@ -58,7 +57,7 @@ public class BoothController : ControllerBase
     /// API: Check-in Đội đua vào Trạm (Entry)
     /// </summary>
     [HttpPost("entry")]
-    [RequirePermission(PermissionCodes.TeamRead)] // Đội đua quét QR vào trạm
+    [RequirePermission(PermissionCodes.BoothEntryRequest)]
     public async Task<IActionResult> Entry(
         [FromBody] EntryToBoothDto request,
         CancellationToken cancellationToken)
@@ -81,7 +80,7 @@ public class BoothController : ControllerBase
     /// API: Ban tổ chức (Organizer) duyệt cho Đội thi vào trạm
     /// </summary>
     [HttpPost("accept-entry")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
+    [RequirePermission(PermissionCodes.BoothEntryManage)]
     public async Task<IActionResult> AcceptEntry(
         [FromBody] AcceptEntryToBoothDto request,
         CancellationToken cancellationToken)
@@ -101,17 +100,23 @@ public class BoothController : ControllerBase
     }
 
     [HttpGet("my-booth")]
-    [RequirePermission(PermissionCodes.OrganizerRead)]
-    public async Task<IActionResult> GetMyBooth([FromQuery] Guid raceId, CancellationToken cancellationToken)
+    [RequirePermission(PermissionCodes.BoothRead)]
+    public async Task<IActionResult> GetMyBooth(
+        [FromQuery] Guid raceId,
+        CancellationToken cancellationToken)
     {
-        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? string.Empty;
+        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue("sub")
+                          ?? string.Empty;
 
         var result = await _mediator.Send(
             new GetMyBoothQuery { RaceId = raceId, OrganizerId = Guid.Parse(organizerId) },
             cancellationToken);
 
         if (result is null)
-            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trạm nào trong trận đấu này."));
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                "Bạn chưa được gán vào trạm nào trong trận đấu này."));
 
         return Ok(ApiResponse.Success(new
         {

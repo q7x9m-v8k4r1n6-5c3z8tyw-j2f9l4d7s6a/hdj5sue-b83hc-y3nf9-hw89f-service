@@ -181,7 +181,10 @@ public class RaceRepository : IRaceRepository
 
         string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
         var parameters = new { RaceId = raceId };
-        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(
+            sqlQuery,
+            parameters,
+            cancellationToken);
         return result.ToList();
     }
 
@@ -201,6 +204,7 @@ public class RaceRepository : IRaceRepository
         IReadOnlyCollection<ScoringLogResultModel> Items, 
         int TotalItems)> GetScoringLogPageByRaceIdAsync(
             Guid raceId,
+            Guid? teamId,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -212,6 +216,7 @@ public class RaceRepository : IRaceRepository
             new
             {
                 RaceId = raceId,
+                TeamId = teamId,
                 Offset = (page - 1) * pageSize,
                 PageSize = pageSize
             },
@@ -219,10 +224,29 @@ public class RaceRepository : IRaceRepository
 
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             RaceQueries.CountScoringLogByRaceIdQuery(),
-            new { RaceId = raceId },
+            new { RaceId = raceId, TeamId = teamId },
             cancellationToken: cancellationToken);
 
         return (logs.ToArray(), totalItems);
+    }
+
+    public async Task<(
+        int CompletedRegularBooths,
+        int CompletedHiddenBooths)> GetCompletedBoothStatsAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var stats = await _db.QueryFirstOrDefaultAsync<CompletedBoothStatsRow>(
+            RaceQueries.GetCompletedBoothStatsQuery(),
+            new { RaceId = raceId, TeamId = teamId },
+            cancellationToken: cancellationToken);
+
+        return stats is null
+            ? (0, 0)
+            : (stats.CompletedRegularBooths, stats.CompletedHiddenBooths);
     }
 
     public Task<int?> GetRaceTeamScoreAsync(
@@ -281,4 +305,10 @@ internal sealed class BoothOrganizerRow
 {
     public Guid BoothId { get; init; }
     public Guid OrganizerId { get; init; }
+}
+
+internal sealed class CompletedBoothStatsRow
+{
+    public int CompletedRegularBooths { get; init; }
+    public int CompletedHiddenBooths { get; init; }
 }

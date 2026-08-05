@@ -3,6 +3,7 @@ namespace OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 public record TeamLeaderboardResultModel
 {
     public Guid TeamId { get; init; }
+    public int Rank { get; init; }
     public string DisplayName { get; init; } = string.Empty;
     public int TotalScore { get; init; }
 }

@@ -44,24 +44,44 @@ public static class RaceQueries
 
     public static string GetAllRacesQuery() => @"
         SELECT
-            [Id],
-            [RaceName] AS [Name],
-            [RaceName],
-            [TimeStart],
-            [TimeEnd],
-            [Place],
-            [Status],
-            [CoverUrl],
-            [ModifiedAt]
-        FROM [dbo].[Race]
-        WHERE [IsDeleted] = 0
-        ORDER BY [CreatedAt] DESC
+            R.[Id],
+            R.[RaceName] AS [Name],
+            R.[RaceName],
+            R.[TimeStart],
+            R.[TimeEnd],
+            R.[Place],
+            R.[Status],
+            R.[CoverUrl],
+            R.[ModifiedAt]
+        FROM [dbo].[Race] R
+        WHERE R.[IsDeleted] = 0
+          AND (
+              @TeamId IS NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[RaceTeam] RT
+                  WHERE RT.[RaceID] = R.[Id]
+                    AND RT.[TeamID] = @TeamId
+                    AND RT.[IsDeleted] = 0
+              )
+          )
+        ORDER BY R.[CreatedAt] DESC
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
     public static string CountRacesQuery() => @"
         SELECT COUNT(1)
-        FROM [dbo].[Race]
-        WHERE [IsDeleted] = 0;";
+        FROM [dbo].[Race] R
+        WHERE R.[IsDeleted] = 0
+          AND (
+              @TeamId IS NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[RaceTeam] RT
+                  WHERE RT.[RaceID] = R.[Id]
+                    AND RT.[TeamID] = @TeamId
+                    AND RT.[IsDeleted] = 0
+              )
+          );";
 
     public static string GetRaceDetailQuery() => @"
         SELECT

@@ -13,6 +13,7 @@ public interface IRaceRepository
         GetPageAsync(
             int page,
             int pageSize,
+            Guid? teamId,
             CancellationToken cancellationToken = default);
     Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default);

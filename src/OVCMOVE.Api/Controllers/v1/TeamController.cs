@@ -27,7 +27,7 @@ public class TeamController : BaseController
     }
 
     [HttpGet("leaderboard")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetLeaderboard(
         [FromQuery] TeamContract.LeaderboardRequest request,
         CancellationToken cancellationToken)
@@ -42,7 +42,7 @@ public class TeamController : BaseController
     }
 
     [HttpGet("score-history")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetScoreHistory(
         [FromQuery] TeamContract.ScoreHistoryRequest request,
         CancellationToken cancellationToken)
@@ -60,7 +60,7 @@ public class TeamController : BaseController
     }
 
     [HttpPost]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> CreateTeam(
         [FromBody] TeamContract.CreateTeamRequest request,
         CancellationToken cancellationToken)
@@ -105,7 +105,7 @@ public class TeamController : BaseController
     }
 
     [HttpPut("{teamId:guid}")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> UpdateTeam(
         Guid teamId,
         [FromBody] TeamContract.UpdateTeamRequest request,
@@ -133,7 +133,7 @@ public class TeamController : BaseController
     }
 
     [HttpDelete("{teamId:guid}")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> DeleteTeam(Guid teamId, CancellationToken cancellationToken)
     {
         var deleted = await _mediator.Send(
@@ -147,7 +147,7 @@ public class TeamController : BaseController
     }
 
     [HttpPost("{teamId:guid}/reset-password")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> ResetPassword(
         Guid teamId,
         CancellationToken cancellationToken)

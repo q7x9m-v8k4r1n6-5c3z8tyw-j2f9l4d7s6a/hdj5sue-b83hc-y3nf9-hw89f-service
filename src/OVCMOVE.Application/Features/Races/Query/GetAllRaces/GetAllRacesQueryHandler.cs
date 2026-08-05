@@ -26,6 +26,7 @@ public class GetAllRacesQueryHandler :
         var (items, totalItems) = await _raceRepository.GetPageAsync(
             page,
             pageSize,
+            request.TeamId,
             cancellationToken);
 
         return new PagedResult<RaceItemResultModel>

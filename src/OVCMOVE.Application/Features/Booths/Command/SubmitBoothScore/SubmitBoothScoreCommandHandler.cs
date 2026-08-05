@@ -2,6 +2,7 @@ using MediatR;
 using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 
@@ -44,6 +45,14 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
                     booth.RaceId,
                     request.TeamID,
                     request.Score,
+                    cancellationToken);
+
+                await _notificationService.NotifyBoothStatusChangedAsync(
+                    booth.RaceId,
+                    request.BoothID,
+                    BoothConstants.BoothStatus.Free,
+                    null,
+                    null,
                     cancellationToken);
             }
 

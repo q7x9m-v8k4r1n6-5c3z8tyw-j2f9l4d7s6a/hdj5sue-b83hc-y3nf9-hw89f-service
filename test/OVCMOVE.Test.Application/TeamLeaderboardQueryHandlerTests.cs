@@ -168,6 +168,7 @@ public class TeamLeaderboardQueryHandlerTests
             GetPageAsync(
                 int page,
                 int pageSize,
+                Guid? teamId,
                 CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

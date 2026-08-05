@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
+using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Abstractions.Hubs;
 
 namespace OVCMOVE.API.Hubs;
 
+[RequirePermission(PermissionCodes.RaceRead)]
 public class BoothHub : Hub<IBoothHubClient>
 {
     public async Task JoinBoothGroup(string boothId)

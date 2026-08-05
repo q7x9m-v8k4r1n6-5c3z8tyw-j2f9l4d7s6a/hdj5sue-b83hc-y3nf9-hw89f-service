@@ -323,4 +323,12 @@ public static class RaceQueries
     SELECT [Rules]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
+    public static string CountCompletedNormalBoothsQuery() => @"
+    SELECT COUNT(DISTINCT sl.BoothId)
+    FROM dbo.ScoringLog sl
+    INNER JOIN dbo.Booth b ON b.Id = sl.BoothId AND b.IsDeleted = 0
+    WHERE sl.RaceId = @RaceId
+      AND sl.TeamId = @TeamId
+      AND b.IsHidden = 0
+      AND sl.IsDeleted = 0;";
 }

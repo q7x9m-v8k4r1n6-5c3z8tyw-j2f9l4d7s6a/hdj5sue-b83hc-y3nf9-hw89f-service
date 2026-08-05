@@ -152,6 +152,7 @@ public class RaceRepository : IRaceRepository
             race.TimeEnd,
             race.Place,
             race.Status,
+            race.Rules,
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
             race.CoverUrl,
@@ -292,6 +293,18 @@ public class RaceRepository : IRaceRepository
         return _db.QueryFirstOrDefaultAsync<string?>(
             RaceQueries.GetRaceRulesQuery(),
             new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+    }
+    public async Task<int> CountCompletedNormalBoothsAsync(
+    Guid raceId,
+    Guid teamId,
+    CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CountCompletedNormalBoothsQuery(),
+            new { RaceId = raceId, TeamId = teamId },
             cancellationToken: cancellationToken);
     }
 }

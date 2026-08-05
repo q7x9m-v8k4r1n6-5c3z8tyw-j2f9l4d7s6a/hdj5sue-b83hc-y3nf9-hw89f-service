@@ -8,6 +8,8 @@ namespace OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 public class RequestEntryToBoothCommandHandler
     : IRequestHandler<RequestEntryToBoothCommand, (bool IsSuccess, string Message)>
 {
+    private const int RequiredNormalBoothsForHiddenBooth = 2;
+
     private readonly IBoothRepository _boothRepository;
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
@@ -45,6 +47,18 @@ public class RequestEntryToBoothCommandHandler
         if (!isTeamInRace)
         {
             return (false, "Đội của bạn không tham gia trận đấu này. Vui lòng kiểm tra lại mã QR.");
+        }
+
+        if (booth.IsHidden)
+        {
+            var completedNormalBooths = await _raceRepository.CountCompletedNormalBoothsAsync(
+                booth.RaceId, request.TeamId, cancellationToken);
+            if (completedNormalBooths < RequiredNormalBoothsForHiddenBooth)
+            {
+                return (false,
+                    $"Đội bạn cần hoàn thành đủ {RequiredNormalBoothsForHiddenBooth} trạm thường trước khi vào trạm ẩn này. " +
+                    $"Hiện đã hoàn thành: {completedNormalBooths}/{RequiredNormalBoothsForHiddenBooth}.");
+            }
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);

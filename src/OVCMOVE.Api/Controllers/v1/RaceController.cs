@@ -243,4 +243,14 @@ public class RaceController : BaseController
 
         return Ok(ApiResponse.Success(new { Rules = rules }));
     }
+    [HttpGet("{raceId:guid}/rules/admin")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> GetAdminRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
+    {
+        var rules = await _mediator.Send(
+            new GetAdminRaceRulesQuery { RaceId = raceId },
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(new { Rules = rules }));
+    }
 }

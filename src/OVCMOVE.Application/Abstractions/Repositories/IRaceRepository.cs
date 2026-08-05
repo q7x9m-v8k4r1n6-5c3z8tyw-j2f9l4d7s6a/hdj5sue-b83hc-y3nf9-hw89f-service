@@ -50,4 +50,8 @@ public interface IRaceRepository
     Guid teamId,
     CancellationToken cancellationToken = default);
     Task<string?> GetRulesAsync(Guid raceId, CancellationToken cancellationToken = default);
+    Task<int> CountCompletedNormalBoothsAsync(
+    Guid raceId,
+    Guid teamId,
+    CancellationToken cancellationToken = default);
 }

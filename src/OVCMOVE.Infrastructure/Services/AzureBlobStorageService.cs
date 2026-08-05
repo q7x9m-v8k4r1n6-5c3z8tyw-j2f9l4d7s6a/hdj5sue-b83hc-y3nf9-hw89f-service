@@ -18,10 +18,8 @@ public class AzureBlobStorageService : IBlobStorageService
     {
         _logger = logger;
         var configuration = options.Value;
-        var blobServiceClient = new BlobServiceClient(
-            configuration.ConnectionString);
-        _containerClient = blobServiceClient.GetBlobContainerClient(
-            configuration.ContainerName);
+        var blobServiceClient = new BlobServiceClient(configuration.ConnectionString);
+        _containerClient = blobServiceClient.GetBlobContainerClient(configuration.ContainerName);
     }
 
     public async Task<string> UploadAsync(
@@ -30,20 +28,26 @@ public class AzureBlobStorageService : IBlobStorageService
         string contentType,
         CancellationToken cancellationToken = default)
     {
-        await _containerClient.CreateIfNotExistsAsync(
+        var response = await _containerClient.CreateIfNotExistsAsync(
             PublicAccessType.Blob,
             cancellationToken: cancellationToken);
+
+        if (response == null)
+        {
+            await _containerClient.SetAccessPolicyAsync(
+                PublicAccessType.Blob,
+                cancellationToken: cancellationToken);
+        }
+
         var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(fileName)}";
         var blobClient = _containerClient.GetBlobClient(uniqueFileName);
-        var blobHttpHeaders = new BlobHttpHeaders
+
+        var uploadOptions = new BlobUploadOptions
         {
-            ContentType = contentType
+            HttpHeaders = new BlobHttpHeaders { ContentType = contentType }
         };
 
-        await blobClient.UploadAsync(
-            fileStream,
-            new BlobUploadOptions { HttpHeaders = blobHttpHeaders },
-            cancellationToken);
+        await blobClient.UploadAsync(fileStream, uploadOptions, cancellationToken);
 
         return blobClient.Uri.ToString();
     }
@@ -55,25 +59,26 @@ public class AzureBlobStorageService : IBlobStorageService
     {
         try
         {
-            var fileUri = new Uri(fileUrl, UriKind.Absolute);
-            var containerPrefix =
-                $"{_containerClient.Uri.AbsoluteUri.TrimEnd('/')}/";
-            if (!fileUri.AbsoluteUri.StartsWith(
-                containerPrefix,
-                StringComparison.OrdinalIgnoreCase))
+            if (!Uri.TryCreate(fileUrl, UriKind.Absolute, out var fileUri))
             {
-                _logger.LogWarning(
-                    "Skipped blob deletion outside configured container: {FileUrl}.",
-                    fileUrl);
                 return false;
             }
 
-            var fileName = Uri.UnescapeDataString(
-                fileUri.Segments[^1]);
-            var response = await _containerClient
+            var containerPrefix = $"{_containerClient.Uri.AbsoluteUri.TrimEnd('/')}/";
+            if (!fileUri.AbsoluteUri.StartsWith(containerPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Skipped blob deletion outside configured container: {FileUrl}.", fileUrl);
+                return false;
+            }
+
+            var relativePath = _containerClient.Uri.MakeRelativeUri(fileUri).ToString();
+            var fileName = Uri.UnescapeDataString(relativePath);
+
+            var deleteResponse = await _containerClient
                 .GetBlobClient(fileName)
                 .DeleteIfExistsAsync(cancellationToken: cancellationToken);
-            return response.Value;
+
+            return deleteResponse.Value;
         }
         catch (OperationCanceledException)
         {
@@ -81,10 +86,7 @@ public class AzureBlobStorageService : IBlobStorageService
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(
-                exception,
-                "Could not remove orphaned blob {FileUrl}.",
-                fileUrl);
+            _logger.LogWarning(exception, "Could not remove orphaned blob {FileUrl}.", fileUrl);
             return false;
         }
     }

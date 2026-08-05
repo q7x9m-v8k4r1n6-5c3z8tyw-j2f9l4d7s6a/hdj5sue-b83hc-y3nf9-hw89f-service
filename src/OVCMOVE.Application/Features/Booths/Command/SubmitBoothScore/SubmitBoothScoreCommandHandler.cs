@@ -36,15 +36,9 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         {
             var booth = await _boothRepository.GetByIdAsync(request.BoothID, cancellationToken);
             var result = await _boothRepository.SubmitScoreAndReleaseAsync(model, cancellationToken);
-            if (!result)
-            {
-                await _unitOfWork.RollbackAsync(CancellationToken.None);
-                return false;
-            }
-
             await _unitOfWork.CommitAsync(cancellationToken);
 
-            if (booth is not null)
+            if (result && booth is not null)
             {
                 await _notificationService.NotifyRaceScoreChangedAsync(
                     booth.RaceId,
@@ -57,7 +51,7 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         }
         catch
         {
-            await _unitOfWork.RollbackAsync(CancellationToken.None);
+            await _unitOfWork.RollbackAsync(cancellationToken);
             throw;
         }
     }

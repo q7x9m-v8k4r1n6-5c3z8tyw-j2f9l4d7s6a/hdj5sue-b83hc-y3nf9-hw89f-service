@@ -84,39 +84,25 @@ public class BoothRepository : IBoothRepository
         var booth = await GetByIdAsync(model.BoothId, cancellationToken);
         if (booth is null) return false;
 
-        var hasCompletedBooth = await _db.QueryFirstOrDefaultAsync<bool>(
-            BoothQueries.HasCompletedBoothQuery(),
-            new
-            {
-                RaceId = booth.RaceId,
-                TeamId = model.TeamId,
-                BoothId = model.BoothId
-            },
-            cancellationToken: cancellationToken);
-        if (hasCompletedBooth) return false;
-
-        var currentScore = await _db.QueryFirstOrDefaultAsync<int?>(
-            BoothQueries.GetRaceTeamScoreQuery(),
+        var currentScore = await _db.QueryFirstOrDefaultAsync<int>(
+            "SELECT ISNULL(TotalScore, 0) FROM dbo.RaceTeam WHERE RaceID = @RaceId AND TeamID = @TeamId;",
             new { RaceId = booth.RaceId, TeamId = model.TeamId },
             cancellationToken: cancellationToken);
-        if (currentScore is null) return false;
 
-        var scoreBefore = currentScore.Value;
+        var scoreBefore = currentScore;
         var scoreAfter = scoreBefore + model.Score;
 
-        var updatedScores = await _db.ExecuteAsync(
+        await _db.ExecuteAsync(
             BoothQueries.UpdateTeamScoreQuery(),
             new { BoothId = model.BoothId, TeamId = model.TeamId, Score = model.Score },
             cancellationToken: cancellationToken);
-        if (updatedScores != 1) return false;
 
-        var releasedBooths = await _db.ExecuteAsync(
+        await _db.ExecuteAsync(
             BoothQueries.ReleaseBoothStatusQuery(),
             new { BoothId = model.BoothId },
             cancellationToken: cancellationToken);
-        if (releasedBooths != 1) return false;
 
-        var insertedLogs = await _db.ExecuteAsync(
+        await _db.ExecuteAsync(
             BoothQueries.InsertScoringLogQuery(),
             new
             {
@@ -137,6 +123,6 @@ public class BoothRepository : IBoothRepository
             },
             cancellationToken: cancellationToken);
 
-        return insertedLogs == 1;
+        return true;
     }
 }

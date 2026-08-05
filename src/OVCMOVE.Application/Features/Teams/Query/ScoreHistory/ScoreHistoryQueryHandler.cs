@@ -2,6 +2,7 @@ using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
 
@@ -62,8 +63,10 @@ public sealed class ScoreHistoryQueryHandler(
         ScoringLogResultModel log) =>
         log.ReasonCode switch
         {
-            "BOOTH_COMPLETED" => "booth_completed",
-            "manual" => "admin_fix",
+            ScoringLogConstants.ReasonCode.BoothCompleted =>
+                ScoringLogConstants.Source.BoothCompleted,
+            ScoringLogConstants.ReasonCode.Manual =>
+                ScoringLogConstants.Source.AdminFix,
             _ => log.EventCode
         };
 }

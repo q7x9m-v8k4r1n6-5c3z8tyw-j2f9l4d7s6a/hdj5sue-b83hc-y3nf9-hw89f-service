@@ -38,31 +38,51 @@ public static class RaceQueries
         SELECT
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
             [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         FROM [dbo].[Race]
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetAllRacesQuery() => @"
         SELECT
-            [Id],
-            [RaceName] AS [Name],
-            [RaceName],
-            [TimeStart],
-            [TimeEnd],
-            [Place],
-            [Status],
-            [CoverUrl],
-            [ModifiedAt]
-        FROM [dbo].[Race]
-        WHERE [IsDeleted] = 0
-        ORDER BY [CreatedAt] DESC
+            R.[Id],
+            R.[RaceName] AS [Name],
+            R.[RaceName],
+            R.[TimeStart],
+            R.[TimeEnd],
+            R.[Place],
+            R.[Status],
+            R.[CoverUrl],
+            R.[ModifiedAt]
+        FROM [dbo].[Race] R
+        WHERE R.[IsDeleted] = 0
+          AND (
+              @TeamId IS NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[RaceTeam] RT
+                  WHERE RT.[RaceID] = R.[Id]
+                    AND RT.[TeamID] = @TeamId
+                    AND RT.[IsDeleted] = 0
+              )
+          )
+        ORDER BY R.[CreatedAt] DESC
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
     public static string CountRacesQuery() => @"
         SELECT COUNT(1)
-        FROM [dbo].[Race]
-        WHERE [IsDeleted] = 0;";
+        FROM [dbo].[Race] R
+        WHERE R.[IsDeleted] = 0
+          AND (
+              @TeamId IS NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[RaceTeam] RT
+                  WHERE RT.[RaceID] = R.[Id]
+                    AND RT.[TeamID] = @TeamId
+                    AND RT.[IsDeleted] = 0
+              )
+          );";
 
     public static string GetRaceDetailQuery() => @"
         SELECT
@@ -210,17 +230,17 @@ public static class RaceQueries
         WHERE [RaceID] = @RaceId AND [OrganizerID] = @OrganizerId;";
 
     public static string GetTeamLeaderboardQuery() => @"
-        SELECT 
-            u.Id AS TeamId,
-            u.DisplayName,
+        SELECT
+            rt.TeamId,
+            CAST(RANK() OVER (ORDER BY rt.TotalScore DESC) AS INT) AS [Rank],
+            COALESCE(NULLIF(u.DisplayName, N''), u.Username, u.LinkedEmail) AS DisplayName,
             rt.TotalScore
         FROM [dbo].[RaceTeam] rt
         INNER JOIN [dbo].[Users] u ON rt.TeamId = u.Id
         WHERE rt.RaceId = @RaceId
           AND rt.IsDeleted = 0
           AND u.IsDeleted = 0
-        ORDER BY rt.TotalScore DESC;";
-
+        ORDER BY rt.TotalScore DESC, DisplayName, rt.TeamId;";
     public static string GetBoothListQuery() => @"
         SELECT 
             b.Id AS BoothId,
@@ -242,6 +262,8 @@ public static class RaceQueries
     public static string GetScoringLogByRaceIdQuery() => @"
         SELECT
             log.Id AS LogId,
+            log.BoothId,
+            log.ActorId,
             b.Name AS BoothName,
             log.EventCode,
             log.EventName,
@@ -260,15 +282,33 @@ public static class RaceQueries
         LEFT JOIN [dbo].[Users] tu ON log.TeamId = tu.Id
         LEFT JOIN [dbo].[Users] ou ON log.ActorId = ou.Id
         WHERE log.RaceId = @RaceId
+          AND (@TeamId IS NULL OR log.TeamId = @TeamId)
           AND log.IsDeleted = 0
-        ORDER BY log.CreatedAt DESC
+        ORDER BY log.CreatedAt DESC, log.Id DESC
         OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
     public static string CountScoringLogByRaceIdQuery() => @"
         SELECT COUNT(1)
         FROM [dbo].[ScoringLog]
         WHERE RaceId = @RaceId
+          AND (@TeamId IS NULL OR TeamId = @TeamId)
           AND IsDeleted = 0;";
+
+    public static string GetCompletedBoothStatsQuery() => @"
+        SELECT
+            COUNT(DISTINCT CASE WHEN b.[IsHidden] = 0 THEN log.[BoothId] END)
+                AS [CompletedRegularBooths],
+            COUNT(DISTINCT CASE WHEN b.[IsHidden] = 1 THEN log.[BoothId] END)
+                AS [CompletedHiddenBooths]
+        FROM [dbo].[ScoringLog] log
+        INNER JOIN [dbo].[Booth] b
+            ON b.[Id] = log.[BoothId]
+           AND b.[RaceId] = log.[RaceId]
+           AND b.[IsDeleted] = 0
+        WHERE log.[RaceId] = @RaceId
+          AND log.[TeamId] = @TeamId
+          AND log.[ReasonCode] = N'BOOTH_COMPLETED'
+          AND log.[IsDeleted] = 0;";
 
     public static string GetRaceTeamScoreQuery() => @"
         SELECT [TotalScore]
@@ -314,6 +354,16 @@ public static class RaceQueries
     WHERE BO.[OrganizerId] = @OrganizerId
       AND B.[RaceID] = @RaceId
       AND BO.[IsDeleted] = 0;";
+
+    public static string CheckBoothOrganizerAssignmentQuery() => @"
+        SELECT CASE WHEN EXISTS
+        (
+            SELECT 1
+            FROM [dbo].[BoothOrganizer]
+            WHERE [OrganizerId] = @OrganizerId
+              AND [BoothId] = @BoothId
+              AND [IsDeleted] = 0
+        ) THEN 1 ELSE 0 END;";
     public static string CheckTeamInRaceQuery() => @"
     SELECT CASE WHEN EXISTS (
         SELECT 1 FROM dbo.RaceTeam
@@ -323,12 +373,37 @@ public static class RaceQueries
     SELECT [Rules]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
-    public static string CountCompletedNormalBoothsQuery() => @"
-    SELECT COUNT(DISTINCT sl.BoothId)
-    FROM dbo.ScoringLog sl
-    INNER JOIN dbo.Booth b ON b.Id = sl.BoothId AND b.IsDeleted = 0
-    WHERE sl.RaceId = @RaceId
-      AND sl.TeamId = @TeamId
-      AND b.IsHidden = 0
-      AND sl.IsDeleted = 0;";
+    public static string GetBoothProgressQuery() => @"
+        SELECT
+            CAST(CASE WHEN EXISTS
+            (
+                SELECT 1
+                FROM [dbo].[RaceTeam] rt
+                WHERE rt.[RaceID] = @RaceId
+                  AND rt.[TeamID] = @TeamId
+                  AND rt.[IsDeleted] = 0
+            ) THEN 1 ELSE 0 END AS BIT) AS [IsTeamInRace],
+            CAST(CASE WHEN EXISTS
+            (
+                SELECT 1
+                FROM [dbo].[ScoringLog] completed
+                WHERE completed.[RaceId] = @RaceId
+                  AND completed.[TeamId] = @TeamId
+                  AND completed.[BoothId] = @BoothId
+                  AND completed.[ReasonCode] = @CompletedReasonCode
+                  AND completed.[IsDeleted] = 0
+            ) THEN 1 ELSE 0 END AS BIT) AS [HasCompletedBooth],
+            COUNT(DISTINCT CASE WHEN booth.[IsHidden] = 0
+                THEN log.[BoothId] END) AS [CompletedRegularBooths],
+            COUNT(DISTINCT CASE WHEN booth.[IsHidden] = 1
+                THEN log.[BoothId] END) AS [CompletedHiddenBooths]
+        FROM [dbo].[ScoringLog] log
+        INNER JOIN [dbo].[Booth] booth
+            ON booth.[Id] = log.[BoothId]
+           AND booth.[RaceID] = log.[RaceId]
+           AND booth.[IsDeleted] = 0
+        WHERE log.[RaceId] = @RaceId
+          AND log.[TeamId] = @TeamId
+          AND log.[ReasonCode] = @CompletedReasonCode
+          AND log.[IsDeleted] = 0;";
 }

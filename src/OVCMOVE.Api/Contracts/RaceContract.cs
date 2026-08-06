@@ -18,6 +18,7 @@ public static class RaceContract
     /// </summary>
     public class GetAllRacesRequest : PagedRequest
     {
+        public Guid? TeamId { get; set; }
     }
 
     /// <summary>

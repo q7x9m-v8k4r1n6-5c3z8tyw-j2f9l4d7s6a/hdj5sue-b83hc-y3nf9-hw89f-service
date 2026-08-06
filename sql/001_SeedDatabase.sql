@@ -210,11 +210,67 @@ BEGIN TRY
             N'manage_accounts'
         ),
         (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740101',
+            N'Booth Read',
+            N'booth.read',
+            N'View booth assignments and operational booth state.',
+            N'booth',
+            N'read'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740102',
+            N'Booth Entry Request',
+            N'booth.entry.request',
+            N'Request team entry into a booth.',
+            N'booth.entry',
+            N'request'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740103',
+            N'Booth Entry Manage',
+            N'booth.entry.manage',
+            N'Accept or manage team entry requests at a booth.',
+            N'booth.entry',
+            N'manage'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740104',
+            N'Booth Score Submit',
+            N'booth.score.submit',
+            N'Submit booth scoring for a team.',
+            N'booth.score',
+            N'submit'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740105',
+            N'Race Read',
+            N'race.read',
+            N'View assigned or available race information.',
+            N'race',
+            N'read'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740106',
+            N'Race Leaderboard Read',
+            N'race.leaderboard.read',
+            N'View race leaderboard and scoring logs.',
+            N'race.leaderboard',
+            N'read'
+        ),
+        (
             '8359B026-EFB7-4B13-873A-3F189FFB4207',
             N'Race Manage',
             N'race.manage',
             N'Create and update race aggregates.',
             N'race',
+            N'manage'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740107',
+            N'Race Score Manage',
+            N'race.score.manage',
+            N'Manually adjust race team scores.',
+            N'race.score',
             N'manage'
         ),
         (
@@ -224,6 +280,14 @@ BEGIN TRY
             N'View and search teams.',
             N'team',
             N'read'
+        ),
+        (
+            '03A82242-4FD6-4DBB-8F8D-9F0B00740108',
+            N'Team Manage',
+            N'team.manage',
+            N'Create, update, delete, and reset team accounts.',
+            N'team',
+            N'manage'
         ),
         (
             'EC2FB60B-A173-4317-B3E6-9AE7D17BA00B',
@@ -318,8 +382,8 @@ BEGIN TRY
     /*
         Role-permission policy:
         - admin: all permissions
-        - organizer: profile, organizer read, race, image and team read
-        - team: profile and team read
+        - organizer: profile, race/booth game operations and team lookup
+        - team: profile, assigned race read, leaderboard read and booth entry request
     */
     DECLARE @RolePermissionCodes TABLE
     (
@@ -334,11 +398,16 @@ BEGIN TRY
     INSERT INTO @RolePermissionCodes ([RoleCode], [PermissionCode])
     VALUES
         (N'organizer', N'auth.profile.read'),
-        (N'organizer', N'organizer.read'),
-        (N'organizer', N'race.manage'),
-        (N'organizer', N'image.upload'),
+        (N'organizer', N'booth.read'),
+        (N'organizer', N'booth.entry.manage'),
+        (N'organizer', N'booth.score.submit'),
+        (N'organizer', N'race.read'),
+        (N'organizer', N'race.leaderboard.read'),
         (N'organizer', N'team.read'),
         (N'team', N'auth.profile.read'),
+        (N'team', N'booth.entry.request'),
+        (N'team', N'race.read'),
+        (N'team', N'race.leaderboard.read'),
         (N'team', N'team.read');
 
     INSERT INTO [dbo].[RolePermissions]

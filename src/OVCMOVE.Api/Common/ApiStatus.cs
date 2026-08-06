@@ -14,6 +14,7 @@ public static class ApiStatus
         public const int NotFound = StatusCodes.Status404NotFound;
         public const int Conflict = StatusCodes.Status409Conflict;
         public const int InternalServerError = StatusCodes.Status500InternalServerError;
+        public const int TooManyRequests = StatusCodes.Status429TooManyRequests;
     }
 
     public static class Messages
@@ -25,5 +26,6 @@ public static class ApiStatus
         public const string NotFound = "Not Found";
         public const string Conflict = "Conflict";
         public const string InternalServerError = "Internal Server Error";
+        public const string TooManyRequests = "Too Many Requests";
     }
 }

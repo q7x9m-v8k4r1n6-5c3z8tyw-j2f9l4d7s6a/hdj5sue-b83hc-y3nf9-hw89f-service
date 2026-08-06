@@ -19,7 +19,8 @@ public static class RaceContractMapping
         this RaceContract.GetAllRacesRequest request) => new()
         {
             Page = request.Page,
-            PageSize = request.PageSize
+            PageSize = request.PageSize,
+            TeamId = request.TeamId
         };
 
     /// <summary>Maps the create-race API contract to its application command.</summary>
@@ -39,7 +40,7 @@ public static class RaceContractMapping
             TimeStart = basicInfo.TimeStart,
             TimeEnd = basicInfo.TimeEnd,
             Place = basicInfo.Place,
-            Rules = request.Rules,
+            Rules = request.Rules ?? string.Empty,
             IsToggledLeaderboard = settings.IsToggledLeaderboard,
             IsHiddenPoint = settings.IsHiddenPoint,
             OrganizerIds = request.OrganizerId ?? [],

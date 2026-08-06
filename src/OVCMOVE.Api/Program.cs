@@ -31,6 +31,10 @@ builder.Configuration
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddMemoryCache();
+builder.Services.AddAppRateLimit(builder.Configuration);
+
 builder.Services.AddMove2026Plugin();
 builder.Services.AddApiControllers();
 builder.Services.AddSwaggerDocumentation();
@@ -47,19 +51,16 @@ builder.Services.AddScoped<IBoothNotificationService, BoothNotificationService>(
 var app = builder.Build();
 
 app.UseSwaggerDocumentation();
-
 app.UseCors("AllowFrontend");
-
 app.UseHttpsRedirection();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseRateLimiter();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.MapHub<BoothHub>("/api/v1/hubs/booth");
 
 app.Run();

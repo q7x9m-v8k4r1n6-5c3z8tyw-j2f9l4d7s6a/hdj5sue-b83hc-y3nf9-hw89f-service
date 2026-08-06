@@ -1,5 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Security;
@@ -11,6 +13,8 @@ using OVCMOVE.Application.Features.Teams.Command.UpdateTeam;
 using OVCMOVE.Application.Features.Teams.Query.GetTeamDetail;
 using OVCMOVE.Application.Features.Teams.Command.DeleteTeam;
 using OVCMOVE.Application.Features.Teams.Command.ResetTeamPassword;
+using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
+using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -22,8 +26,41 @@ public class TeamController : BaseController
     {
     }
 
+    [HttpGet("leaderboard")]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
+    public async Task<IActionResult> GetLeaderboard(
+        [FromQuery] TeamContract.LeaderboardRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new TeamLeaderboardQuery(
+                request.RaceId!.Value,
+                GetCurrentTeamId()),
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    [HttpGet("score-history")]
+    [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
+    public async Task<IActionResult> GetScoreHistory(
+        [FromQuery] TeamContract.ScoreHistoryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new ScoreHistoryQuery(
+                request.RaceId!.Value,
+                GetCurrentTeamId(),
+                request.Page,
+                request.PageSize),
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(result.ToResponse(
+            item => item.ToResponse())));
+    }
+
     [HttpPost]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> CreateTeam(
         [FromBody] TeamContract.CreateTeamRequest request,
         CancellationToken cancellationToken)
@@ -68,7 +105,7 @@ public class TeamController : BaseController
     }
 
     [HttpPut("{teamId:guid}")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> UpdateTeam(
         Guid teamId,
         [FromBody] TeamContract.UpdateTeamRequest request,
@@ -96,7 +133,7 @@ public class TeamController : BaseController
     }
 
     [HttpDelete("{teamId:guid}")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> DeleteTeam(Guid teamId, CancellationToken cancellationToken)
     {
         var deleted = await _mediator.Send(
@@ -110,7 +147,7 @@ public class TeamController : BaseController
     }
 
     [HttpPost("{teamId:guid}/reset-password")]
-    [RequirePermission(PermissionCodes.TeamRead)]
+    [RequirePermission(PermissionCodes.TeamManage)]
     public async Task<IActionResult> ResetPassword(
         Guid teamId,
         CancellationToken cancellationToken)
@@ -153,5 +190,15 @@ public class TeamController : BaseController
             cancellationToken);
         return Ok(ApiResponse.Success(
             result.Select(item => item.ToResponse()).ToArray()));
+    }
+    private Guid GetCurrentTeamId()
+    {
+        var teamIdValue =
+            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        return Guid.TryParse(teamIdValue, out var teamId)
+            ? teamId
+            : throw new UnauthorizedAccessException("Token không hợp lệ.");
     }
 }

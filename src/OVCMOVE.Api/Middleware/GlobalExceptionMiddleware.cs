@@ -83,6 +83,25 @@ public class GlobalExceptionMiddleware
                 ApiStatus.Messages.BadRequest,
                 ex.Message);
         }
+        catch (ApplicationForbiddenException ex)
+        {
+            _logger.LogWarning("Tài khoản/IP bị cấm: {Message}", ex.Message);
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.Forbidden,
+                ApiStatus.Messages.Forbidden,
+                ex.Message);
+        }
+        catch (ApplicationRateLimitException ex)
+        {
+            _logger.LogWarning("Phát hiện spam request: {Message}", ex.Message);
+            context.Response.Headers.RetryAfter = ex.RetryAfterSeconds.ToString();
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.TooManyRequests, 
+                ApiStatus.Messages.TooManyRequests,
+                ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi hệ thống không mong muốn: {Message}", ex.Message);

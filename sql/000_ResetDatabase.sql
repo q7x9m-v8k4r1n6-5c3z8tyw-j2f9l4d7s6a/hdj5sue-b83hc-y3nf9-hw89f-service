@@ -151,6 +151,7 @@ BEGIN TRY
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Race_Status] DEFAULT (N'draft'),
         [CoverUrl] NVARCHAR(2048) NULL,
+        [Rules] NVARCHAR(MAX) NULL,
         [IsToggledLeaderboard] BIT NOT NULL
             CONSTRAINT [DF_Race_IsToggledLeaderboard] DEFAULT (0),
         [IsHiddenPoint] BIT NOT NULL
@@ -286,6 +287,12 @@ BEGIN TRY
     EXEC sys.sp_executesql N'
         CREATE INDEX [IX_ScoringLog_RaceId_CreatedAt]
             ON [dbo].[ScoringLog] ([RaceId], [CreatedAt] DESC);
+
+        CREATE UNIQUE INDEX [UX_ScoringLog_CompletedBooth]
+            ON [dbo].[ScoringLog] ([RaceId], [TeamId], [BoothId])
+            WHERE [IsDeleted] = 0
+              AND [BoothId] IS NOT NULL
+              AND [ReasonCode] = N''BOOTH_COMPLETED'';
     ';
 
     CREATE TABLE [dbo].[RaceOrganizer]

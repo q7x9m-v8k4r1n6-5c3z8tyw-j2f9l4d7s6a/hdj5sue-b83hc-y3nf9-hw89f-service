@@ -54,6 +54,7 @@ internal static class RacePatchMapper
                 ? null
                 : patch.CoverUrl.Trim();
         }
+        if (patch.Rules is not null) race.Rules = patch.Rules.Trim();
 
         if (patch.Status is not null)
         {

@@ -151,6 +151,8 @@ BEGIN TRY
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Race_Status] DEFAULT (N'draft'),
         [CoverUrl] NVARCHAR(2048) NULL,
+        [Rules] NVARCHAR(MAX) NOT NULL
+            CONSTRAINT [DF_Race_Rules] DEFAULT (N''),
         [IsToggledLeaderboard] BIT NOT NULL
             CONSTRAINT [DF_Race_IsToggledLeaderboard] DEFAULT (0),
         [IsHiddenPoint] BIT NOT NULL

@@ -69,6 +69,20 @@ public class DatabaseScriptContractTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void RaceRulesMigration_BackfillsAndMakesRulesRequired()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(repositoryRoot, "sql", "004_AddRaceRules.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(repositoryRoot, "sql", "000_ResetDatabase.sql"));
+
+        Assert.Contains("WHERE [Rules] IS NULL", migrationScript);
+        Assert.Contains("ALTER COLUMN [Rules] NVARCHAR(MAX) NOT NULL", migrationScript);
+        Assert.Contains("[Rules] NVARCHAR(MAX) NOT NULL", resetScript);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

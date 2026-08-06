@@ -155,6 +155,7 @@ public class RaceRepository : IRaceRepository
             race.TimeEnd,
             race.Place,
             race.Status,
+            race.Rules,
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
             race.CoverUrl,
@@ -298,6 +299,32 @@ public class RaceRepository : IRaceRepository
             log,
             cancellationToken: cancellationToken);
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
+    }
+
+    public async Task<bool> IsTeamInRaceAsync(
+        Guid raceId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CheckTeamInRaceQuery(),
+            new { RaceId = raceId, TeamId = teamId },
+            cancellationToken: cancellationToken);
+
+        return result == 1;
+    }
+
+    public Task<string?> GetRulesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _db.QueryFirstOrDefaultAsync<string?>(
+            RaceQueries.GetRaceRulesQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
     }
 }
 

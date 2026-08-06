@@ -12,6 +12,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Constants;
 using static OVCMOVE.Api.Contracts.RaceContract;
@@ -253,5 +254,32 @@ public class RaceController : BaseController
             cancellationToken);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+    [HttpGet("{raceId:guid}/rules")]
+    [RequirePermission(PermissionCodes.RaceRead)]
+    public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetRaceRulesQuery
+            {
+                RaceId = raceId,
+                TeamId = GetRequiredCurrentUserId()
+            },
+            cancellationToken);
+
+        if (!result.IsTeamInRace)
+            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trận đấu này."));
+
+        return Ok(ApiResponse.Success(new { result.Rules }));
+    }
+    [HttpGet("{raceId:guid}/rules/admin")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> GetAdminRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
+    {
+        var rules = await _mediator.Send(
+            new GetAdminRaceRulesQuery { RaceId = raceId },
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(new { Rules = rules }));
     }
 }

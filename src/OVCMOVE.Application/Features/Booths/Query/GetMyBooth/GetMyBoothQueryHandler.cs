@@ -1,7 +1,5 @@
 ﻿using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
-using OVCMOVE.Application.DTOs.ResultModels;
-
 namespace OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
 
 public class GetMyBoothQueryHandler : IRequestHandler<GetMyBoothQuery, MyBoothResultModel?>

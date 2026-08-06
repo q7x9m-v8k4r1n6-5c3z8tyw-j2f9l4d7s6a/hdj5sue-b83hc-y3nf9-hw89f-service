@@ -67,6 +67,13 @@ public static class BoothQueries
         ";
     }
 
+    public static string GetRaceTeamScoreQuery() => @"
+        SELECT [TotalScore]
+        FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
+
     /// <summary>
     /// Query giải phóng trạng thái Trạm về lại 'Free' sau khi chấm điểm xong
     /// </summary>

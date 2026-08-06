@@ -244,7 +244,12 @@ public class RaceRepository : IRaceRepository
 
         var stats = await _db.QueryFirstOrDefaultAsync<CompletedBoothStatsRow>(
             RaceQueries.GetCompletedBoothStatsQuery(),
-            new { RaceId = raceId, TeamId = teamId },
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
             cancellationToken: cancellationToken);
 
         return stats is null

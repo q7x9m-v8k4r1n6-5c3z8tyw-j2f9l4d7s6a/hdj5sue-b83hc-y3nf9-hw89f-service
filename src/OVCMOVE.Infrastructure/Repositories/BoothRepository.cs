@@ -117,7 +117,7 @@ public class BoothRepository : IBoothRepository
         if (booth is null) return false;
 
         var currentScore = await _db.QueryFirstOrDefaultAsync<int?>(
-            "SELECT TotalScore FROM dbo.RaceTeam WHERE RaceID = @RaceId AND TeamID = @TeamId AND IsDeleted = 0;",
+            BoothQueries.GetRaceTeamScoreQuery(),
             new { RaceId = booth.RaceId, TeamId = model.TeamId },
             cancellationToken: cancellationToken);
 

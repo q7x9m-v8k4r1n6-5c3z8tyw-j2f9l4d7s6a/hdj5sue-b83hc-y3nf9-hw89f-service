@@ -30,4 +30,14 @@ public static class BoothContract
         [Required]
         public Guid TeamId { get; init; }
     }
+
+    public sealed record OperationResponse(string Message);
+
+    public sealed record MyBoothResponse
+    {
+        public Guid BoothId { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Place { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+    }
 }

@@ -1,6 +1,4 @@
 ﻿using MediatR;
-using OVCMOVE.Application.DTOs.ResultModels;
-
 namespace OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
 
 public class GetMyBoothQuery : IRequest<MyBoothResultModel?>

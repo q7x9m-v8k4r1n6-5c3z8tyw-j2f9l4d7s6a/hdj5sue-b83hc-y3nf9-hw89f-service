@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Features.Booths.Commands.AcceptEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
@@ -52,7 +53,9 @@ public class BoothController : ControllerBase
         if (!result)
             return BadRequest(ApiResponse.Error(ApiStatus.Codes.BadRequest, "Chấm điểm thất bại."));
 
-        return Ok(ApiResponse.Success(new { Message = "Chấm điểm và ghi nhật ký thành công!" }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(
+                "Chấm điểm và ghi nhật ký thành công!")));
     }
 
     /// <summary>
@@ -78,7 +81,8 @@ public class BoothController : ControllerBase
                 ApiStatus.Messages.BadRequest,
                 result.Message));
 
-        return Ok(ApiResponse.Success(new { Message = "Đã gửi yêu cầu vào trạm! Vui lòng chờ Ban tổ chức duyệt." }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(result.Message)));
     }
 
     /// <summary>
@@ -102,7 +106,8 @@ public class BoothController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(ApiResponse.Error(ApiStatus.Codes.BadRequest, result.Message));
 
-        return Ok(ApiResponse.Success(new { Message = result.Message }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(result.Message)));
     }
 
     [HttpPost("{boothId:guid}/cancel-session")]
@@ -115,10 +120,9 @@ public class BoothController : ControllerBase
             new CancelBoothSessionCommand(boothId, GetCurrentUserId()),
             cancellationToken);
 
-        return Ok(ApiResponse.Success(new
-        {
-            Message = "Đã hủy lượt chơi và giải phóng trạm."
-        }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(
+                "Đã hủy lượt chơi và giải phóng trạm.")));
     }
 
     [HttpGet("my-booth")]
@@ -138,13 +142,7 @@ public class BoothController : ControllerBase
         if (result is null)
             return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trạm nào trong trận đấu này."));
 
-        return Ok(ApiResponse.Success(new
-        {
-            BoothId = result.BoothId,
-            Name = result.Name,
-            Place = result.Place,
-            Description = result.Description
-        }));
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
     private Guid GetCurrentUserId()

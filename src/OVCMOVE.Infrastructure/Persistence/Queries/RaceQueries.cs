@@ -307,7 +307,7 @@ public static class RaceQueries
            AND b.[IsDeleted] = 0
         WHERE log.[RaceId] = @RaceId
           AND log.[TeamId] = @TeamId
-          AND log.[ReasonCode] = N'BOOTH_COMPLETED'
+          AND log.[ReasonCode] = @CompletedReasonCode
           AND log.[IsDeleted] = 0;";
 
     public static string GetRaceTeamScoreQuery() => @"

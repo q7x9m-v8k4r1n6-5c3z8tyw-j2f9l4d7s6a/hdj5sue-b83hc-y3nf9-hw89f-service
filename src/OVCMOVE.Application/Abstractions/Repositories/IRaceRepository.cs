@@ -29,9 +29,15 @@ public interface IRaceRepository
         CancellationToken cancellationToken = default);
     Task<(IReadOnlyCollection<ScoringLogResultModel> Items, int TotalItems)> GetScoringLogPageByRaceIdAsync(
         Guid raceId,
+        Guid? teamId,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<(int CompletedRegularBooths, int CompletedHiddenBooths)>
+        GetCompletedBoothStatsAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default);
     Task<int?> GetRaceTeamScoreAsync(
         Guid raceId,
         Guid teamId,

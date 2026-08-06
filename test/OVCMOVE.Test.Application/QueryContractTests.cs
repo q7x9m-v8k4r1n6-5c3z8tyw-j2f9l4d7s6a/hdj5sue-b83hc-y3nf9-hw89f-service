@@ -96,4 +96,5 @@ public class QueryContractTests
             sql,
             StringComparison.OrdinalIgnoreCase);
     }
+
 }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using OVCMOVE.Api.Security;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Test.Application;
 
@@ -81,6 +82,35 @@ public class DatabaseScriptContractTests
         Assert.Contains("WHERE [Rules] IS NULL", migrationScript);
         Assert.Contains("ALTER COLUMN [Rules] NVARCHAR(MAX) NOT NULL", migrationScript);
         Assert.Contains("[Rules] NVARCHAR(MAX) NOT NULL", resetScript);
+    }
+
+    [Fact]
+    public void BoothParticipationSchema_UsesCanonicalCodeAndGuardsOccupancy()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "005_BoothParticipationRules.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(repositoryRoot, "sql", "000_ResetDatabase.sql"));
+
+        Assert.Equal(
+            "BOOTH_COMPLETED",
+            ScoringLogConstants.ReasonCode.BoothCompleted);
+        Assert.Contains(
+            "[ReasonCode] = N'BOOTH_COMPLETED'",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "UX_Booth_OccupiedTeam",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "UX_Booth_OccupiedTeam",
+            resetScript,
+            StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

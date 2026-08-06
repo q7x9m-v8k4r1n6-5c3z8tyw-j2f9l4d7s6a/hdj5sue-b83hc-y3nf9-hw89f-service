@@ -6,4 +6,5 @@ public class AcceptEntryToBoothCommand : IRequest<(bool IsSuccess, string Messag
 {
     public Guid BoothId { get; set; }
     public Guid TeamId { get; set; }
+    public Guid OrganizerId { get; set; }
 }

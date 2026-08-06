@@ -4,6 +4,8 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Application.Features.Booths.Common;
+using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -242,7 +244,12 @@ public class RaceRepository : IRaceRepository
 
         var stats = await _db.QueryFirstOrDefaultAsync<CompletedBoothStatsRow>(
             RaceQueries.GetCompletedBoothStatsQuery(),
-            new { RaceId = raceId, TeamId = teamId },
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
             cancellationToken: cancellationToken);
 
         return stats is null
@@ -300,11 +307,10 @@ public class RaceRepository : IRaceRepository
             cancellationToken: cancellationToken);
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
-
     public async Task<bool> IsTeamInRaceAsync(
-        Guid raceId,
-        Guid teamId,
-        CancellationToken cancellationToken = default)
+    Guid raceId,
+    Guid teamId,
+    CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -315,16 +321,32 @@ public class RaceRepository : IRaceRepository
 
         return result == 1;
     }
-
-    public Task<string?> GetRulesAsync(
-        Guid raceId,
-        CancellationToken cancellationToken = default)
+    public Task<string?> GetRulesAsync(Guid raceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return _db.QueryFirstOrDefaultAsync<string?>(
             RaceQueries.GetRaceRulesQuery(),
             new { RaceId = raceId },
             cancellationToken: cancellationToken);
+    }
+    public async Task<BoothProgressResultModel> GetBoothProgressAsync(
+        Guid raceId,
+        Guid teamId,
+        Guid boothId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _db.QueryFirstOrDefaultAsync<BoothProgressResultModel>(
+            RaceQueries.GetBoothProgressQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                BoothId = boothId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken) ?? new BoothProgressResultModel();
     }
 }
 

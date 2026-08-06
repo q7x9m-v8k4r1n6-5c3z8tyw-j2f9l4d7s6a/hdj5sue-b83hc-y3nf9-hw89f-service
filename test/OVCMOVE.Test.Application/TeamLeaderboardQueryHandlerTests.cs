@@ -6,6 +6,7 @@ using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
+using OVCMOVE.Application.Features.Booths.Common;
 using TeamLeaderboardFeature =
     OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Entities;
@@ -19,8 +20,11 @@ public class TeamLeaderboardQueryHandlerTests
     {
         var raceId = Guid.NewGuid();
         var repository = new RaceRepositoryStub(
-            new Race { Id = raceId }, [], (0, 0),
-            teamInRace: true, rules: null);
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            teamInRace: true,
+            rules: null);
         var handler = new GetRaceRulesQueryHandler(repository);
 
         var result = await handler.Handle(
@@ -40,8 +44,11 @@ public class TeamLeaderboardQueryHandlerTests
     {
         var raceId = Guid.NewGuid();
         var repository = new RaceRepositoryStub(
-            new Race { Id = raceId }, [], (0, 0),
-            teamInRace: false, rules: "Rules");
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            teamInRace: false,
+            rules: "Rules");
         var handler = new GetRaceRulesQueryHandler(repository);
 
         var result = await handler.Handle(
@@ -286,6 +293,13 @@ public class TeamLeaderboardQueryHandlerTests
             Guid raceId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(rules);
+
+        public Task<BoothProgressResultModel> GetBoothProgressAsync(
+            Guid raceId,
+            Guid teamId,
+            Guid boothId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
 }

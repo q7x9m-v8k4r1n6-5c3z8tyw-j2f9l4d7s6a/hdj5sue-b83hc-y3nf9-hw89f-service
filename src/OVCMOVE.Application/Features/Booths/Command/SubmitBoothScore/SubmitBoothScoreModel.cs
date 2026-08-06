@@ -6,8 +6,12 @@ public class SubmitBoothScoreModel
     public Guid TeamId { get; set; }
     public Guid OrganizerId { get; set; }
     public int Score { get; set; }
-    public string EventCode { get; set; } = "BOOTH";
-    public string EventName { get; set; } = "Chấm điểm trạm";
-    public string ReasonCode { get; set; } = "BOOTH_COMPLETED";
-    public string Reason { get; set; } = "Hoàn thành thử thách tại trạm";
+    public string EventCode { get; set; } =
+        OVCMOVE.Domain.Constants.ScoringLogConstants.EventCode.Booth;
+    public string EventName { get; set; } =
+        OVCMOVE.Domain.Constants.ScoringLogConstants.EventName.BoothScoring;
+    public string ReasonCode { get; set; } =
+        OVCMOVE.Domain.Constants.ScoringLogConstants.ReasonCode.BoothCompleted;
+    public string Reason { get; set; } =
+        OVCMOVE.Domain.Constants.ScoringLogConstants.Reason.BoothCompleted;
 }

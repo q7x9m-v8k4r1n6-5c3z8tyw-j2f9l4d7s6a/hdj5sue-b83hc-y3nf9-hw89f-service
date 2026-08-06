@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 using OVCMOVE.Api.Security;
+using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
@@ -13,7 +15,6 @@ using OVCMOVE.Application.Features.Auth.Query.GetMe;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
-using OVCMOVE.Api.Services.LoginLockoutService;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -57,21 +58,25 @@ public class AuthController : BaseController
     [DisableRateLimiting]
     public async Task<IActionResult> Login(
         [FromBody] AuthContract.LoginRequest request,
-        [FromServices] ILoginLockoutService lockoutService,
+        [FromServices] ILoginRateLimitService lockoutService,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        if (string.IsNullOrWhiteSpace(ipAddress))
+            throw new ApplicationValidationException("Không thể xác định địa chỉ IP. Yêu cầu bị từ chối.");
         var username = request.Username;
-        lockoutService.EnsureNotLockedOut(ipAddress, username);
+
+        lockoutService.CheckIfBanned(ipAddress, username);
+        lockoutService.CheckWaitingTime(ipAddress, username);
 
         try
         {
             var command = request.ToCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            lockoutService.ResetLockout(ipAddress, username);
+            lockoutService.ResetLimit(ipAddress, username);
             
             SetRefreshTokenCookie(
                 result.RefreshToken,

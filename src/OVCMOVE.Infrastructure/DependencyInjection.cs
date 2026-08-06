@@ -59,6 +59,17 @@ public static class DependencyInjection
                     !string.IsNullOrWhiteSpace(options.ContainerName),
                 "Azure blob connection string and container name are required.")
             .ValidateOnStart();
+
+        services.AddOptions<LoginRateLimitConfigOptions>()
+            .Bind(configuration.GetSection(LoginRateLimitConfigOptions.SectionName))
+            .Validate(
+                options => 
+                    options.MaxFailedAttemptsBeforeWait > 0 &&
+                    options.MaxFailedAttemptsBeforeBan > options.MaxFailedAttemptsBeforeWait &&
+                    options.BaseWaitTimeSeconds > 0 &&
+                    options.WaitTimeMultiplier >= 1,
+                "LoginRateLimitConfig valid thresholds and wait times are required or in right format.")
+            .ValidateOnStart();
         #endregion
 
         services.AddSingleton<ISqlServerFactory, SqlServerFactory>();
@@ -90,6 +101,7 @@ public static class DependencyInjection
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
+        services.AddSingleton<ILoginRateLimitService, LoginRateLimitService>();
         #endregion
 
         #region ==================== BackgroundJobs ====================

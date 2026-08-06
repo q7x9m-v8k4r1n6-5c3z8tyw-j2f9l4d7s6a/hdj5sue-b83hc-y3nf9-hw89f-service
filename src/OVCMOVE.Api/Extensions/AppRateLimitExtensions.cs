@@ -2,15 +2,24 @@ using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Options;
 
 namespace OVCMOVE.Api.Extensions;
 
-public static class RateLimiterExtensions
+public static class AppRateLimitExtensions
 {
     private const string InternalApiPolicy = "InternalApiPolicy";
 
-    public static IServiceCollection AddCustomRateLimiting(this IServiceCollection services)
+    public static IServiceCollection AddAppRateLimit(this IServiceCollection services, IConfiguration configuration)
     {
+        var rateLimitOptions = configuration
+            .GetSection(AppRateLimitConfigOptions.SectionName)
+            .Get<AppRateLimitConfigOptions>()
+            ?? throw new InvalidOperationException("AppRateLimitConfig is not configured.");
+
+        if (rateLimitOptions.PermitLimit <= 0 || rateLimitOptions.WindowMinutes <= 0 || rateLimitOptions.DefaultRetryAfterSeconds <= 0)
+            throw new InvalidOperationException("AppRateLimitConfig thresholds and window time must be greater than zero.");
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = ApiStatus.Codes.TooManyRequests;
@@ -20,11 +29,10 @@ public static class RateLimiterExtensions
                 context.HttpContext.Response.StatusCode = ApiStatus.Codes.TooManyRequests;
                 context.HttpContext.Response.ContentType = "application/json";
                 
-                int retryAfterSeconds = 5;
+                int retryAfterSeconds = rateLimitOptions.DefaultRetryAfterSeconds;
+                
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
-                {
                     retryAfterSeconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
-                }
 
                 context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString();
 
@@ -40,11 +48,11 @@ public static class RateLimiterExtensions
 
             options.AddSlidingWindowLimiter(InternalApiPolicy, limiterOptions =>
             {
-                limiterOptions.PermitLimit = 60;
-                limiterOptions.Window = TimeSpan.FromMinutes(1);
-                limiterOptions.SegmentsPerWindow = 6;
+                limiterOptions.PermitLimit = rateLimitOptions.PermitLimit;
+                limiterOptions.Window = TimeSpan.FromMinutes(rateLimitOptions.WindowMinutes);
+                limiterOptions.SegmentsPerWindow = rateLimitOptions.SegmentsPerWindow;
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                limiterOptions.QueueLimit = 0;
+                limiterOptions.QueueLimit = rateLimitOptions.QueueLimit;
             });
         });
 

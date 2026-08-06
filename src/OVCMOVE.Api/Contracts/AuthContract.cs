@@ -37,6 +37,12 @@ public class AuthContract
     public class LogoutRequest { }
     public class RefreshTokenRequest { }
 
+    public class RemoveBanRequest
+    {
+        public string IpAddress { get; init;} = string.Empty;
+        public string Username { get; init;} = string.Empty;
+    }
+
     // --- RESPONSE ---
     public class LoginResponse
     {

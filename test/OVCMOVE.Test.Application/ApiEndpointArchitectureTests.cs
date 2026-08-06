@@ -15,7 +15,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(AuthController),
             "api/v1/[controller]",
-            5
+            6
         },
         {
             typeof(ImageController),

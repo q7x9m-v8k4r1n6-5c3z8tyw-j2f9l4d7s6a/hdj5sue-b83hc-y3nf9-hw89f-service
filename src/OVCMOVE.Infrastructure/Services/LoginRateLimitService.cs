@@ -24,7 +24,7 @@ public class LoginRateLimitService : ILoginRateLimitService
     public void CheckIfBanned(string ipAddress, string username)
     {
         if (_cache.TryGetValue($"Ban_IP_{ipAddress}", out string? ipBanReason))
-            throw new ApplicationForbiddenException($"[BANNED] IP của bạn đã bị khóa do {ipBanReason}");
+            throw new ApplicationForbiddenException($"[BANNED] IP {ipAddress} của bạn đã bị khóa do {ipBanReason}");
             
         if (_cache.TryGetValue($"Ban_User_{username}", out string? userBanReason))
             throw new ApplicationForbiddenException($"[BANNED] Tài khoản đã bị khóa do {userBanReason}");
@@ -76,6 +76,23 @@ public class LoginRateLimitService : ILoginRateLimitService
         
         _cache.Remove($"Fail_User_{username}");
         _cache.Remove($"Wait_User_{username}");
+    }
+
+    public void RemoveBan(string? ipAddress, string? username)
+    {
+        if (!string.IsNullOrWhiteSpace(ipAddress))
+        {
+            _cache.Remove($"Fail_IP_{ipAddress}");
+            _cache.Remove($"Wait_IP_{ipAddress}");
+            _cache.Remove($"Ban_IP_{ipAddress}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            _cache.Remove($"Fail_User_{username}");
+            _cache.Remove($"Wait_User_{username}");
+            _cache.Remove($"Ban_User_{username}");
+        }
     }
 
     private void Penalize(string failKey, string waitKey, string banKey)

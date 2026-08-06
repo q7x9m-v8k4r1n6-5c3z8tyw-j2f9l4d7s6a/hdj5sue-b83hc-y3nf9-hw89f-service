@@ -11,6 +11,7 @@ using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
 using OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
+using OVCMOVE.Application.Features.Auth.Command.RemoveBan;
 using OVCMOVE.Application.Features.Auth.Query.GetMe;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
@@ -58,7 +59,7 @@ public class AuthController : BaseController
     [DisableRateLimiting]
     public async Task<IActionResult> Login(
         [FromBody] AuthContract.LoginRequest request,
-        [FromServices] ILoginRateLimitService lockoutService,
+        [FromServices] ILoginRateLimitService service,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -68,15 +69,15 @@ public class AuthController : BaseController
             throw new ApplicationValidationException("Không thể xác định địa chỉ IP. Yêu cầu bị từ chối.");
         var username = request.Username;
 
-        lockoutService.CheckIfBanned(ipAddress, username);
-        lockoutService.CheckWaitingTime(ipAddress, username);
+        service.CheckIfBanned(ipAddress, username);
+        service.CheckWaitingTime(ipAddress, username);
 
         try
         {
             var command = request.ToCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            lockoutService.ResetLimit(ipAddress, username);
+            service.ResetLimit(ipAddress, username);
             
             SetRefreshTokenCookie(
                 result.RefreshToken,
@@ -87,7 +88,7 @@ public class AuthController : BaseController
         }
         catch (UnauthorizedAccessException)
         {
-            lockoutService.RecordFailedAttempt(ipAddress, username);
+            service.RecordFailedAttempt(ipAddress, username);
             throw;
         }
     }
@@ -149,6 +150,21 @@ public class AuthController : BaseController
             result.RefreshTokenExpiration);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    [HttpPost("remove-ban")]
+    [RequirePermission(PermissionCodes.TeamManage)]
+    public async Task<IActionResult> RemoveBan([FromBody] AuthContract.RemoveBanRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(request.IpAddress) && string.IsNullOrWhiteSpace(request.Username))
+            throw new ApplicationValidationException("Phải cung cấp ít nhất IP hoặc Username để gỡ ban.");
+
+        var command = new RemoveBanCommand(request.IpAddress, request.Username);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        return Ok(ApiResponse.Success(result, "Đã gỡ ban thành công."));
     }
 
     /// <summary>Stores the refresh token in a secure, server-only cookie.</summary>

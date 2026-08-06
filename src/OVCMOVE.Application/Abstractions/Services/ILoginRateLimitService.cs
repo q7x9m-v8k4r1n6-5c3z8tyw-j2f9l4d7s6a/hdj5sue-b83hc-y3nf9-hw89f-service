@@ -6,4 +6,5 @@ public interface ILoginRateLimitService
     void CheckWaitingTime(string ipAddress, string username);
     void RecordFailedAttempt(string ipAddress, string username);
     void ResetLimit(string ipAddress, string username);
+    void RemoveBan(string? ipAddress, string? username);
 }

@@ -74,10 +74,18 @@ public class BoothRepository : IBoothRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var affectedRows = await _db.ExecuteAsync(
-            BoothQueries.TryOccupyBoothQuery(),
-            new { BoothId = boothId, TeamId = teamId },
-            cancellationToken);
+        int affectedRows;
+        try
+        {
+            affectedRows = await _db.ExecuteAsync(
+                BoothQueries.TryOccupyBoothQuery(),
+                new { BoothId = boothId, TeamId = teamId },
+                cancellationToken);
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            return false;
+        }
 
         return affectedRows == 1;
     }

@@ -14,7 +14,33 @@ BEGIN TRY
     IF COL_LENGTH(N'dbo.Race', N'Rules') IS NULL
     BEGIN
         ALTER TABLE [dbo].[Race]
-            ADD [Rules] NVARCHAR(MAX) NULL;
+            ADD [Rules] NVARCHAR(MAX) NOT NULL
+                CONSTRAINT [DF_Race_Rules] DEFAULT (N'');
+    END;
+
+    IF COL_LENGTH(N'dbo.Race', N'Rules') IS NOT NULL
+    BEGIN
+        UPDATE [dbo].[Race]
+        SET [Rules] = N''
+        WHERE [Rules] IS NULL;
+
+        ALTER TABLE [dbo].[Race]
+            ALTER COLUMN [Rules] NVARCHAR(MAX) NOT NULL;
+
+        IF NOT EXISTS
+        (
+            SELECT 1
+            FROM sys.default_constraints dc
+            INNER JOIN sys.columns columnInfo
+                ON columnInfo.[object_id] = dc.[parent_object_id]
+               AND columnInfo.[column_id] = dc.[parent_column_id]
+            WHERE dc.[parent_object_id] = OBJECT_ID(N'dbo.Race')
+              AND columnInfo.[name] = N'Rules'
+        )
+        BEGIN
+            ALTER TABLE [dbo].[Race]
+                ADD CONSTRAINT [DF_Race_Rules] DEFAULT (N'') FOR [Rules];
+        END;
     END;
 
     DECLARE @ArchivedDuplicateCompletions TABLE
@@ -86,6 +112,46 @@ BEGIN TRY
             WHERE [IsDeleted] = 0
               AND [BoothId] IS NOT NULL
               AND [ReasonCode] = N'BOOTH_COMPLETED';
+    END;
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM sys.indexes
+        WHERE [object_id] = OBJECT_ID(N'dbo.Booth')
+          AND [name] = N'UX_Booth_OccupiedTeam'
+    )
+    BEGIN
+        ;WITH RankedOccupiedBooths AS
+        (
+            SELECT
+                [Id],
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY [TeamId]
+                    ORDER BY [ModifiedAt] DESC, [Id]
+                ) AS [OccupancyNumber]
+            FROM [dbo].[Booth]
+            WHERE [IsDeleted] = 0
+              AND [TeamId] IS NOT NULL
+              AND [Status] = N'occupied'
+        )
+        UPDATE booth
+        SET
+            [Status] = N'free',
+            [TeamId] = NULL,
+            [ModifiedBy] = N'booth-participation-migration',
+            [ModifiedAt] = SYSUTCDATETIME()
+        FROM [dbo].[Booth] booth
+        INNER JOIN RankedOccupiedBooths ranked
+            ON ranked.[Id] = booth.[Id]
+        WHERE ranked.[OccupancyNumber] > 1;
+
+        CREATE UNIQUE INDEX [UX_Booth_OccupiedTeam]
+            ON [dbo].[Booth] ([TeamId])
+            WHERE [IsDeleted] = 0
+              AND [TeamId] IS NOT NULL
+              AND [Status] = N'occupied';
     END;
 
     IF NOT EXISTS

@@ -259,16 +259,18 @@ public class RaceController : BaseController
     [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
-        var teamId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? string.Empty;
-
-        var rules = await _mediator.Send(
-            new GetRaceRulesQuery { RaceId = raceId, TeamId = Guid.Parse(teamId) },
+        var result = await _mediator.Send(
+            new GetRaceRulesQuery
+            {
+                RaceId = raceId,
+                TeamId = GetRequiredCurrentUserId()
+            },
             cancellationToken);
 
-        if (rules is null)
+        if (!result.IsTeamInRace)
             return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trận đấu này."));
 
-        return Ok(ApiResponse.Success(new { Rules = rules }));
+        return Ok(ApiResponse.Success(new { result.Rules }));
     }
     [HttpGet("{raceId:guid}/rules/admin")]
     [RequirePermission(PermissionCodes.RaceManage)]

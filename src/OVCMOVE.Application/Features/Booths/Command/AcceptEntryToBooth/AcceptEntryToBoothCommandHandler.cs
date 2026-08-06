@@ -65,7 +65,7 @@ public class AcceptEntryToBoothCommandHandler
             cancellationToken);
         if (!isOccupied)
         {
-            return (false, "Trạm đang có đội khác sử dụng.");
+            return (false, "Trạm đang được sử dụng hoặc đội đang ở trạm khác.");
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);

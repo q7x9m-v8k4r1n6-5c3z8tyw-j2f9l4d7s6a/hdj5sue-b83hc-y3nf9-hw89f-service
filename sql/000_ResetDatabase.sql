@@ -151,7 +151,8 @@ BEGIN TRY
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Race_Status] DEFAULT (N'draft'),
         [CoverUrl] NVARCHAR(2048) NULL,
-        [Rules] NVARCHAR(MAX) NULL,
+        [Rules] NVARCHAR(MAX) NOT NULL
+            CONSTRAINT [DF_Race_Rules] DEFAULT (N''),
         [IsToggledLeaderboard] BIT NOT NULL
             CONSTRAINT [DF_Race_IsToggledLeaderboard] DEFAULT (0),
         [IsHiddenPoint] BIT NOT NULL
@@ -200,6 +201,12 @@ BEGIN TRY
     EXEC sys.sp_executesql N'
         CREATE INDEX [IX_Booth_RaceID]
             ON [dbo].[Booth] ([RaceID]);
+
+        CREATE UNIQUE INDEX [UX_Booth_OccupiedTeam]
+            ON [dbo].[Booth] ([TeamId])
+            WHERE [IsDeleted] = 0
+              AND [TeamId] IS NOT NULL
+              AND [Status] = N''occupied'';
     ';
 
     CREATE TABLE [dbo].[BoothOrganizer]

@@ -370,7 +370,7 @@ public static class RaceQueries
         WHERE RaceID = @RaceId AND TeamID = @TeamId AND IsDeleted = 0
     ) THEN 1 ELSE 0 END;";
     public static string GetRaceRulesQuery() => @"
-    SELECT [Rules]
+    SELECT COALESCE([Rules], N'')
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
     public static string GetBoothProgressQuery() => @"

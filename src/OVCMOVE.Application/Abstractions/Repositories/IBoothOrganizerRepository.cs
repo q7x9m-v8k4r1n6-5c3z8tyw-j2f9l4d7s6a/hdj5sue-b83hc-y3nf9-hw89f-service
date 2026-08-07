@@ -16,4 +16,9 @@ public interface IBoothOrganizerRepository
     Guid organizerId,
     Guid raceId,
     CancellationToken cancellationToken = default);
+
+    Task<bool> IsAssignedAsync(
+        Guid organizerId,
+        Guid boothId,
+        CancellationToken cancellationToken = default);
 }

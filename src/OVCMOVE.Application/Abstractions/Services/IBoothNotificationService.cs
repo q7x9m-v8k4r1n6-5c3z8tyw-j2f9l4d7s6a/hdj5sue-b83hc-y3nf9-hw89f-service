@@ -18,4 +18,10 @@ public interface IBoothNotificationService
         Guid teamId,
         int delta,
         CancellationToken cancellationToken = default);
+
+    Task NotifyBoothEntryCancelledAsync(
+        Guid raceId,
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
 }

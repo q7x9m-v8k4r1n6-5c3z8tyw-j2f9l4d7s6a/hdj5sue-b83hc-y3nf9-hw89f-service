@@ -14,6 +14,8 @@ public static class BoothQueries
                 Place,
                 Description,
                 RaceID,
+                TeamId,
+                IsHidden,
                 Status,
                 CreatedBy,
                 CreatedAt,
@@ -25,6 +27,28 @@ public static class BoothQueries
         ";
     }
 
+    public static string TryOccupyBoothQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'occupied',
+            [TeamId] = @TeamId,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'free'
+          AND [TeamId] IS NULL;";
+
+    public static string TryReleaseBoothQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'free',
+            [TeamId] = NULL,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'occupied'
+          AND [TeamId] = @TeamId;";
+
     /// <summary>
     /// Query cộng điểm tích lũy cho Đội chơi
     /// </summary>
@@ -35,9 +59,20 @@ public static class BoothQueries
             SET rt.TotalScore = rt.TotalScore + @Score
             FROM dbo.RaceTeam rt
             INNER JOIN dbo.Booth b ON b.RaceID = rt.RaceID
-            WHERE b.Id = @BoothId AND rt.TeamID = @TeamId;
+            WHERE b.Id = @BoothId
+              AND b.Status = N'occupied'
+              AND b.TeamId = @TeamId
+              AND rt.TeamID = @TeamId
+              AND rt.IsDeleted = 0;
         ";
     }
+
+    public static string GetRaceTeamScoreQuery() => @"
+        SELECT [TotalScore]
+        FROM [dbo].[RaceTeam]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0;";
 
     /// <summary>
     /// Query giải phóng trạng thái Trạm về lại 'Free' sau khi chấm điểm xong
@@ -47,7 +82,9 @@ public static class BoothQueries
         return @"
             UPDATE dbo.Booth
             SET Status = 'free', TeamId = NULL
-            WHERE Id = @BoothId;
+            WHERE Id = @BoothId
+              AND Status = N'occupied'
+              AND TeamId = @TeamId;
         ";
     }
 

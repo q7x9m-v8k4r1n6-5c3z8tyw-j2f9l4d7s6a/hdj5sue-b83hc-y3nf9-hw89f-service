@@ -4,6 +4,8 @@ using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE.Infrastructure.Persistence.Queries;
+using OVCMOVE.Application.Common;
+using Microsoft.Data.SqlClient;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -65,6 +67,44 @@ public class BoothRepository : IBoothRepository
         return affectedRows >= 1;
     }
 
+    public async Task<bool> TryOccupyAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        int affectedRows;
+        try
+        {
+            affectedRows = await _db.ExecuteAsync(
+                BoothQueries.TryOccupyBoothQuery(),
+                new { BoothId = boothId, TeamId = teamId },
+                cancellationToken);
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            return false;
+        }
+
+        return affectedRows == 1;
+    }
+
+    public async Task<bool> TryReleaseAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            BoothQueries.TryReleaseBoothQuery(),
+            new { BoothId = boothId, TeamId = teamId },
+            cancellationToken);
+
+        return affectedRows == 1;
+    }
+
     public Task DeleteAsync(Guid boothId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -84,44 +124,72 @@ public class BoothRepository : IBoothRepository
         var booth = await GetByIdAsync(model.BoothId, cancellationToken);
         if (booth is null) return false;
 
-        var currentScore = await _db.QueryFirstOrDefaultAsync<int>(
-            "SELECT ISNULL(TotalScore, 0) FROM dbo.RaceTeam WHERE RaceID = @RaceId AND TeamID = @TeamId;",
+        var currentScore = await _db.QueryFirstOrDefaultAsync<int?>(
+            BoothQueries.GetRaceTeamScoreQuery(),
             new { RaceId = booth.RaceId, TeamId = model.TeamId },
             cancellationToken: cancellationToken);
 
-        var scoreBefore = currentScore;
+        if (currentScore is null)
+        {
+            throw new ApplicationValidationException(
+                "Đội không tham gia giải đua của trạm này.");
+        }
+
+        var scoreBefore = currentScore.Value;
         var scoreAfter = scoreBefore + model.Score;
 
-        await _db.ExecuteAsync(
+        var scoreRows = await _db.ExecuteAsync(
             BoothQueries.UpdateTeamScoreQuery(),
             new { BoothId = model.BoothId, TeamId = model.TeamId, Score = model.Score },
             cancellationToken: cancellationToken);
 
-        await _db.ExecuteAsync(
+        if (scoreRows != 1)
+        {
+            throw new ApplicationConflictException(
+                "Đội không còn chiếm trạm này.");
+        }
+
+        var releaseRows = await _db.ExecuteAsync(
             BoothQueries.ReleaseBoothStatusQuery(),
-            new { BoothId = model.BoothId },
+            new { BoothId = model.BoothId, TeamId = model.TeamId },
             cancellationToken: cancellationToken);
 
-        await _db.ExecuteAsync(
-            BoothQueries.InsertScoringLogQuery(),
-            new
-            {
-                Id = Guid.NewGuid(),
-                EventCode = model.EventCode,
-                EventName = model.EventName,
-                RaceId = booth.RaceId,
-                TeamId = model.TeamId,
-                ActorId = model.OrganizerId,
-                BoothId = model.BoothId,
-                Delta = model.Score,
-                ScoreBefore = scoreBefore,
-                ScoreAfter = scoreAfter,
-                ReasonCode = model.ReasonCode,
-                Reason = model.Reason,
-                CreatedBy = model.OrganizerId.ToString(),
-                ModifiedBy = model.OrganizerId.ToString()
-            },
-            cancellationToken: cancellationToken);
+        if (releaseRows != 1)
+        {
+            throw new ApplicationConflictException(
+                "Không thể giải phóng trạm sau khi chấm điểm.");
+        }
+
+        try
+        {
+            var logRows = await _db.ExecuteAsync(
+                BoothQueries.InsertScoringLogQuery(),
+                new
+                {
+                    Id = Guid.NewGuid(),
+                    EventCode = model.EventCode,
+                    EventName = model.EventName,
+                    RaceId = booth.RaceId,
+                    TeamId = model.TeamId,
+                    ActorId = model.OrganizerId,
+                    BoothId = model.BoothId,
+                    Delta = model.Score,
+                    ScoreBefore = scoreBefore,
+                    ScoreAfter = scoreAfter,
+                    ReasonCode = model.ReasonCode,
+                    Reason = model.Reason,
+                    CreatedBy = model.OrganizerId.ToString(),
+                    ModifiedBy = model.OrganizerId.ToString()
+                },
+                cancellationToken: cancellationToken);
+            PersistenceWriteGuard.EnsureInserted(logRows, nameof(ScoringLog));
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            throw new ApplicationConflictException(
+                "Đội đã hoàn thành trạm này.",
+                exception);
+        }
 
         return true;
     }

@@ -1,10 +1,8 @@
 ﻿using MediatR;
+namespace OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
 
-namespace OVCMOVE.Application.Features.Booths.Query.GetMyBooth
+public class GetMyBoothQuery : IRequest<MyBoothResultModel?>
 {
-    public class GetMyBoothQuery : IRequest<Guid?>
-    {
-        public Guid RaceId { get; set; }
-        public Guid OrganizerId { get; set; }
-    }
+    public Guid RaceId { get; set; }
+    public Guid OrganizerId { get; set; }
 }

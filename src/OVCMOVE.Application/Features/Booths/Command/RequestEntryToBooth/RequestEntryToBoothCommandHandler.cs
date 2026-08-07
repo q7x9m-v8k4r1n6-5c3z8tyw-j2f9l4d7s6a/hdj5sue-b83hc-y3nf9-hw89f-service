@@ -2,6 +2,7 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Domain.Constants;
+using OVCMOVE.Application.Features.Booths.Common;
 
 namespace OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 
@@ -9,15 +10,18 @@ public class RequestEntryToBoothCommandHandler
     : IRequestHandler<RequestEntryToBoothCommand, (bool IsSuccess, string Message)>
 {
     private readonly IBoothRepository _boothRepository;
+    private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
 
     public RequestEntryToBoothCommandHandler(
         IBoothRepository boothRepository,
+        IRaceRepository raceRepository,
         IBoothNotificationService notificationService,
         IUserRepository userRepository)
     {
         _boothRepository = boothRepository;
+        _raceRepository = raceRepository;
         _notificationService = notificationService;
         _userRepository = userRepository;
     }
@@ -37,6 +41,17 @@ public class RequestEntryToBoothCommandHandler
             return (false, "Trạm thi đấu đang có đội khác sử dụng.");
         }
 
+        var progress = await _raceRepository.GetBoothProgressAsync(
+            booth.RaceId,
+            request.TeamId,
+            request.BoothId,
+            cancellationToken);
+        var entryError = BoothParticipationPolicy.GetEntryError(booth, progress);
+        if (entryError is not null)
+        {
+            return (false, entryError);
+        }
+
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);
         var teamName = !string.IsNullOrWhiteSpace(teamUser?.DisplayName)
             ? teamUser.DisplayName
@@ -45,7 +60,7 @@ public class RequestEntryToBoothCommandHandler
         await _notificationService.NotifyBoothStatusChangedAsync(
             booth.RaceId,
             request.BoothId,
-            "Pending",
+            BoothConstants.BoothStatus.Pending,
             request.TeamId,
             teamName,
             cancellationToken);

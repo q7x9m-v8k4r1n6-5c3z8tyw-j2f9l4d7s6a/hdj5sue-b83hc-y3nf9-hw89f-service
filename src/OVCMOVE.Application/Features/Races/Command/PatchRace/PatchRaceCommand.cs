@@ -22,6 +22,7 @@ public class PatchRaceCommand : AuditedRequest, IRequest<RaceDetailResultModel?>
         public DateTime? TimeEnd { get; set; }
         public string? Place { get; set; }
         public string? CoverUrl { get; set; }
+        public string? Rules { get; set; }
         public string? Status { get; set; }
     }
 

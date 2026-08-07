@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\plugin\OVCMOVE.2026.Plugin\OVCMOVE.2026.Plugin.csproj" />
+    <ProjectReference Include="..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj" />
     <ProjectReference Include="..\OVCMOVE.Application\OVCMOVE.Application.csproj" />
     <ProjectReference Include="..\OVCMOVE.Infrastructure\OVCMOVE.Infrastructure.csproj" />
   </ItemGroup>

@@ -43,7 +43,7 @@ public class ArchitectureTests
     public void Plugin_DoesNotReferenceInfrastructureOrApi()
     {
         var references = typeof(
-            OVCMOVE.Move2026.Plugin.DependencyInjection).Assembly
+            OVCMOVE2026.Plugin.DependencyInjection).Assembly
             .GetReferencedAssemblies()
             .Select(reference => reference.Name);
 

@@ -7,7 +7,7 @@ using OVCMOVE.API.Hubs;
 using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure;
-using OVCMOVE.Move2026.Plugin;
+using OVCMOVE2026.Plugin;
 
 var builder = WebApplication.CreateBuilder(args);
 

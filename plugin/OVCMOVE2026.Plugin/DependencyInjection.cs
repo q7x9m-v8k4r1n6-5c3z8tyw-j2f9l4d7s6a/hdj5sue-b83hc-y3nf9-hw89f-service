@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace OVCMOVE.Move2026.Plugin;
+namespace OVCMOVE2026.Plugin;
 
 /// <summary>Registers the optional MOVE 2026 feature module.</summary>
 public static class DependencyInjection

@@ -50,4 +50,19 @@ public sealed class BoothOrganizerRepository : IBoothOrganizerRepository
             new { OrganizerId = organizerId, RaceId = raceId },
             cancellationToken);
     }
+
+    public async Task<bool> IsAssignedAsync(
+        Guid organizerId,
+        Guid boothId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.CheckBoothOrganizerAssignmentQuery(),
+            new { OrganizerId = organizerId, BoothId = boothId },
+            cancellationToken);
+
+        return result == 1;
+    }
 }

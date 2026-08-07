@@ -4,7 +4,9 @@ using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
+using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
+using OVCMOVE.Application.Features.Booths.Common;
 using TeamLeaderboardFeature =
     OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Entities;
@@ -13,6 +15,54 @@ namespace OVCMOVE.Test.Application;
 
 public class TeamLeaderboardQueryHandlerTests
 {
+    [Fact]
+    public async Task RaceRules_TeamInRaceWithNullRules_ReturnsEmptyRules()
+    {
+        var raceId = Guid.NewGuid();
+        var repository = new RaceRepositoryStub(
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            teamInRace: true,
+            rules: null);
+        var handler = new GetRaceRulesQueryHandler(repository);
+
+        var result = await handler.Handle(
+            new GetRaceRulesQuery
+            {
+                RaceId = raceId,
+                TeamId = Guid.NewGuid()
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsTeamInRace);
+        Assert.Equal(string.Empty, result.Rules);
+    }
+
+    [Fact]
+    public async Task RaceRules_TeamOutsideRace_IsReportedSeparately()
+    {
+        var raceId = Guid.NewGuid();
+        var repository = new RaceRepositoryStub(
+            new Race { Id = raceId },
+            [],
+            (0, 0),
+            teamInRace: false,
+            rules: "Rules");
+        var handler = new GetRaceRulesQueryHandler(repository);
+
+        var result = await handler.Handle(
+            new GetRaceRulesQuery
+            {
+                RaceId = raceId,
+                TeamId = Guid.NewGuid()
+            },
+            CancellationToken.None);
+
+        Assert.False(result.IsTeamInRace);
+        Assert.Equal(string.Empty, result.Rules);
+    }
+
     [Fact]
     public async Task ScoreHistory_UsesCurrentTeamFilterAndMapsSharedAdminLog()
     {
@@ -144,7 +194,9 @@ public class TeamLeaderboardQueryHandlerTests
         List<TeamLeaderboardResultModel> leaderboard,
         (int CompletedRegularBooths, int CompletedHiddenBooths) stats,
         IReadOnlyCollection<ScoringLogResultModel>? scoringLogs = null,
-        int? currentScore = 0)
+        int? currentScore = 0,
+        bool teamInRace = true,
+        string? rules = "")
         : IRaceRepository
     {
         public Guid? LastScoringLogTeamId { get; private set; }
@@ -228,6 +280,24 @@ public class TeamLeaderboardQueryHandlerTests
 
         public Task CreateScoringLogAsync(
             ScoringLog log,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> IsTeamInRaceAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(teamInRace);
+
+        public Task<string?> GetRulesAsync(
+            Guid raceId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(rules);
+
+        public Task<BoothProgressResultModel> GetBoothProgressAsync(
+            Guid raceId,
+            Guid teamId,
+            Guid boothId,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

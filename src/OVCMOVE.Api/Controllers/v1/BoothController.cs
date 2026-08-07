@@ -2,12 +2,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
+using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
-using OVCMOVE.Application.DTOs.Booth;
 using OVCMOVE.Application.Features.Booths.Commands.AcceptEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
+using OVCMOVE.Application.Features.Booths.Commands.CancelBoothSession;
 using System.Security.Claims;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -30,7 +32,7 @@ public class BoothController : ControllerBase
     [HttpPost("submit-score")]
     [RequirePermission(PermissionCodes.BoothScoreSubmit)]
     public async Task<IActionResult> SubmitScore(
-        [FromBody] BoothScoringRequestDTO request,
+        [FromBody] BoothContract.SubmitScoreRequest request,
         CancellationToken cancellationToken)
     {
         //Tự động lấy ID của Organizer từ Token đăng nhập
@@ -40,9 +42,9 @@ public class BoothController : ControllerBase
 
         var command = new SubmitBoothScoreCommand
         {
-            BoothID = request.BoothID,
-            TeamID = request.TeamID,
-            OrganizerId = Guid.Parse(organizerId),
+            BoothID = request.BoothId,
+            TeamID = request.TeamId,
+            OrganizerId = ParseUserId(organizerId),
             Score = request.Score
         };
 
@@ -51,7 +53,9 @@ public class BoothController : ControllerBase
         if (!result)
             return BadRequest(ApiResponse.Error(ApiStatus.Codes.BadRequest, "Chấm điểm thất bại."));
 
-        return Ok(ApiResponse.Success(new { Message = "Chấm điểm và ghi nhật ký thành công!" }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(
+                "Chấm điểm và ghi nhật ký thành công!")));
     }
 
     /// <summary>
@@ -60,21 +64,25 @@ public class BoothController : ControllerBase
     [HttpPost("entry")]
     [RequirePermission(PermissionCodes.BoothEntryRequest)] // Đội đua quét QR vào trạm
     public async Task<IActionResult> Entry(
-        [FromBody] EntryToBoothDto request,
+        [FromBody] BoothContract.EntryRequest request,
         CancellationToken cancellationToken)
     {
         var command = new RequestEntryToBoothCommand
         {
             BoothId = request.BoothId,
-            TeamId = request.TeamId
+            TeamId = GetCurrentUserId()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
 
         if (!result.IsSuccess)
-            return BadRequest(ApiResponse.Error(ApiStatus.Codes.BadRequest, "Vào trạm thất bại."));
+            return BadRequest(ApiResponse.Error(
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                result.Message));
 
-        return Ok(ApiResponse.Success(new { Message = "Đã gửi yêu cầu vào trạm! Vui lòng chờ Ban tổ chức duyệt." }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(result.Message)));
     }
 
     /// <summary>
@@ -83,13 +91,14 @@ public class BoothController : ControllerBase
     [HttpPost("accept-entry")]
     [RequirePermission(PermissionCodes.BoothEntryManage)]
     public async Task<IActionResult> AcceptEntry(
-        [FromBody] AcceptEntryToBoothDto request,
+        [FromBody] BoothContract.AcceptEntryRequest request,
         CancellationToken cancellationToken)
     {
         var command = new AcceptEntryToBoothCommand
         {
             BoothId = request.BoothId,
-            TeamId = request.TeamId
+            TeamId = request.TeamId,
+            OrganizerId = GetCurrentUserId()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -97,7 +106,23 @@ public class BoothController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(ApiResponse.Error(ApiStatus.Codes.BadRequest, result.Message));
 
-        return Ok(ApiResponse.Success(new { Message = result.Message }));
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(result.Message)));
+    }
+
+    [HttpPost("{boothId:guid}/cancel-session")]
+    [RequirePermission(PermissionCodes.BoothEntryManage)]
+    public async Task<IActionResult> CancelSession(
+        Guid boothId,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new CancelBoothSessionCommand(boothId, GetCurrentUserId()),
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(
+                "Đã hủy lượt chơi và giải phóng trạm.")));
     }
 
     [HttpGet("my-booth")]
@@ -106,19 +131,30 @@ public class BoothController : ControllerBase
         [FromQuery] Guid raceId,
         CancellationToken cancellationToken)
     {
-        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                          ?? User.FindFirstValue("sub")
-                          ?? string.Empty;
-
-        var boothId = await _mediator.Send(
-            new GetMyBoothQuery { RaceId = raceId, OrganizerId = Guid.Parse(organizerId) },
+        var result = await _mediator.Send(
+            new GetMyBoothQuery
+            {
+                RaceId = raceId,
+                OrganizerId = GetCurrentUserId()
+            },
             cancellationToken);
 
-        if (boothId is null)
-            return NotFound(ApiResponse.Error(
-                ApiStatus.Codes.NotFound,
-                "Bạn chưa được gán vào trạm nào trong trận đấu này."));
+        if (result is null)
+            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trạm nào trong trận đấu này."));
 
-        return Ok(ApiResponse.Success(new { BoothId = boothId }));
+        return Ok(ApiResponse.Success(result.ToResponse()));
     }
+
+    private Guid GetCurrentUserId()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("sub")
+            ?? string.Empty;
+        return ParseUserId(userId);
+    }
+
+    private static Guid ParseUserId(string value) =>
+        Guid.TryParse(value, out var userId)
+            ? userId
+            : throw new UnauthorizedAccessException("Token không hợp lệ.");
 }

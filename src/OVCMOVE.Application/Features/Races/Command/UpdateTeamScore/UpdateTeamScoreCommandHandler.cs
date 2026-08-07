@@ -4,6 +4,7 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Domain.Entities;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 
@@ -67,8 +68,8 @@ public sealed class UpdateTeamScoreCommandHandler :
                 new ScoringLog
                 {
                     Id = Guid.NewGuid(),
-                    EventCode = "manual-score-adjustment",
-                    EventName = "Điều chỉnh điểm thủ công",
+                    EventCode = ScoringLogConstants.EventCode.ManualScoreAdjustment,
+                    EventName = ScoringLogConstants.EventName.ManualScoreAdjustment,
                     RaceId = request.RaceId,
                     TeamId = request.TeamId,
                     ActorId = null,
@@ -76,7 +77,7 @@ public sealed class UpdateTeamScoreCommandHandler :
                     Delta = request.Delta,
                     ScoreBefore = scoreBefore.Value,
                     ScoreAfter = scoreAfter,
-                    ReasonCode = "manual",
+                    ReasonCode = ScoringLogConstants.ReasonCode.Manual,
                     Reason = reason,
                     CreatedBy = actor,
                     CreatedAt = now,

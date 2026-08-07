@@ -12,6 +12,14 @@ public interface IBoothRepository
     Task<Booth?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<bool> UpdateAsync(Booth booth, CancellationToken cancellationToken = default);
+    Task<bool> TryOccupyAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
+    Task<bool> TryReleaseAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid boothId, CancellationToken cancellationToken = default);
 
     /// <summary>

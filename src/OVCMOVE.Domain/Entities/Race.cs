@@ -13,6 +13,7 @@ public class Race : BaseEntity
     public string Place { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? CoverUrl { get; set; }
+    public string? Rules { get; set; }
 
     public bool IsToggledLeaderboard { get; set; }
     public bool IsHiddenPoint { get; set; }

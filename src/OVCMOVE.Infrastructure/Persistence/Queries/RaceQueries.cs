@@ -35,13 +35,13 @@ public static class RaceQueries
           AND [ModifiedAt] = @ExpectedModifiedAt;";
 
     public static string GetRaceByIdQuery() => @"
-        SELECT
-            [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
-            [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
-            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
-        FROM [dbo].[Race]
-        WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
+    SELECT
+        [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
+        [Status], [Rules],
+        [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+        [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+    FROM [dbo].[Race]
+    WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetAllRacesQuery() => @"
         SELECT

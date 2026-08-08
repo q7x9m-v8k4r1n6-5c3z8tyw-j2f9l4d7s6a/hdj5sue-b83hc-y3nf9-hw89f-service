@@ -40,7 +40,7 @@ public static class RaceContractMapping
             TimeStart = basicInfo.TimeStart,
             TimeEnd = basicInfo.TimeEnd,
             Place = basicInfo.Place,
-            Rules = request.Rules,
+            Rules = basicInfo.Rules,
             IsToggledLeaderboard = settings.IsToggledLeaderboard,
             IsHiddenPoint = settings.IsHiddenPoint,
             OrganizerIds = request.OrganizerId ?? [],

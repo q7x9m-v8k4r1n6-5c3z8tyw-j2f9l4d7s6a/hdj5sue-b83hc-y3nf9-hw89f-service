@@ -28,7 +28,6 @@ public static class RaceContract
     {
         public BasicInfoModel BasicInfo { get; set; } = new();
         public List<Guid> OrganizerId { get; set; } = new();
-        public string? Rules { get; set; }
         // A race may be created before any team is assigned.
         public List<Guid> RaceTeam { get; set; } = new();
         public List<BoothInfoModel>? Booths { get; set; }
@@ -40,6 +39,7 @@ public static class RaceContract
             public DateTime TimeStart { get; set; }
             public DateTime TimeEnd { get; set; }
             public string Place { get; set; } = string.Empty;
+            public string? Rules {  get; set; } = string.Empty;
         }
 
         public class BoothInfoModel

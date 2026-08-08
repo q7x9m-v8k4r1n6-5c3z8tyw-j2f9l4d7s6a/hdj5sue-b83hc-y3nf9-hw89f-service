@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using OVCMOVE2026.Plugin.Repositories;
+using System.Reflection; 
 
 namespace OVCMOVE2026.Plugin;
 
@@ -8,7 +10,10 @@ public static class DependencyInjection
     public static IServiceCollection AddMove2026Plugin(
         this IServiceCollection services)
     {
-        // Register plugin-owned handlers and services here as the module grows.
+        services.AddScoped<ISecretMissionRepository, SecretMissionRepository>();
+
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
         return services;
     }
 }

@@ -9,6 +9,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OVCMOVE.Application\OVCMOVE.Application.csproj" />
+    <ProjectReference Include="..\..\src\OVCMOVE.Infrastructure\OVCMOVE.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

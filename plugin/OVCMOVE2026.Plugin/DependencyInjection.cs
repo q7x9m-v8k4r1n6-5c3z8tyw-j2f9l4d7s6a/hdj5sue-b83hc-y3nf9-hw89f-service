@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using OVCMOVE2026.Plugin.Repositories;
 using System.Reflection; 
+using OVCMOVE2026.Plugin.Repositories;
+using OVCMOVE2026.Plugin.Services.QrCode;
 
 namespace OVCMOVE2026.Plugin;
 
@@ -11,7 +12,8 @@ public static class DependencyInjection
         this IServiceCollection services)
     {
         services.AddScoped<ISecretMissionRepository, SecretMissionRepository>();
-
+        services.AddScoped<IQrCodeGeneratorService, QrCodeGeneratorService>();
+        
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
         return services;

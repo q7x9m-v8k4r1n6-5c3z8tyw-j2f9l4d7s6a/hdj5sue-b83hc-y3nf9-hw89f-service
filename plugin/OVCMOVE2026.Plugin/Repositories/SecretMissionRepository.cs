@@ -48,4 +48,37 @@ public class SecretMissionRepository : ISecretMissionRepository
             },
             cancellationToken: cancellationToken);
     }
+
+    public async Task UpdateClaimAsync(SecretMission mission, CancellationToken cancellationToken = default)
+    {
+        await _db.ExecuteAsync(
+            SecretMissionQueries.UpdateClaimQuery(),
+            new
+            {
+                mission.Id,
+                mission.TeamId,
+                mission.ReceivedBy,
+                mission.ReceivedTime
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<IEnumerable<SecretMission>> GetMissionsWithoutQrCodeAsync(CancellationToken cancellationToken = default)
+    {
+        return await _db.QueryAsync<SecretMission>(
+            SecretMissionQueries.GetMissionsWithoutQrCodeQuery(),
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task UpdateQrCodeUrlAsync(Guid id, string qrCodeUrl, CancellationToken cancellationToken = default)
+    {
+        await _db.ExecuteAsync(
+            SecretMissionQueries.UpdateQrCodeUrlQuery(),
+            new
+            {
+                Id = id,
+                QrCodeUrl = qrCodeUrl
+            },
+            cancellationToken: cancellationToken);
+    }
 }

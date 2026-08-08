@@ -111,7 +111,7 @@ public class PatchRaceCommandHandler :
             {
                 await _blobStorageService.TryDeleteAsync(
                     uploadedCoverUrl,
-                    CancellationToken.None);
+                    cancellationToken: CancellationToken.None);
             }
 
             throw;
@@ -122,7 +122,7 @@ public class PatchRaceCommandHandler :
         {
             await _blobStorageService.TryDeleteAsync(
                 previousCoverUrl,
-                CancellationToken.None);
+                cancellationToken: CancellationToken.None);
         }
 
         return await _raceRepository.GetDetailAsync(
@@ -143,7 +143,7 @@ public class PatchRaceCommandHandler :
             request.CoverImage.Stream,
             request.CoverImage.FileName,
             request.CoverImage.ContentType,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         request.BasicInfo ??= new PatchRaceCommand.BasicInfoPatchModel();
         request.BasicInfo.CoverUrl = coverUrl;

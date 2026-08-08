@@ -55,7 +55,7 @@ public class CreateRaceCommandHandler :
                 request.CoverImage.Stream,
                 request.CoverImage.FileName,
                 request.CoverImage.ContentType,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         try
@@ -129,7 +129,7 @@ public class CreateRaceCommandHandler :
             {
                 await _blobStorageService.TryDeleteAsync(
                     coverUrl,
-                    CancellationToken.None);
+                    cancellationToken: CancellationToken.None);
             }
 
             throw;

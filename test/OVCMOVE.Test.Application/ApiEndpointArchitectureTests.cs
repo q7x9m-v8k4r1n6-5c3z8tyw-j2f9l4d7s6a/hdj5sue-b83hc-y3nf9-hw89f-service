@@ -15,7 +15,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(AuthController),
             "api/v1/[controller]",
-            5
+            6
         },
         {
             typeof(ImageController),
@@ -35,7 +35,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(TeamController),
             "api/v1/[controller]",
-            7
+            9
         }
     };
 

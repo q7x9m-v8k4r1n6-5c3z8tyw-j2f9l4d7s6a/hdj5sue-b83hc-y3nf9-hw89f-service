@@ -28,3 +28,18 @@ public sealed class ConcurrencyConflictException : ApplicationConflictException
     {
     }
 }
+
+public class ApplicationRateLimitException : Exception
+{
+    public int RetryAfterSeconds { get; }
+
+    public ApplicationRateLimitException(int retryAfterSeconds, string message) : base(message) 
+    { 
+        RetryAfterSeconds = retryAfterSeconds;
+    }
+}
+
+public class ApplicationForbiddenException : Exception
+{
+    public ApplicationForbiddenException(string message) : base(message) { }
+}

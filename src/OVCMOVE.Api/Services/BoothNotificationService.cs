@@ -41,4 +41,19 @@ public class BoothNotificationService : IBoothNotificationService
             .Group($"Race_{raceId}")
             .ReceiveRaceScoreChanged(raceId, teamId, delta);
     }
+
+    public async Task NotifyBoothEntryCancelledAsync(
+        Guid raceId,
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"Booth_{boothId}")
+            .ReceiveBoothEntryCancelled(boothId, teamId);
+
+        await _hubContext.Clients
+            .Group($"Race_{raceId}")
+            .ReceiveBoothEntryCancelled(boothId, teamId);
+    }
 }

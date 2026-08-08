@@ -4,6 +4,8 @@ using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Application.Features.Booths.Common;
+using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Domain.Entities;
@@ -182,7 +184,10 @@ public class RaceRepository : IRaceRepository
 
         string sqlQuery = RaceQueries.GetTeamLeaderboardQuery();
         var parameters = new { RaceId = raceId };
-        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(sqlQuery, parameters);
+        var result = await _db.QueryAsync<TeamLeaderboardResultModel>(
+            sqlQuery,
+            parameters,
+            cancellationToken);
         return result.ToList();
     }
 
@@ -202,6 +207,7 @@ public class RaceRepository : IRaceRepository
         IReadOnlyCollection<ScoringLogResultModel> Items, 
         int TotalItems)> GetScoringLogPageByRaceIdAsync(
             Guid raceId,
+            Guid? teamId,
             int page,
             int pageSize,
             CancellationToken cancellationToken = default)
@@ -213,6 +219,7 @@ public class RaceRepository : IRaceRepository
             new
             {
                 RaceId = raceId,
+                TeamId = teamId,
                 Offset = (page - 1) * pageSize,
                 PageSize = pageSize
             },
@@ -220,10 +227,34 @@ public class RaceRepository : IRaceRepository
 
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             RaceQueries.CountScoringLogByRaceIdQuery(),
-            new { RaceId = raceId },
+            new { RaceId = raceId, TeamId = teamId },
             cancellationToken: cancellationToken);
 
         return (logs.ToArray(), totalItems);
+    }
+
+    public async Task<(
+        int CompletedRegularBooths,
+        int CompletedHiddenBooths)> GetCompletedBoothStatsAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var stats = await _db.QueryFirstOrDefaultAsync<CompletedBoothStatsRow>(
+            RaceQueries.GetCompletedBoothStatsQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken: cancellationToken);
+
+        return stats is null
+            ? (0, 0)
+            : (stats.CompletedRegularBooths, stats.CompletedHiddenBooths);
     }
 
     public Task<int?> GetRaceTeamScoreAsync(
@@ -298,17 +329,24 @@ public class RaceRepository : IRaceRepository
             new { RaceId = raceId },
             cancellationToken: cancellationToken);
     }
-    public async Task<int> CountCompletedNormalBoothsAsync(
-    Guid raceId,
-    Guid teamId,
-    CancellationToken cancellationToken = default)
+    public async Task<BoothProgressResultModel> GetBoothProgressAsync(
+        Guid raceId,
+        Guid teamId,
+        Guid boothId,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _db.QueryFirstOrDefaultAsync<int>(
-            RaceQueries.CountCompletedNormalBoothsQuery(),
-            new { RaceId = raceId, TeamId = teamId },
-            cancellationToken: cancellationToken);
+        return await _db.QueryFirstOrDefaultAsync<BoothProgressResultModel>(
+            RaceQueries.GetBoothProgressQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                BoothId = boothId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken) ?? new BoothProgressResultModel();
     }
 }
 
@@ -316,4 +354,10 @@ internal sealed class BoothOrganizerRow
 {
     public Guid BoothId { get; init; }
     public Guid OrganizerId { get; init; }
+}
+
+internal sealed class CompletedBoothStatsRow
+{
+    public int CompletedRegularBooths { get; init; }
+    public int CompletedHiddenBooths { get; init; }
 }

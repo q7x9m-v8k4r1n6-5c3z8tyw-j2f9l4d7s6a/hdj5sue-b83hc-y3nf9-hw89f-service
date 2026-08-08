@@ -11,4 +11,6 @@ public interface IBoothHubClient
     /// Phát sự kiện điểm của một đội trong trận đấu vừa thay đổi.
     /// </summary>
     Task ReceiveRaceScoreChanged(Guid raceId, Guid teamId, int delta);
+
+    Task ReceiveBoothEntryCancelled(Guid boothId, Guid teamId);
 }

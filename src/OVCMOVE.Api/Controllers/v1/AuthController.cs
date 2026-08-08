@@ -1,13 +1,17 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 using OVCMOVE.Api.Security;
+using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Features.Auth.Command.Login;
 using OVCMOVE.Application.Features.Auth.Command.Logout;
 using OVCMOVE.Application.Features.Auth.Command.Refresh;
 using OVCMOVE.Application.Features.Auth.Command.GoogleLogin;
+using OVCMOVE.Application.Features.Auth.Command.RemoveBan;
 using OVCMOVE.Application.Features.Auth.Query.GetMe;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
@@ -28,6 +32,7 @@ public class AuthController : BaseController
 
     [HttpGet("me")]
     [RequirePermission(PermissionCodes.AuthProfileRead)]
+    [DisableRateLimiting]
     public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
     {
         var userIdString = User.FindFirst(
@@ -51,18 +56,41 @@ public class AuthController : BaseController
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] AuthContract.LoginRequest request, CancellationToken cancellationToken)
+    [DisableRateLimiting]
+    public async Task<IActionResult> Login(
+        [FromBody] AuthContract.LoginRequest request,
+        [FromServices] ILoginRateLimitService service,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var command = request.ToCommand();
-        var result = await _mediator.Send(command, cancellationToken);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        if (string.IsNullOrWhiteSpace(ipAddress))
+            throw new ApplicationValidationException("Không thể xác định địa chỉ IP. Yêu cầu bị từ chối.");
+        var username = request.Username;
 
-        SetRefreshTokenCookie(
-            result.RefreshToken,
-            result.RefreshTokenExpiration);
+        service.CheckIfBanned(ipAddress, username);
+        service.CheckWaitingTime(ipAddress, username);
 
-        return Ok(ApiResponse.Success(result.ToResponse()));
+        try
+        {
+            var command = request.ToCommand();
+            var result = await _mediator.Send(command, cancellationToken);
+
+            service.ResetLimit(ipAddress, username);
+            
+            SetRefreshTokenCookie(
+                result.RefreshToken,
+                result.RefreshTokenExpiration);
+
+            return Ok(
+                ApiResponse.Success(result.ToResponse()));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            service.RecordFailedAttempt(ipAddress, username);
+            throw;
+        }
     }
 
     [HttpPost("logout")]
@@ -85,6 +113,7 @@ public class AuthController : BaseController
 
     [HttpPost("refresh-token")]
     [AllowAnonymous]
+    [DisableRateLimiting]
     public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -108,6 +137,7 @@ public class AuthController : BaseController
 
     [HttpPost("google-login")]
     [AllowAnonymous]
+    [EnableRateLimiting("InternalApiPolicy")]
     public async Task<IActionResult> GoogleLogin([FromBody] AuthContract.GoogleLoginRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -120,6 +150,21 @@ public class AuthController : BaseController
             result.RefreshTokenExpiration);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    [HttpPost("remove-ban")]
+    [RequirePermission(PermissionCodes.TeamManage)]
+    public async Task<IActionResult> RemoveBan([FromBody] AuthContract.RemoveBanRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(request.IpAddress) && string.IsNullOrWhiteSpace(request.Username))
+            throw new ApplicationValidationException("Phải cung cấp ít nhất IP hoặc Username để gỡ ban.");
+
+        var command = new RemoveBanCommand(request.IpAddress, request.Username);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        return Ok(ApiResponse.Success(result, "Đã gỡ ban thành công."));
     }
 
     /// <summary>Stores the refresh token in a secure, server-only cookie.</summary>

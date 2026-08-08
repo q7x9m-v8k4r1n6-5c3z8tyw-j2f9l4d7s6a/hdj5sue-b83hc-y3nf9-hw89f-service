@@ -3,6 +3,7 @@ using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Application.Features.Booths.Common;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
 
@@ -29,9 +30,15 @@ public interface IRaceRepository
         CancellationToken cancellationToken = default);
     Task<(IReadOnlyCollection<ScoringLogResultModel> Items, int TotalItems)> GetScoringLogPageByRaceIdAsync(
         Guid raceId,
+        Guid? teamId,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<(int CompletedRegularBooths, int CompletedHiddenBooths)>
+        GetCompletedBoothStatsAsync(
+            Guid raceId,
+            Guid teamId,
+            CancellationToken cancellationToken = default);
     Task<int?> GetRaceTeamScoreAsync(
         Guid raceId,
         Guid teamId,
@@ -51,8 +58,9 @@ public interface IRaceRepository
     Guid teamId,
     CancellationToken cancellationToken = default);
     Task<string?> GetRulesAsync(Guid raceId, CancellationToken cancellationToken = default);
-    Task<int> CountCompletedNormalBoothsAsync(
-    Guid raceId,
-    Guid teamId,
-    CancellationToken cancellationToken = default);
+    Task<BoothProgressResultModel> GetBoothProgressAsync(
+        Guid raceId,
+        Guid teamId,
+        Guid boothId,
+        CancellationToken cancellationToken = default);
 }

@@ -55,4 +55,16 @@ public static class SecretMissionQueries
             [ModifiedBy] = 'system-claim-mission',
             [ModifiedAt] = SYSUTCDATETIME()
         WHERE [Id] = @Id AND [IsDeleted] = 0;";
+
+    public static string GetMissionsWithoutQrCodeQuery() => $@"
+        SELECT {Columns}
+        FROM [dbo].[SecretMission]
+        WHERE [QrCodeUrl] IS NULL AND [IsDeleted] = 0;";
+
+    public static string UpdateQrCodeUrlQuery() => @"
+        UPDATE [dbo].[SecretMission]
+        SET [QrCodeUrl] = @QrCodeUrl,
+            [ModifiedBy] = 'system-generate-qr',
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @Id AND [IsDeleted] = 0;";
 }

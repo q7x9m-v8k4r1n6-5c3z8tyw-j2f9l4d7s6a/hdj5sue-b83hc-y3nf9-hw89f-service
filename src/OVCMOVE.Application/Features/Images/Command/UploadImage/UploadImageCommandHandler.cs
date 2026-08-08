@@ -22,5 +22,5 @@ public class UploadImageCommandHandler :
             request.File.Stream,
             request.File.FileName,
             request.File.ContentType,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 }

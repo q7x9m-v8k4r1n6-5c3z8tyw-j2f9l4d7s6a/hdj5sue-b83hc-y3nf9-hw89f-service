@@ -45,4 +45,14 @@ public static class SecretMissionQueries
             [SubmittedTime]
         FROM [dbo].[SecretMission]
         WHERE [Id] = @Id AND [TeamId] = @TeamId AND [IsDeleted] = 0;";
+
+    public static string UpdateClaimQuery() => @"
+        UPDATE [dbo].[SecretMission]
+        SET [IsAssigned] = 1,
+            [TeamId] = @TeamId,
+            [ReceivedBy] = @ReceivedBy,
+            [ReceivedTime] = @ReceivedTime,
+            [ModifiedBy] = 'system-claim-mission',
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @Id AND [IsDeleted] = 0;";
 }

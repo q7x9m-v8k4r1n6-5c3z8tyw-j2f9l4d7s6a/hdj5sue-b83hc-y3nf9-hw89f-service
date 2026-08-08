@@ -48,4 +48,18 @@ public class SecretMissionRepository : ISecretMissionRepository
             },
             cancellationToken: cancellationToken);
     }
+
+    public async Task UpdateClaimAsync(SecretMission mission, CancellationToken cancellationToken = default)
+    {
+        await _db.ExecuteAsync(
+            SecretMissionQueries.UpdateClaimQuery(),
+            new
+            {
+                mission.Id,
+                mission.TeamId,
+                mission.ReceivedBy,
+                mission.ReceivedTime
+            },
+            cancellationToken: cancellationToken);
+    }
 }

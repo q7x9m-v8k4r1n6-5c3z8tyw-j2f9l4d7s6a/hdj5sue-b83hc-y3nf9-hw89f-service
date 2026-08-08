@@ -12,6 +12,7 @@ using OVCMOVE2026.Plugin.Common;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
+using OVCMOVE2026.Plugin.CQRS.Commands.ClaimSecretMission;
 using OVCMOVE2026.Plugin.Models.Contracts;
 
 namespace OVCMOVE2026.Plugin.Controllers;
@@ -85,7 +86,6 @@ public class SecretMissionController : ControllerBase // Kế thừa class gốc
     [HttpGet("overview")]
     public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
     {
-        // Lấy ID của Đội đang đăng nhập
         var teamIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(teamIdString, out var teamId))
         {
@@ -116,6 +116,31 @@ public class SecretMissionController : ControllerBase // Kế thừa class gốc
         }
 
         return Ok(new { code = 200, message = "Thành công", data = result });
+    }
+
+    [HttpPost("{id:guid}/claim")]
+    public async Task<IActionResult> ClaimMission([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var teamIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(teamIdString, out var teamId))
+        {
+            return Unauthorized(new { code = 401, message = "Không lấy được thông tin đội chơi." });
+        }
+
+        var command = new ClaimSecretMissionCommand(id, teamId);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsNotFound)
+        {
+            return NotFound(new { code = 404, message = result.Message });
+        }
+        
+        if (result.IsConflict)
+        {
+            return StatusCode(409, new { code = 409, message = result.Message });
+        }
+
+        return Ok(new { code = 200, message = result.Message, data = true });
     }
     
 }

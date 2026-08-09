@@ -9,6 +9,7 @@ public interface IBlobStorageService
         Stream fileStream,
         string fileName,
         string contentType,
+        string? containerName = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -17,5 +18,6 @@ public interface IBlobStorageService
     /// </summary>
     Task<bool> TryDeleteAsync(
         string fileUrl,
+        string? containerName = null,
         CancellationToken cancellationToken = default);
 }

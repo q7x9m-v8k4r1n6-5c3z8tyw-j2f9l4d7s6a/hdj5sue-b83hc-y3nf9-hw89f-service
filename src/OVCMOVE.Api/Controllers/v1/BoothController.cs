@@ -35,7 +35,6 @@ public class BoothController : ControllerBase
         [FromBody] BoothContract.SubmitScoreRequest request,
         CancellationToken cancellationToken)
     {
-        //Tự động lấy ID của Organizer từ Token đăng nhập
         var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                           ?? User.FindFirstValue("sub")
                           ?? string.Empty;
@@ -62,7 +61,7 @@ public class BoothController : ControllerBase
     /// API: Check-in Đội đua vào Trạm (Entry)
     /// </summary>
     [HttpPost("entry")]
-    [RequirePermission(PermissionCodes.BoothEntryRequest)] // Đội đua quét QR vào trạm
+    [RequirePermission(PermissionCodes.BoothEntryRequest)]
     public async Task<IActionResult> Entry(
         [FromBody] BoothContract.EntryRequest request,
         CancellationToken cancellationToken)
@@ -140,7 +139,9 @@ public class BoothController : ControllerBase
             cancellationToken);
 
         if (result is null)
-            return NotFound(ApiResponse.Error(ApiStatus.Codes.NotFound, "Bạn chưa được gán vào trạm nào trong trận đấu này."));
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                "Bạn chưa được gán vào trạm nào trong trận đấu này."));
 
         return Ok(ApiResponse.Success(result.ToResponse()));
     }

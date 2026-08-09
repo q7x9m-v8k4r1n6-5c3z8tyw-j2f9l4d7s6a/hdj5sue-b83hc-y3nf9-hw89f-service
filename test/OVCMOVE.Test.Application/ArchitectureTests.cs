@@ -39,18 +39,6 @@ public class ArchitectureTests
         Assert.DoesNotContain("OVCMOVE.Api", references);
     }
 
-    [Fact(Skip = "Technical Debt: Chấp nhận cho Plugin gọi thẳng Infrastructure vì module này sẽ bị xóa vào năm sau.")]
-    public void Plugin_DoesNotReferenceInfrastructureOrApi()
-    {
-        var references = typeof(
-            OVCMOVE2026.Plugin.DependencyInjection).Assembly
-            .GetReferencedAssemblies()
-            .Select(reference => reference.Name);
-
-        Assert.DoesNotContain("OVCMOVE.Infrastructure", references);
-        Assert.DoesNotContain("OVCMOVE.Api", references);
-    }
-
     [Fact]
     public void DomainEntities_OnlyExposeDataMembers()
     {

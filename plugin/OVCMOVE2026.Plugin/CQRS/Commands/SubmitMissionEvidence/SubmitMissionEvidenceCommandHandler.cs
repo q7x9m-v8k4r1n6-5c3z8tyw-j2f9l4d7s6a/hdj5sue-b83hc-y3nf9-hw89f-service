@@ -1,8 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Configuration;
-
 using OVCMOVE.Application.Abstractions;
+using OVCMOVE.Application.Common; // <-- Dòng khắc phục lỗi
 using OVCMOVE2026.Plugin.Repositories;
+using OVCMOVE2026.Plugin.Models;
 
 namespace OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
 
@@ -22,51 +28,37 @@ public class SubmitMissionEvidenceCommandHandler : IRequestHandler<SubmitMission
         _configuration = configuration;
     }
 
-    public async Task<bool> Handle(SubmitMissionEvidenceCommand request, CancellationToken cancellationToken)
+    // ... using ...
+public async Task<bool> Handle(SubmitMissionEvidenceCommand request, CancellationToken cancellationToken)
+{
+    var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
+    if (mission == null || !mission.IsAssigned) throw new InvalidOperationException("Nhiệm vụ không hợp lệ.");
+
+    var containerName = _configuration["OVCMOVE_AzureBlobStorage:EviContainerName"] ?? "mission-evidence";
+    var newEvidences = new List<EvidenceFile>();
+    var now = DateTime.UtcNow;
+
+    async Task ProcessFiles(IEnumerable<FileUploadModel>? files, string fileType)
     {
-        var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
-        if (mission == null)
-            throw new InvalidOperationException("Không tìm thấy nhiệm vụ bí mật này."); 
-        if (!mission.IsAssigned)
-            throw new InvalidOperationException("Không thể nộp bằng chứng vì nhiệm vụ này chưa được nhận.");
-
-        var containerName = _configuration["OVCMOVE_AzureBlobStorage:EviContainerName"] ?? "mission-evidence";
-
-        var imageUrls = new List<string>();
-        if (request.Images?.Any() == true)
+        if (files == null) return;
+        foreach (var file in files)
         {
-            foreach (var image in request.Images)
+            var url = await _blobStorageService.UploadAsync(file.Stream, file.FileName, file.ContentType, containerName, cancellationToken);
+            newEvidences.Add(new EvidenceFile
             {
-                var url = await _blobStorageService.UploadAsync(
-                    image.Stream, image.FileName, image.ContentType, containerName, cancellationToken);
-                imageUrls.Add(url);
-            }
+                Id = Guid.NewGuid(), MissionId = request.MissionId,
+                Url = url, FileType = fileType,
+                CreatedAt = now, CreatedBy = request.SubmittedBy.ToString()
+            });
         }
-
-        var videoUrls = new List<string>();
-        if (request.Videos?.Any() == true)
-        {
-            foreach (var video in request.Videos)
-            {
-                var url = await _blobStorageService.UploadAsync(
-                    video.Stream, video.FileName, video.ContentType, containerName, cancellationToken);
-                videoUrls.Add(url);
-            }
-        }
-
-        if (!imageUrls.Any() && !videoUrls.Any())
-        {
-            throw new InvalidOperationException("Phải nộp ít nhất 1 ảnh hoặc 1 video để hoàn thành nhiệm vụ.");
-        }
-
-        mission.EvidenceImageUrl = imageUrls.Any() ? imageUrls : null;
-        mission.EvidenceVideoUrl = videoUrls.Any() ? videoUrls : null;
-        
-        mission.SubmittedBy = request.SubmittedBy;
-        mission.SubmittedTime = DateTime.UtcNow;
-
-        await _repository.UpdateEvidenceAsync(mission, cancellationToken);
-
-        return true;
     }
+
+    await ProcessFiles(request.Images, "image");
+    await ProcessFiles(request.Videos, "video");
+
+    if (!newEvidences.Any()) throw new InvalidOperationException("Phải nộp ít nhất 1 file.");
+
+    await _repository.AddEvidencesAsync(request.MissionId, request.SubmittedBy, newEvidences, cancellationToken);
+    return true;
+}
 }

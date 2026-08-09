@@ -1,5 +1,9 @@
-using System.Text.Json;
-using OVCMOVE.Infrastructure.Persistence.Dapper; // Mượn IDbExecutor từ Core
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Repositories.Queries;
 
@@ -14,71 +18,52 @@ public class SecretMissionRepository : ISecretMissionRepository
         _db = db;
     }
 
-    public async Task<SecretMission?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    private async Task<SecretMission?> QueryMissionWithEvidences(string missionSql, object param, CancellationToken cancellationToken)
     {
-        // Lưu ý từ Tech Lead: Tùy vào cấu hình Dapper của Core, nếu lúc chạy nó báo lỗi 
-        // không parse được JSON sang List<string>, ta sẽ cần gắn thêm 1 cái TypeHandler cho Dapper.
-        // Tạm thời cứ query chuẩn như vầy trước.
-        return await _db.QueryFirstOrDefaultAsync<SecretMission>(
-            SecretMissionQueries.GetByIdQuery(),
-            new { Id = id },
-            cancellationToken: cancellationToken);
+        var mission = await _db.QueryFirstOrDefaultAsync<SecretMission>(missionSql, param, cancellationToken);
+        
+        if (mission == null) return null;
+
+        var evidences = await _db.QueryAsync<EvidenceFile>(
+            SecretMissionQueries.GetEvidencesByMissionIdQuery(),
+            new { MissionId = mission.Id },
+            cancellationToken);
+
+        mission.Evidences = evidences?.ToList() ?? new List<EvidenceFile>();
+        
+        return mission;
+    }
+    public Task<SecretMission?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        QueryMissionWithEvidences(SecretMissionQueries.GetByIdQuery(), new { Id = id }, cancellationToken);
+
+    public Task<SecretMission?> GetDetailAsync(Guid id, Guid teamId, CancellationToken cancellationToken = default) =>
+        QueryMissionWithEvidences(SecretMissionQueries.GetDetailByIdAndTeamIdQuery(), new { Id = id, TeamId = teamId }, cancellationToken);
+
+    public async Task AddEvidencesAsync(Guid missionId, Guid submittedBy, List<EvidenceFile> evidences, CancellationToken cancellationToken = default)
+    {
+        // 1. Cập nhật state của Mission
+        await _db.ExecuteAsync(SecretMissionQueries.UpdateMissionSubmitStateQuery(), new { Id = missionId, SubmittedBy = submittedBy }, cancellationToken);
+        
+        // 2. Insert hàng loạt vào bảng con (Dapper tự động chạy vòng lặp cực nhanh)
+        if (evidences.Any())
+        {
+            await _db.ExecuteAsync(SecretMissionQueries.InsertEvidenceQuery(), evidences, cancellationToken);
+        }
     }
 
-    public async Task UpdateEvidenceAsync(SecretMission mission, CancellationToken cancellationToken = default)
-    {
-        // Chuyển List thành JSON string để lưu vào SQL Server
-        var evidenceImageUrlJson = mission.EvidenceImageUrl != null 
-            ? JsonSerializer.Serialize(mission.EvidenceImageUrl) 
-            : null;
-            
-        var evidenceVideoUrlJson = mission.EvidenceVideoUrl != null 
-            ? JsonSerializer.Serialize(mission.EvidenceVideoUrl) 
-            : null;
+    public async Task<EvidenceFile?> GetEvidenceByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _db.QueryFirstOrDefaultAsync<EvidenceFile>(SecretMissionQueries.GetEvidenceByIdQuery(), new { Id = id }, cancellationToken);
 
-        await _db.ExecuteAsync(
-            SecretMissionQueries.UpdateEvidenceQuery(),
-            new
-            {
-                mission.Id,
-                EvidenceImageUrl = evidenceImageUrlJson,
-                EvidenceVideoUrl = evidenceVideoUrlJson,
-                mission.SubmittedBy,
-                mission.SubmittedTime
-            },
-            cancellationToken: cancellationToken);
-    }
+    public async Task DeleteEvidenceAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(SecretMissionQueries.DeleteEvidenceQuery(), new { Id = id }, cancellationToken);
 
-    public async Task UpdateClaimAsync(SecretMission mission, CancellationToken cancellationToken = default)
-    {
-        await _db.ExecuteAsync(
-            SecretMissionQueries.UpdateClaimQuery(),
-            new
-            {
-                mission.Id,
-                mission.TeamId,
-                mission.ReceivedBy,
-                mission.ReceivedTime
-            },
-            cancellationToken: cancellationToken);
-    }
+    // Các hàm còn lại giữ nguyên
+    public async Task UpdateClaimAsync(SecretMission mission, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(SecretMissionQueries.UpdateClaimQuery(), mission, cancellationToken);
 
-    public async Task<IEnumerable<SecretMission>> GetMissionsWithoutQrCodeAsync(CancellationToken cancellationToken = default)
-    {
-        return await _db.QueryAsync<SecretMission>(
-            SecretMissionQueries.GetMissionsWithoutQrCodeQuery(),
-            cancellationToken: cancellationToken);
-    }
+    public async Task<IEnumerable<SecretMission>> GetMissionsWithoutQrCodeAsync(CancellationToken cancellationToken = default) =>
+        await _db.QueryAsync<SecretMission>(SecretMissionQueries.GetMissionsWithoutQrCodeQuery(), cancellationToken: cancellationToken);
 
-    public async Task UpdateQrCodeUrlAsync(Guid id, string qrCodeUrl, CancellationToken cancellationToken = default)
-    {
-        await _db.ExecuteAsync(
-            SecretMissionQueries.UpdateQrCodeUrlQuery(),
-            new
-            {
-                Id = id,
-                QrCodeUrl = qrCodeUrl
-            },
-            cancellationToken: cancellationToken);
-    }
+    public async Task UpdateQrCodeUrlAsync(Guid id, string qrCodeUrl, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(SecretMissionQueries.UpdateQrCodeUrlQuery(), new { Id = id, QrCodeUrl = qrCodeUrl }, cancellationToken);
 }

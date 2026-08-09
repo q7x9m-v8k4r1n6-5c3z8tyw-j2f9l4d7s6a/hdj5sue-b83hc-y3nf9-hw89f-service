@@ -1,10 +1,9 @@
+using System;
+using System.Collections.Generic;
 using OVCMOVE.Domain.Common;
 
 namespace OVCMOVE2026.Plugin.Models;
 
-/// <summary>
-/// Domain entity: nhiệm vụ ẩn ban đầu hoặc hộp mù dọc đường 
-/// </summary>
 public class SecretMission : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
@@ -18,9 +17,6 @@ public class SecretMission : BaseEntity
     public Guid? ReceivedBy { get; set; }
     public DateTime? ReceivedTime { get; set; }
     public Guid? SubmittedBy { get; set; }
-    public DateTime? SubmittedTime { get; set; }
     public string? QrCodeUrl { get; set; }
-    public List<string>? EvidenceVideoUrl { get; set; }
-    public List<string>? EvidenceImageUrl { get; set; }
-
+    public List<EvidenceFile> Evidences { get; set; } = new();
 }

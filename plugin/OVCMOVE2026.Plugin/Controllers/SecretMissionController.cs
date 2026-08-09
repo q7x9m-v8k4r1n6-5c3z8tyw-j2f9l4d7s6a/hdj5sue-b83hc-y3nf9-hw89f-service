@@ -2,7 +2,6 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-using Microsoft.AspNetCore.Http;
 using OVCMOVE.Application.Common; 
 using OVCMOVE2026.Plugin.Common; 
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
@@ -10,17 +9,17 @@ using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
 using OVCMOVE2026.Plugin.CQRS.Commands.ClaimSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
+using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
 using OVCMOVE2026.Plugin.Models.Contracts;
 
 namespace OVCMOVE2026.Plugin.Controllers;
 
 [Route("api/v1/plugin/secret-mission")]
-[ApiController] // Bắt buộc phải có khi dùng ControllerBase
-public class SecretMissionController : ControllerBase // Kế thừa class gốc của Microsoft
+[ApiController] 
+public class SecretMissionController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    // Tự Inject Mediator thay vì nhờ BaseController
     public SecretMissionController(IMediator mediator) 
     {
         _mediator = mediator;
@@ -35,7 +34,6 @@ public class SecretMissionController : ControllerBase // Kế thừa class gốc
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdString, out var submittedBy))
         {
-            // Trả về Object ẩn danh (Anonymous Object) có cấu trúc giống ApiResponse
             return Unauthorized(new { code = 401, message = "Không lấy được thông tin người dùng. Vui lòng đăng nhập lại." });
         }
 
@@ -149,7 +147,6 @@ public class SecretMissionController : ControllerBase // Kế thừa class gốc
         var command = new GenerateMissionQrCodesBatchCommand();
         var result = await _mediator.Send(command, cancellationToken);
 
-        // Nếu DB không trả về nhiệm vụ nào thiếu QR
         if (result.TotalGenerated == 0 && result.TotalFailed == 0)
         {
             return Ok(new 
@@ -166,6 +163,23 @@ public class SecretMissionController : ControllerBase // Kế thừa class gốc
             message = $"Xử lý hoàn tất. Tạo mới thành công: {result.TotalGenerated} mã. Bị lỗi: {result.TotalFailed} mã.", 
             data = result 
         });
+    }
+
+    /// <summary>
+    /// Xóa một file minh chứng (Ảnh hoặc Video) khỏi nhiệm vụ bí mật
+    /// </summary>
+    [HttpDelete("{missionId}/evidence/{fileId}")]
+    public async Task<IActionResult> DeleteEvidence(Guid missionId, Guid fileId, CancellationToken cancellationToken)
+    {
+        var command = new DeleteMissionEvidenceCommand(missionId, fileId);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result)
+        {
+            return NotFound(new { code = 404, message = "Không tìm thấy nhiệm vụ bí mật." });
+        }
+
+        return Ok(new { code = 200, message = "Xóa file minh chứng thành công." });
     }
     
 }

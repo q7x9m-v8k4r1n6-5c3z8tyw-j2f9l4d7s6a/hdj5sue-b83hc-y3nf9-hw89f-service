@@ -34,17 +34,36 @@ public sealed class RejectEntryToBoothCommandHandler(
                 "Bạn không được phân công quản lý trạm này.");
         }
 
-        if (booth.Status == BoothConstants.BoothStatus.Occupied ||
-            booth.TeamId is not null)
+        if (booth.Status != BoothConstants.BoothStatus.Pending ||
+            booth.TeamId != request.TeamId)
         {
             throw new ApplicationConflictException(
-                "Yêu cầu đã được xử lý hoặc trạm đang có đội sử dụng.");
+                "Yêu cầu đã được xử lý hoặc không còn chờ duyệt.");
+        }
+
+
+        var rejected = await boothRepository.TryRejectEntryAsync(
+            request.BoothId,
+            request.TeamId,
+            cancellationToken);
+        if (!rejected)
+        {
+            throw new ApplicationConflictException(
+                "Trạng thái yêu cầu đã thay đổi. Vui lòng thử lại.");
         }
 
         await notificationService.NotifyBoothEntryRejectedAsync(
             booth.RaceId,
             request.BoothId,
             request.TeamId,
+            cancellationToken);
+
+        await notificationService.NotifyBoothStatusChangedAsync(
+            booth.RaceId,
+            request.BoothId,
+            BoothConstants.BoothStatus.Free,
+            null,
+            null,
             cancellationToken);
     }
 }

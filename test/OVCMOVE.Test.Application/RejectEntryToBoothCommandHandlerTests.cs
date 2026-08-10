@@ -11,9 +11,10 @@ namespace OVCMOVE.Test.Application;
 public sealed class RejectEntryToBoothCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_AssignedFreeBooth_NotifiesRejectedTeam()
+    public async Task Handle_AssignedPendingBooth_ReleasesAndNotifiesRejectedTeam()
     {
-        var booth = CreateFreeBooth();
+        var teamId = Guid.NewGuid();
+        var booth = CreatePendingBooth(teamId);
         var notifications = new RecordingNotificationService();
         var handler = new RejectEntryToBoothCommandHandler(
             new StubBoothRepository(booth),
@@ -21,7 +22,7 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             notifications);
         var command = new RejectEntryToBoothCommand(
             booth.Id,
-            Guid.NewGuid(),
+            teamId,
             Guid.NewGuid());
 
         await handler.Handle(command, CancellationToken.None);
@@ -29,12 +30,15 @@ public sealed class RejectEntryToBoothCommandHandlerTests
         Assert.Equal(
             (booth.RaceId, booth.Id, command.TeamId),
             notifications.RejectedEntry);
+        Assert.Equal(BoothConstants.BoothStatus.Free, booth.Status);
+        Assert.Null(booth.TeamId);
     }
 
     [Fact]
     public async Task Handle_UnassignedOrganizer_ThrowsForbidden()
     {
-        var booth = CreateFreeBooth();
+        var teamId = Guid.NewGuid();
+        var booth = CreatePendingBooth(teamId);
         var notifications = new RecordingNotificationService();
         var handler = new RejectEntryToBoothCommandHandler(
             new StubBoothRepository(booth),
@@ -45,7 +49,7 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             handler.Handle(
                 new RejectEntryToBoothCommand(
                     booth.Id,
-                    Guid.NewGuid(),
+                    teamId,
                     Guid.NewGuid()),
                 CancellationToken.None));
 
@@ -82,6 +86,14 @@ public sealed class RejectEntryToBoothCommandHandlerTests
         Status = BoothConstants.BoothStatus.Free
     };
 
+    private static Booth CreatePendingBooth(Guid teamId) => new()
+    {
+        Id = Guid.NewGuid(),
+        RaceId = Guid.NewGuid(),
+        Status = BoothConstants.BoothStatus.Pending,
+        TeamId = teamId
+    };
+
     private sealed class StubBoothRepository(Booth? booth) : IBoothRepository
     {
         public Task<Booth?> GetByIdAsync(
@@ -109,6 +121,29 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             Guid teamId,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<bool> TryRequestEntryAsync(
+            Guid boothId,
+            Guid teamId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> TryRejectEntryAsync(
+            Guid boothId,
+            Guid teamId,
+            CancellationToken cancellationToken = default)
+        {
+            if (booth?.Id != boothId ||
+                booth.Status != BoothConstants.BoothStatus.Pending ||
+                booth.TeamId != teamId)
+            {
+                return Task.FromResult(false);
+            }
+
+            booth.Status = BoothConstants.BoothStatus.Free;
+            booth.TeamId = null;
+            return Task.FromResult(true);
+        }
 
         public Task<bool> TryReleaseAsync(
             Guid boothId,
@@ -151,6 +186,11 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             Guid raceId,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<IReadOnlyCollection<BoothOrganizer>> GetByRaceIdAsync(
+            Guid raceId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class RecordingNotificationService
@@ -179,7 +219,7 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             Guid? teamId,
             string? teamName,
             CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            Task.CompletedTask;
 
         public Task NotifyRaceScoreChangedAsync(
             Guid raceId,

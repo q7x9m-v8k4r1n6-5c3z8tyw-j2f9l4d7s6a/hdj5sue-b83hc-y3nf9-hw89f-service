@@ -131,6 +131,38 @@ public class UseCaseValidationTests
         Assert.Contains(missingTeamId.ToString(), exception.Message);
     }
 
+    [Fact]
+    public async Task CreateRace_RejectsOrganizerAssignedToMultipleBooths()
+    {
+        var organizerId = Guid.NewGuid();
+        var command = ValidCreateRace();
+        command.Booths =
+        [
+            new CreateRaceCommand.CreateBoothModel
+            {
+                Name = "Booth 1",
+                Place = "A",
+                OrganizerIds = [organizerId]
+            },
+            new CreateRaceCommand.CreateBoothModel
+            {
+                Name = "Booth 2",
+                Place = "B",
+                OrganizerIds = [organizerId]
+            }
+        ];
+        var validator = new CreateRaceRelationValidator(
+            new TeamRepositoryStub([]),
+            new OrganizerRepositoryStub([organizerId]));
+
+        var exception = await Assert.ThrowsAsync<ApplicationValidationException>(
+            () => validator.ValidateAsync(command, CancellationToken.None));
+
+        Assert.Contains(
+            "Mỗi organizer chỉ được quản lý một booth",
+            exception.Message);
+    }
+
     private static CreateRaceCommand ValidCreateRace() => new()
     {
         RaceName = "MOVE 2026",

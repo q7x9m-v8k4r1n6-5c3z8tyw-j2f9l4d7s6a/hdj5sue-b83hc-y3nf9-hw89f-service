@@ -49,6 +49,12 @@ public sealed class BoothPatchProcessor
             request.RaceId,
             cancellationToken)).ToDictionary(booth => booth.Id);
 
+        await ValidateOneBoothPerOrganizerAsync(
+            request.RaceId,
+            request.Booths,
+            booths,
+            cancellationToken);
+
         foreach (var boothId in request.Booths.Remove?.Distinct() ?? [])
         {
             if (!booths.Remove(boothId))
@@ -60,6 +66,19 @@ public sealed class BoothPatchProcessor
                 boothId,
                 cancellationToken);
             await _boothRepository.DeleteAsync(boothId, cancellationToken);
+        }
+
+        foreach (var patch in (request.Booths.Update ?? [])
+                     .Where(item => item.OrganizerIds is not null))
+        {
+            if (!booths.ContainsKey(patch.BoothId))
+            {
+                throw InvalidBooth(request.RaceId, patch.BoothId);
+            }
+
+            await _boothOrganizerRepository.DeleteByBoothIdAsync(
+                patch.BoothId,
+                cancellationToken);
         }
 
         foreach (var patch in request.Booths.Update ?? [])
@@ -77,7 +96,8 @@ public sealed class BoothPatchProcessor
             await _boothRepository.UpdateAsync(booth, cancellationToken);
             if (patch.OrganizerIds is not null)
             {
-                await ReplaceOrganizerIdsAsync(
+                await CreateOrganizerRelationsAsync(
+                    request.RaceId,
                     booth.Id,
                     patch.OrganizerIds,
                     actor,
@@ -97,6 +117,7 @@ public sealed class BoothPatchProcessor
                 booth,
                 cancellationToken);
             await CreateOrganizerRelationsAsync(
+                request.RaceId,
                 booth.Id,
                 patch.OrganizerIds,
                 actor,
@@ -170,25 +191,52 @@ public sealed class BoothPatchProcessor
         Guid boothId) => new(
         $"Booth '{boothId}' không thuộc trận đấu '{raceId}'.");
 
-    private async Task ReplaceOrganizerIdsAsync(
-        Guid boothId,
-        IEnumerable<Guid>? organizerIds,
-        string actor,
-        DateTime now,
+    private async Task ValidateOneBoothPerOrganizerAsync(
+        Guid raceId,
+        PatchRaceCommand.BoothPatchModel patch,
+        IReadOnlyDictionary<Guid, Booth> booths,
         CancellationToken cancellationToken)
     {
-        await _boothOrganizerRepository.DeleteByBoothIdAsync(
-            boothId,
-            cancellationToken);
-        await CreateOrganizerRelationsAsync(
-            boothId,
-            organizerIds,
-            actor,
-            now,
-            cancellationToken);
+        var assignments = (await _boothOrganizerRepository.GetByRaceIdAsync(
+                raceId,
+                cancellationToken))
+            .GroupBy(item => item.BoothId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(item => item.OrganizerId).ToHashSet());
+
+        foreach (var boothId in patch.Remove?.Distinct() ?? [])
+        {
+            assignments.Remove(boothId);
+        }
+
+        foreach (var update in patch.Update ?? [])
+        {
+            if (update.OrganizerIds is not null && booths.ContainsKey(update.BoothId))
+            {
+                assignments[update.BoothId] = update.OrganizerIds.ToHashSet();
+            }
+        }
+
+        var organizerAssignments = assignments.Values
+            .Concat((patch.Add ?? [])
+                .Select(item => (item.OrganizerIds ?? []).ToHashSet()))
+            .SelectMany(ids => ids)
+            .GroupBy(id => id)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+
+        if (organizerAssignments.Length > 0)
+        {
+            throw new ApplicationValidationException(
+                "Mỗi organizer chỉ được quản lý một booth trong một trận đấu: " +
+                string.Join(", ", organizerAssignments));
+        }
     }
 
     private async Task CreateOrganizerRelationsAsync(
+        Guid raceId,
         Guid boothId,
         IEnumerable<Guid>? organizerIds,
         string actor,
@@ -201,6 +249,7 @@ public sealed class BoothPatchProcessor
                 new BoothOrganizer
                 {
                     Id = Guid.NewGuid(),
+                    RaceId = raceId,
                     BoothId = boothId,
                     OrganizerId = organizerId,
                     CreatedBy = actor,

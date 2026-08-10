@@ -27,6 +27,17 @@ public static class BoothQueries
         ";
     }
 
+    public static string TryRequestBoothEntryQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'pending',
+            [TeamId] = @TeamId,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'free'
+          AND [TeamId] IS NULL;";
+
     public static string TryOccupyBoothQuery() => @"
         UPDATE [dbo].[Booth]
         SET
@@ -35,8 +46,19 @@ public static class BoothQueries
             [ModifiedAt] = SYSUTCDATETIME()
         WHERE [Id] = @BoothId
           AND [IsDeleted] = 0
-          AND [Status] = N'free'
-          AND [TeamId] IS NULL;";
+          AND [Status] = N'pending'
+          AND [TeamId] = @TeamId;";
+
+    public static string TryRejectBoothEntryQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'free',
+            [TeamId] = NULL,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'pending'
+          AND [TeamId] = @TeamId;";
 
     public static string TryReleaseBoothQuery() => @"
         UPDATE [dbo].[Booth]

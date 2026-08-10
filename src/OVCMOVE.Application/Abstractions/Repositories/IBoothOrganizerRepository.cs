@@ -13,9 +13,13 @@ public interface IBoothOrganizerRepository
         CancellationToken cancellationToken = default);
 
     Task<BoothOrganizer?> GetByOrganizerAndRaceAsync(
-    Guid organizerId,
-    Guid raceId,
-    CancellationToken cancellationToken = default);
+        Guid organizerId,
+        Guid raceId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<BoothOrganizer>> GetByRaceIdAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default);
 
     Task<bool> IsAssignedAsync(
         Guid organizerId,

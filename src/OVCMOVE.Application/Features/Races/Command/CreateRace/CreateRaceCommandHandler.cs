@@ -87,6 +87,7 @@ public class CreateRaceCommandHandler :
                 {
                     await _boothOrganizerRepository.CreateAsync(
                         CreateRaceFactory.CreateBoothOrganizer(
+                            raceId,
                             booth.Id,
                             organizerId,
                             actor,

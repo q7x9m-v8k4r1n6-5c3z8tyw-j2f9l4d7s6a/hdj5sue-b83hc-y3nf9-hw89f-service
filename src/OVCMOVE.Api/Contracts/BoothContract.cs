@@ -31,6 +31,15 @@ public static class BoothContract
         public Guid TeamId { get; init; }
     }
 
+    public sealed class RejectEntryRequest
+    {
+        [Required]
+        public Guid BoothId { get; init; }
+
+        [Required]
+        public Guid TeamId { get; init; }
+    }
+
     public sealed record OperationResponse(string Message);
 
     public sealed record MyBoothResponse

@@ -24,4 +24,10 @@ public interface IBoothNotificationService
         Guid boothId,
         Guid teamId,
         CancellationToken cancellationToken = default);
+
+    Task NotifyBoothEntryRejectedAsync(
+        Guid raceId,
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
 }

@@ -10,6 +10,7 @@ using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
 using OVCMOVE.Application.Features.Booths.Commands.CancelBoothSession;
+using OVCMOVE.Application.Features.Booths.Commands.RejectEntryToBooth;
 using System.Security.Claims;
 
 namespace OVCMOVE.Api.Controllers.v1;
@@ -107,6 +108,24 @@ public class BoothController : ControllerBase
 
         return Ok(ApiResponse.Success(
             new BoothContract.OperationResponse(result.Message)));
+    }
+
+    [HttpPost("reject-entry")]
+    [RequirePermission(PermissionCodes.BoothEntryManage)]
+    public async Task<IActionResult> RejectEntry(
+        [FromBody] BoothContract.RejectEntryRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new RejectEntryToBoothCommand(
+                request.BoothId,
+                request.TeamId,
+                GetCurrentUserId()),
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(
+            new BoothContract.OperationResponse(
+                "Đã từ chối yêu cầu vào trạm.")));
     }
 
     [HttpPost("{boothId:guid}/cancel-session")]

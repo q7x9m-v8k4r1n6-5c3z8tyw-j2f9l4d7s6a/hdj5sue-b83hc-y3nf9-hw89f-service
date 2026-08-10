@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
+            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @Rules,
+            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -27,7 +27,6 @@ public static class RaceQueries
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
             [CoverUrl] = @CoverUrl,
-            [Rules] = @Rules,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id
@@ -38,11 +37,19 @@ public static class RaceQueries
     public static string GetRaceByIdQuery() => @"
     SELECT
         [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
-        [Status], [Rules],
+        [Status],
         [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
+
+    public static string RaceExistsQuery() => @"
+    SELECT CASE WHEN EXISTS
+    (
+        SELECT 1
+        FROM [dbo].[Race]
+        WHERE [Id] = @RaceId AND [IsDeleted] = 0
+    ) THEN 1 ELSE 0 END;";
 
     public static string GetAllRacesQuery() => @"
     SELECT
@@ -352,6 +359,31 @@ public static class RaceQueries
             @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
             @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
+
+    public static string CreateRaceMessageQuery() => @"
+        INSERT INTO [dbo].[RaceMessage]
+        (
+            [Id], [RaceId], [SenderId], [SenderName],
+            [RecipientKeysJson], [RecipientLabelsJson], [Body],
+            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+        )
+        VALUES
+        (
+            @Id, @RaceId, @SenderId, @SenderName,
+            @RecipientKeysJson, @RecipientLabelsJson, @Body,
+            @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
+        );";
+
+    public static string GetRaceMessagesQuery() => @"
+        SELECT TOP (@Limit)
+            [Id], [RaceId], [SenderId], [SenderName],
+            [RecipientKeysJson], [RecipientLabelsJson], [Body],
+            [CreatedAt]
+        FROM [dbo].[RaceMessage]
+        WHERE [RaceId] = @RaceId
+          AND [IsDeleted] = 0
+        ORDER BY [CreatedAt] DESC, [Id] DESC;";
+
     public static string CheckBoothOrganizerAssignmentQuery() => @"
         SELECT CASE WHEN EXISTS
         (
@@ -379,7 +411,7 @@ public static class RaceQueries
         ) THEN 1 ELSE 0 END;";
 
     public static string GetRaceRulesQuery() => @"
-    SELECT [Rules]
+    SELECT CAST(N'' AS NVARCHAR(MAX))
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
     public static string GetBoothProgressQuery() => @"

@@ -1,6 +1,8 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
@@ -142,6 +144,18 @@ public class RaceRepository : IRaceRepository
             cancellationToken: cancellationToken);
     }
 
+    public async Task<bool> ExistsAsync(Guid raceId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _db.QueryFirstOrDefaultAsync<int>(
+            RaceQueries.RaceExistsQuery(),
+            new { RaceId = raceId },
+            cancellationToken: cancellationToken);
+
+        return result == 1;
+    }
+
     public async Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,
@@ -157,7 +171,6 @@ public class RaceRepository : IRaceRepository
             race.TimeEnd,
             race.Place,
             race.Status,
-            race.Rules,
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
             race.CoverUrl,
@@ -307,6 +320,45 @@ public class RaceRepository : IRaceRepository
             cancellationToken: cancellationToken);
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
+
+    public async Task CreateRaceMessageAsync(
+        RaceMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateRaceMessageQuery(),
+            message,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(RaceMessage));
+    }
+
+    public async Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(
+        Guid raceId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var rows = await _db.QueryAsync<RaceMessageRow>(
+            RaceQueries.GetRaceMessagesQuery(),
+            new { RaceId = raceId, Limit = limit },
+            cancellationToken: cancellationToken);
+
+        return rows.Select(row => new RaceMessageResultModel
+        {
+            Id = row.Id,
+            RaceId = row.RaceId,
+            SenderId = row.SenderId,
+            SenderName = row.SenderName,
+            RecipientKeys = ParseJsonArray(row.RecipientKeysJson),
+            RecipientLabels = ParseJsonArray(row.RecipientLabelsJson),
+            Body = row.Body,
+            CreatedAt = row.CreatedAt
+        }).ToArray();
+    }
+
     public async Task<bool> IsTeamInRaceAsync(
     Guid raceId,
     Guid teamId,
@@ -348,6 +400,32 @@ public class RaceRepository : IRaceRepository
             },
             cancellationToken) ?? new BoothProgressResultModel();
     }
+
+    private static IReadOnlyCollection<string> ParseJsonArray(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+}
+
+internal sealed class RaceMessageRow
+{
+    public Guid Id { get; init; }
+    public Guid RaceId { get; init; }
+    public Guid? SenderId { get; init; }
+    public string SenderName { get; init; } = string.Empty;
+    public string RecipientKeysJson { get; init; } = "[]";
+    public string RecipientLabelsJson { get; init; } = "[]";
+    public string Body { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
 }
 
 internal sealed class BoothOrganizerRow

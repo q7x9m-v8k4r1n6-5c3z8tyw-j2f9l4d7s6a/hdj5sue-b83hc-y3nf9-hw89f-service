@@ -1,9 +1,11 @@
-﻿namespace OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Features.Races.Common;
+
+namespace OVCMOVE.Application.Abstractions.Services;
 
 public interface IBoothNotificationService
 {
     /// <summary>
-    /// Phát thông báo đổi trạng thái trạm cho các Client thời gian thực
+    /// Phat thong bao doi trang thai tram cho cac client thoi gian thuc.
     /// </summary>
     Task NotifyBoothStatusChangedAsync(
         Guid raceId,
@@ -29,5 +31,10 @@ public interface IBoothNotificationService
         Guid raceId,
         Guid boothId,
         Guid teamId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyRaceMessageAsync(
+        Guid raceId,
+        RaceMessageResultModel message,
         CancellationToken cancellationToken = default);
 }

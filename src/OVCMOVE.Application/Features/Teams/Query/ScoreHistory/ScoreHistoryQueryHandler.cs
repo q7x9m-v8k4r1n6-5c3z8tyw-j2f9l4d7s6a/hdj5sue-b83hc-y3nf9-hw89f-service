@@ -16,8 +16,12 @@ public sealed class ScoreHistoryQueryHandler(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        _ = await raceRepository.GetByIdAsync(request.RaceId, cancellationToken)
-            ?? throw new ApplicationNotFoundException("Giải đua không tồn tại.");
+        var raceExists = await raceRepository.ExistsAsync(request.RaceId, cancellationToken);
+        if (!raceExists)
+        {
+            throw new ApplicationNotFoundException("Giải đua không tồn tại.");
+        }
+
         var currentScore = await raceRepository.GetRaceTeamScoreAsync(
             request.RaceId,
             request.TeamId,

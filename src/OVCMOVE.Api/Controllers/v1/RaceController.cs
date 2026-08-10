@@ -12,6 +12,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Features.Races.Query.GetRaceMessages;
 using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Constants;
@@ -213,6 +214,51 @@ public class RaceController : BaseController
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
+    [HttpGet("{raceId:guid}/messages")]
+    [RequirePermission(PermissionCodes.RaceRead)]
+    public async Task<IActionResult> GetRaceMessages(
+        [FromRoute] Guid raceId,
+        [FromQuery] int limit,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _mediator.Send(
+            new GetRaceMessagesQuery
+            {
+                RaceId = raceId,
+                Limit = limit <= 0 ? 50 : limit
+            },
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(result.Select(item => item.ToResponse()).ToArray()));
+    }
+
+    [HttpPost("{raceId:guid}/messages")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> SendRaceMessage(
+        [FromRoute] Guid raceId,
+        [FromBody] SendRaceMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _mediator.Send(
+            request.ToCommand(
+                raceId,
+                GetRequiredCurrentUserId(),
+                GetCurrentUserDisplayName()),
+            cancellationToken);
+        if (result is null)
+        {
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
+        }
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
     [HttpGet("{raceId:guid}/rules")]
     [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
@@ -257,6 +303,11 @@ public class RaceController : BaseController
             User.FindFirstValue("user_type"),
             UserConstants.UserType.Team,
             StringComparison.OrdinalIgnoreCase);
+
+    private string GetCurrentUserDisplayName() =>
+        User.FindFirstValue(ClaimTypes.Name)
+        ?? User.FindFirstValue("name")
+        ?? "ADMIN";
 
     private static T DeserializePayload<T>(string payload)
     {

@@ -1,6 +1,7 @@
 ﻿using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.Features.Booths.Common;
@@ -18,6 +19,7 @@ public interface IRaceRepository
             CancellationToken cancellationToken = default);
     Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,
@@ -52,6 +54,13 @@ public interface IRaceRepository
         CancellationToken cancellationToken = default);
     Task CreateScoringLogAsync(
         ScoringLog log,
+        CancellationToken cancellationToken = default);
+    Task CreateRaceMessageAsync(
+        RaceMessage message,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(
+        Guid raceId,
+        int limit,
         CancellationToken cancellationToken = default);
     Task<bool> IsTeamInRaceAsync(
     Guid raceId,

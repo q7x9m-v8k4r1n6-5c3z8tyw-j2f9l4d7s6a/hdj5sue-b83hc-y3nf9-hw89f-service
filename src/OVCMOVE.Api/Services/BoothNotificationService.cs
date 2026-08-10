@@ -2,6 +2,7 @@
 using OVCMOVE.API.Hubs;
 using OVCMOVE.Application.Abstractions.Hubs;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Features.Races.Common;
 
 namespace OVCMOVE.Api.Services;
 
@@ -70,5 +71,15 @@ public class BoothNotificationService : IBoothNotificationService
         await _hubContext.Clients
             .Group($"Race_{raceId}")
             .ReceiveBoothEntryRejected(boothId, teamId);
+    }
+
+    public async Task NotifyRaceMessageAsync(
+        Guid raceId,
+        RaceMessageResultModel message,
+        CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"Race_{raceId}")
+            .ReceiveRaceMessage(message);
     }
 }

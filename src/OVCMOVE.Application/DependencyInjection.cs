@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OVCMOVE.Application.Behaviors;
 using OVCMOVE.Application.Features.Auth;
+using OVCMOVE.Application.Features.CardEffects;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 
@@ -24,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<RaceOrganizerPatchProcessor>();
         services.AddScoped<CreateRaceRelationValidator>();
         services.AddScoped<AuthSessionIssuer>();
+        services.AddScoped<CardEffectWorkflowValidator>();
+        services.AddScoped<CardEffectWorkflowExecutor>();
 
         return services;
     }

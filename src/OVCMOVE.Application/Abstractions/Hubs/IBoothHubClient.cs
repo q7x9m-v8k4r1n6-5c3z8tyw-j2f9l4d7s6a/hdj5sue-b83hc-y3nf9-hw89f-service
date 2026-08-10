@@ -13,4 +13,6 @@ public interface IBoothHubClient
     Task ReceiveRaceScoreChanged(Guid raceId, Guid teamId, int delta);
 
     Task ReceiveBoothEntryCancelled(Guid boothId, Guid teamId);
+
+    Task ReceiveBoothEntryRejected(Guid boothId, Guid teamId);
 }

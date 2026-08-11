@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Common;
@@ -247,7 +248,7 @@ public class RaceController : BaseController
             request.ToCommand(
                 raceId,
                 GetRequiredCurrentUserId(),
-                GetCurrentUserDisplayName()),
+                User.GetCurrentUserDisplayName("ADMIN")),
             cancellationToken);
         if (result is null)
         {
@@ -303,11 +304,6 @@ public class RaceController : BaseController
             User.FindFirstValue("user_type"),
             UserConstants.UserType.Team,
             StringComparison.OrdinalIgnoreCase);
-
-    private string GetCurrentUserDisplayName() =>
-        User.FindFirstValue(ClaimTypes.Name)
-        ?? User.FindFirstValue("name")
-        ?? "ADMIN";
 
     private static T DeserializePayload<T>(string payload)
     {

@@ -10,6 +10,6 @@ namespace OVCMOVE.Application.DTOs.Booth
         /// thông tin đội đang chơi trạm đó
         /// </summary>
         public Guid? TeamID { get; set; } 
-        public string Name { get; set; }    
+        public string Name { get; set; } = string.Empty;
     }
 }

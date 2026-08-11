@@ -101,6 +101,12 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(booth?.Id == id ? booth : null);
 
+        public Task<Booth?> GetActiveByTeamAndRaceAsync(
+            Guid teamId,
+            Guid raceId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<Guid> CreateAsync(
             Booth value,
             CancellationToken cancellationToken = default) =>

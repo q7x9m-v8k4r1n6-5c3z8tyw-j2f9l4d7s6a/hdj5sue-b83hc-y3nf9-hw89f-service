@@ -27,6 +27,28 @@ public static class BoothQueries
         ";
     }
 
+    public static string GetActiveBoothByTeamAndRaceQuery() => @"
+        SELECT TOP (1)
+            [Id],
+            [Name],
+            [Place],
+            [Description],
+            [RaceID],
+            [TeamId],
+            [IsHidden],
+            [Status],
+            [CreatedBy],
+            [CreatedAt],
+            [ModifiedBy],
+            [ModifiedAt],
+            [IsDeleted]
+        FROM [dbo].[Booth]
+        WHERE [RaceID] = @RaceId
+          AND [TeamId] = @TeamId
+          AND [Status] IN (@PendingStatus, @OccupiedStatus)
+          AND [IsDeleted] = 0
+        ORDER BY [ModifiedAt] DESC, [Id];";
+
     public static string TryRequestBoothEntryQuery() => @"
         UPDATE [dbo].[Booth]
         SET

@@ -74,6 +74,20 @@ public class ApiEndpointArchitectureTests
             action.GetCustomAttributes<HttpPostAttribute>());
     }
 
+    [Fact]
+    public void BoothRejectEntryEndpoint_IsPresentAndProtected()
+    {
+        var action = typeof(BoothController).GetMethod(
+            nameof(BoothController.RejectEntry));
+
+        Assert.NotNull(action);
+        var post = Assert.Single(
+            action.GetCustomAttributes<HttpPostAttribute>());
+        Assert.Equal("reject-entry", post.Template);
+        Assert.NotEmpty(
+            action.GetCustomAttributes().OfType<IAuthorizeData>());
+    }
+
     [Theory]
     [MemberData(nameof(FeatureControllers))]
     [MemberData(nameof(AdminControllers))]

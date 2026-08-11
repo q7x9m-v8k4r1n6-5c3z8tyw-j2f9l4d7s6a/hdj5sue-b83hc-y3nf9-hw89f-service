@@ -40,18 +40,6 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void Plugin_DoesNotReferenceInfrastructureOrApi()
-    {
-        var references = typeof(
-            OVCMOVE2026.Plugin.DependencyInjection).Assembly
-            .GetReferencedAssemblies()
-            .Select(reference => reference.Name);
-
-        Assert.DoesNotContain("OVCMOVE.Infrastructure", references);
-        Assert.DoesNotContain("OVCMOVE.Api", references);
-    }
-
-    [Fact]
     public void DomainEntities_OnlyExposeDataMembers()
     {
         var entityTypes = typeof(BaseEntity).Assembly

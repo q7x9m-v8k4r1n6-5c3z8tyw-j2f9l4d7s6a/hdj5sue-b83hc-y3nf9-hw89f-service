@@ -42,6 +42,28 @@ public sealed class CreateRaceRelationValidator
 
         ThrowIfMissing("Team", teamIds, existingTeamIds);
         ThrowIfMissing("Organizer", organizerIds, existingOrganizerIds);
+        ThrowIfOrganizerManagesMultipleBooths(request.Booths ?? []);
+    }
+
+    private static void ThrowIfOrganizerManagesMultipleBooths(
+        IEnumerable<CreateRaceCommand.CreateBoothModel> booths)
+    {
+        var duplicatedOrganizerIds = booths
+            .SelectMany((booth, boothIndex) =>
+                (booth.OrganizerIds ?? [])
+                    .Distinct()
+                    .Select(organizerId => new { organizerId, boothIndex }))
+            .GroupBy(item => item.organizerId)
+            .Where(group => group.Select(item => item.boothIndex).Distinct().Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+
+        if (duplicatedOrganizerIds.Length > 0)
+        {
+            throw new ApplicationValidationException(
+                "Mỗi organizer chỉ được quản lý một booth trong một trận đấu: " +
+                string.Join(", ", duplicatedOrganizerIds));
+        }
     }
 
     private static void ThrowIfMissing(

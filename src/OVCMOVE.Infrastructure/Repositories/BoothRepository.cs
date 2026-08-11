@@ -67,6 +67,27 @@ public class BoothRepository : IBoothRepository
         return affectedRows >= 1;
     }
 
+    public async Task<bool> TryRequestEntryAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            var affectedRows = await _db.ExecuteAsync(
+                BoothQueries.TryRequestBoothEntryQuery(),
+                new { BoothId = boothId, TeamId = teamId },
+                cancellationToken);
+            return affectedRows == 1;
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> TryOccupyAsync(
         Guid boothId,
         Guid teamId,
@@ -99,6 +120,21 @@ public class BoothRepository : IBoothRepository
 
         var affectedRows = await _db.ExecuteAsync(
             BoothQueries.TryReleaseBoothQuery(),
+            new { BoothId = boothId, TeamId = teamId },
+            cancellationToken);
+
+        return affectedRows == 1;
+    }
+
+    public async Task<bool> TryRejectEntryAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            BoothQueries.TryRejectBoothEntryQuery(),
             new { BoothId = boothId, TeamId = teamId },
             cancellationToken);
 

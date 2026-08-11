@@ -73,12 +73,14 @@ internal static class CreateRaceFactory
 
     /// <summary>Creates one organizer relationship belonging to a booth.</summary>
     internal static BoothOrganizer CreateBoothOrganizer(
+        Guid raceId,
         Guid boothId,
         Guid organizerId,
         string actor,
         DateTime now) => new()
         {
             Id = Guid.NewGuid(),
+            RaceId = raceId,
             BoothId = boothId,
             OrganizerId = organizerId,
             CreatedAt = now,

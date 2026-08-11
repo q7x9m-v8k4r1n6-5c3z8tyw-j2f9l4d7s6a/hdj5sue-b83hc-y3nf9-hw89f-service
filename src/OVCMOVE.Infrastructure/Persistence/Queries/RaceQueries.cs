@@ -214,10 +214,10 @@ public static class RaceQueries
 
     public static string CreateBoothOrganizerQuery() => @"
         INSERT INTO [dbo].[BoothOrganizer]
-            ([Id], [BoothId], [OrganizerId], [CreatedBy], [CreatedAt],
+            ([Id], [RaceId], [BoothId], [OrganizerId], [CreatedBy], [CreatedAt],
              [ModifiedBy], [ModifiedAt], [IsDeleted])
         VALUES
-            (@Id, @BoothId, @OrganizerId, @CreatedBy, @CreatedAt,
+            (@Id, @RaceId, @BoothId, @OrganizerId, @CreatedBy, @CreatedAt,
              @ModifiedBy, @ModifiedAt, @IsDeleted);";
 
     public static string DeleteBoothOrganizersByBoothIdQuery() => @"
@@ -395,15 +395,26 @@ public static class RaceQueries
         ) THEN 1 ELSE 0 END;";
     public static string GetBoothOrganizerByOrganizerAndRaceQuery() => @"
     SELECT TOP 1
-        BO.[Id], BO.[BoothId], BO.[OrganizerId],
+        BO.[Id], BO.[RaceId], BO.[BoothId], BO.[OrganizerId],
         BO.[CreatedBy], BO.[CreatedAt], BO.[ModifiedBy], BO.[ModifiedAt], BO.[IsDeleted]
     FROM [dbo].[BoothOrganizer] BO
     INNER JOIN [dbo].[Booth] B
         ON B.[Id] = BO.[BoothId]
        AND B.[IsDeleted] = 0
     WHERE BO.[OrganizerId] = @OrganizerId
-      AND B.[RaceID] = @RaceId
+      AND BO.[RaceId] = @RaceId
       AND BO.[IsDeleted] = 0;";
+
+    public static string GetBoothOrganizerAssignmentsByRaceQuery() => @"
+        SELECT
+            BO.[Id], BO.[RaceId], BO.[BoothId], BO.[OrganizerId],
+            BO.[CreatedBy], BO.[CreatedAt], BO.[ModifiedBy], BO.[ModifiedAt], BO.[IsDeleted]
+        FROM [dbo].[BoothOrganizer] BO
+        INNER JOIN [dbo].[Booth] B
+            ON B.[Id] = BO.[BoothId]
+           AND B.[IsDeleted] = 0
+        WHERE BO.[RaceId] = @RaceId
+          AND BO.[IsDeleted] = 0;";
     public static string CheckTeamInRaceQuery() => @"
         SELECT CASE WHEN EXISTS (
             SELECT 1 FROM dbo.RaceTeam

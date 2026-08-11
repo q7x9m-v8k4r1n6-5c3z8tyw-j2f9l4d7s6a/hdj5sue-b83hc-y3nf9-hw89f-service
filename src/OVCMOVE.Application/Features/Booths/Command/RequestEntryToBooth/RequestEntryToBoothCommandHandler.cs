@@ -36,7 +36,8 @@ public class RequestEntryToBoothCommandHandler
             return (false, "Trạm thi đấu không tồn tại.");
         }
 
-        if (booth.Status == BoothConstants.BoothStatus.Occupied)
+        if (booth.Status != BoothConstants.BoothStatus.Free ||
+            booth.TeamId is not null)
         {
             return (false, "Trạm thi đấu đang có đội khác sử dụng.");
         }
@@ -50,6 +51,15 @@ public class RequestEntryToBoothCommandHandler
         if (entryError is not null)
         {
             return (false, entryError);
+        }
+
+        var requested = await _boothRepository.TryRequestEntryAsync(
+            request.BoothId,
+            request.TeamId,
+            cancellationToken);
+        if (!requested)
+        {
+            return (false, "Trạm đang có yêu cầu khác hoặc đội đang ở trạm khác.");
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);

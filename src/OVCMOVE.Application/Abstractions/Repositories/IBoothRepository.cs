@@ -10,9 +10,21 @@ public interface IBoothRepository
 {
     Task<Guid> CreateAsync(Booth booth, CancellationToken cancellationToken = default);
     Task<Booth?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Booth?> GetActiveByTeamAndRaceAsync(
+        Guid teamId,
+        Guid raceId,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<bool> UpdateAsync(Booth booth, CancellationToken cancellationToken = default);
+    Task<bool> TryRequestEntryAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
     Task<bool> TryOccupyAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default);
+    Task<bool> TryRejectEntryAsync(
         Guid boothId,
         Guid teamId,
         CancellationToken cancellationToken = default);

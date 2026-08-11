@@ -12,6 +12,9 @@ public static class BoothContractMapping
             BoothId = result.BoothId,
             Name = result.Name,
             Place = result.Place,
-            Description = result.Description
+            Description = result.Description,
+            Status = result.Status,
+            TeamId = result.TeamId,
+            TeamName = result.TeamName
         };
 }

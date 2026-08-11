@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
@@ -11,19 +10,15 @@ using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Query.GetMyBooth;
 using OVCMOVE.Application.Features.Booths.Commands.CancelBoothSession;
 using OVCMOVE.Application.Features.Booths.Commands.RejectEntryToBooth;
-using System.Security.Claims;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
-[ApiController]
 [Route("api/v1/[controller]")]
-public class BoothController : ControllerBase
+public class BoothController : BaseController
 {
-    private readonly ISender _mediator;
-
-    public BoothController(ISender mediator)
+    public BoothController(IMediator mediator)
+        : base(mediator)
     {
-        _mediator = mediator;
     }
 
     /// <summary>
@@ -36,15 +31,11 @@ public class BoothController : ControllerBase
         [FromBody] BoothContract.SubmitScoreRequest request,
         CancellationToken cancellationToken)
     {
-        var organizerId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                          ?? User.FindFirstValue("sub")
-                          ?? string.Empty;
-
         var command = new SubmitBoothScoreCommand
         {
             BoothID = request.BoothId,
             TeamID = request.TeamId,
-            OrganizerId = ParseUserId(organizerId),
+            OrganizerId = GetRequiredCurrentUserId(),
             Score = request.Score
         };
 
@@ -70,7 +61,7 @@ public class BoothController : ControllerBase
         var command = new RequestEntryToBoothCommand
         {
             BoothId = request.BoothId,
-            TeamId = GetCurrentUserId()
+            TeamId = GetRequiredCurrentUserId()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -98,7 +89,7 @@ public class BoothController : ControllerBase
         {
             BoothId = request.BoothId,
             TeamId = request.TeamId,
-            OrganizerId = GetCurrentUserId()
+            OrganizerId = GetRequiredCurrentUserId()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -120,7 +111,7 @@ public class BoothController : ControllerBase
             new RejectEntryToBoothCommand(
                 request.BoothId,
                 request.TeamId,
-                GetCurrentUserId()),
+                GetRequiredCurrentUserId()),
             cancellationToken);
 
         return Ok(ApiResponse.Success(
@@ -135,7 +126,9 @@ public class BoothController : ControllerBase
         CancellationToken cancellationToken)
     {
         await _mediator.Send(
-            new CancelBoothSessionCommand(boothId, GetCurrentUserId()),
+            new CancelBoothSessionCommand(
+                boothId,
+                GetRequiredCurrentUserId()),
             cancellationToken);
 
         return Ok(ApiResponse.Success(
@@ -153,7 +146,7 @@ public class BoothController : ControllerBase
             new GetMyBoothQuery
             {
                 RaceId = raceId,
-                OrganizerId = GetCurrentUserId()
+                OrganizerId = GetRequiredCurrentUserId()
             },
             cancellationToken);
 
@@ -165,16 +158,4 @@ public class BoothController : ControllerBase
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
-    private Guid GetCurrentUserId()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue("sub")
-            ?? string.Empty;
-        return ParseUserId(userId);
-    }
-
-    private static Guid ParseUserId(string value) =>
-        Guid.TryParse(value, out var userId)
-            ? userId
-            : throw new UnauthorizedAccessException("Token không hợp lệ.");
 }

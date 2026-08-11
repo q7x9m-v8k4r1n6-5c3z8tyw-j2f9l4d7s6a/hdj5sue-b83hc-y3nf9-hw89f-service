@@ -27,6 +27,39 @@ public static class BoothQueries
         ";
     }
 
+    public static string GetActiveBoothByTeamAndRaceQuery() => @"
+        SELECT TOP (1)
+            [Id],
+            [Name],
+            [Place],
+            [Description],
+            [RaceID],
+            [TeamId],
+            [IsHidden],
+            [Status],
+            [CreatedBy],
+            [CreatedAt],
+            [ModifiedBy],
+            [ModifiedAt],
+            [IsDeleted]
+        FROM [dbo].[Booth]
+        WHERE [RaceID] = @RaceId
+          AND [TeamId] = @TeamId
+          AND [Status] IN (@PendingStatus, @OccupiedStatus)
+          AND [IsDeleted] = 0
+        ORDER BY [ModifiedAt] DESC, [Id];";
+
+    public static string TryRequestBoothEntryQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'pending',
+            [TeamId] = @TeamId,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'free'
+          AND [TeamId] IS NULL;";
+
     public static string TryOccupyBoothQuery() => @"
         UPDATE [dbo].[Booth]
         SET
@@ -35,8 +68,19 @@ public static class BoothQueries
             [ModifiedAt] = SYSUTCDATETIME()
         WHERE [Id] = @BoothId
           AND [IsDeleted] = 0
-          AND [Status] = N'free'
-          AND [TeamId] IS NULL;";
+          AND [Status] = N'pending'
+          AND [TeamId] = @TeamId;";
+
+    public static string TryRejectBoothEntryQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [Status] = N'free',
+            [TeamId] = NULL,
+            [ModifiedAt] = SYSUTCDATETIME()
+        WHERE [Id] = @BoothId
+          AND [IsDeleted] = 0
+          AND [Status] = N'pending'
+          AND [TeamId] = @TeamId;";
 
     public static string TryReleaseBoothQuery() => @"
         UPDATE [dbo].[Booth]

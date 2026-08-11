@@ -202,11 +202,10 @@ BEGIN TRY
         CREATE INDEX [IX_Booth_RaceID]
             ON [dbo].[Booth] ([RaceID]);
 
-        CREATE UNIQUE INDEX [UX_Booth_OccupiedTeam]
+        CREATE UNIQUE INDEX [UX_Booth_ActiveTeam]
             ON [dbo].[Booth] ([TeamId])
             WHERE [IsDeleted] = 0
-              AND [TeamId] IS NOT NULL
-              AND [Status] = N''occupied'';
+              AND [TeamId] IS NOT NULL;
     ';
 
     CREATE TABLE [dbo].[BoothOrganizer]
@@ -214,6 +213,7 @@ BEGIN TRY
         [Id] UNIQUEIDENTIFIER NOT NULL
             CONSTRAINT [PK_BoothOrganizer] PRIMARY KEY
             CONSTRAINT [DF_BoothOrganizer_Id] DEFAULT (NEWID()),
+        [RaceId] UNIQUEIDENTIFIER NOT NULL,
         [BoothId] UNIQUEIDENTIFIER NOT NULL,
         [OrganizerId] UNIQUEIDENTIFIER NOT NULL,
         [CreatedBy] NVARCHAR(100) NULL,
@@ -229,6 +229,10 @@ BEGIN TRY
     EXEC sys.sp_executesql N'
         CREATE UNIQUE INDEX [UX_BoothOrganizer_BoothId_OrganizerId]
             ON [dbo].[BoothOrganizer] ([BoothId], [OrganizerId])
+            WHERE [IsDeleted] = 0;
+
+        CREATE UNIQUE INDEX [UX_BoothOrganizer_RaceId_OrganizerId]
+            ON [dbo].[BoothOrganizer] ([RaceId], [OrganizerId])
             WHERE [IsDeleted] = 0;
 
         CREATE INDEX [IX_BoothOrganizer_OrganizerId]

@@ -3,6 +3,8 @@ using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE.Infrastructure.Persistence.Queries;
+using OVCMOVE.Application.Common;
+using Microsoft.Data.SqlClient;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -20,10 +22,19 @@ public sealed class BoothOrganizerRepository : IBoothOrganizerRepository
         BoothOrganizer boothOrganizer,
         CancellationToken cancellationToken = default)
     {
-        var affectedRows = await _db.ExecuteAsync(
-            RaceQueries.CreateBoothOrganizerQuery(),
-            boothOrganizer,
-            cancellationToken);
+        int affectedRows;
+        try
+        {
+            affectedRows = await _db.ExecuteAsync(
+                RaceQueries.CreateBoothOrganizerQuery(),
+                boothOrganizer,
+                cancellationToken);
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            throw new ApplicationValidationException(
+                "Mỗi organizer chỉ được quản lý một booth trong một trận đấu.");
+        }
         PersistenceWriteGuard.EnsureInserted(
             affectedRows,
             nameof(BoothOrganizer));
@@ -64,5 +75,16 @@ public sealed class BoothOrganizerRepository : IBoothOrganizerRepository
             cancellationToken);
 
         return result == 1;
+    }
+
+    public async Task<IReadOnlyCollection<BoothOrganizer>> GetByRaceIdAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        var assignments = await _db.QueryAsync<BoothOrganizer>(
+            RaceQueries.GetBoothOrganizerAssignmentsByRaceQuery(),
+            new { RaceId = raceId },
+            cancellationToken);
+        return assignments.ToArray();
     }
 }

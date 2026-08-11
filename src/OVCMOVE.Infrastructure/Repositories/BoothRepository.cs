@@ -6,6 +6,7 @@ using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE.Infrastructure.Persistence.Queries;
 using OVCMOVE.Application.Common;
 using Microsoft.Data.SqlClient;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -43,6 +44,25 @@ public class BoothRepository : IBoothRepository
             cancellationToken: cancellationToken);
     }
 
+    public async Task<Booth?> GetActiveByTeamAndRaceAsync(
+        Guid teamId,
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _db.QueryFirstOrDefaultAsync<Booth>(
+            BoothQueries.GetActiveBoothByTeamAndRaceQuery(),
+            new
+            {
+                TeamId = teamId,
+                RaceId = raceId,
+                PendingStatus = BoothConstants.BoothStatus.Pending,
+                OccupiedStatus = BoothConstants.BoothStatus.Occupied
+            },
+            cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -65,6 +85,27 @@ public class BoothRepository : IBoothRepository
             cancellationToken: cancellationToken);
 
         return affectedRows >= 1;
+    }
+
+    public async Task<bool> TryRequestEntryAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            var affectedRows = await _db.ExecuteAsync(
+                BoothQueries.TryRequestBoothEntryQuery(),
+                new { BoothId = boothId, TeamId = teamId },
+                cancellationToken);
+            return affectedRows == 1;
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            return false;
+        }
     }
 
     public async Task<bool> TryOccupyAsync(
@@ -99,6 +140,21 @@ public class BoothRepository : IBoothRepository
 
         var affectedRows = await _db.ExecuteAsync(
             BoothQueries.TryReleaseBoothQuery(),
+            new { BoothId = boothId, TeamId = teamId },
+            cancellationToken);
+
+        return affectedRows == 1;
+    }
+
+    public async Task<bool> TryRejectEntryAsync(
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            BoothQueries.TryRejectBoothEntryQuery(),
             new { BoothId = boothId, TeamId = teamId },
             cancellationToken);
 

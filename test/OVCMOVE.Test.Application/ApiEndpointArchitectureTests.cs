@@ -35,7 +35,12 @@ public class ApiEndpointArchitectureTests
         {
             typeof(TeamController),
             "api/v1/[controller]",
-            9
+            10
+        },
+        {
+            typeof(BoothController),
+            "api/v1/[controller]",
+            6
         }
     };
 
@@ -88,6 +93,20 @@ public class ApiEndpointArchitectureTests
             action.GetCustomAttributes().OfType<IAuthorizeData>());
     }
 
+    [Fact]
+    public void TeamMySessionEndpoint_IsPresentAndProtected()
+    {
+        var action = typeof(TeamController).GetMethod(
+            nameof(TeamController.GetMySession));
+
+        Assert.NotNull(action);
+        var get = Assert.Single(
+            action.GetCustomAttributes<HttpGetAttribute>());
+        Assert.Equal("my-session", get.Template);
+        Assert.NotEmpty(
+            action.GetCustomAttributes().OfType<IAuthorizeData>());
+    }
+
     [Theory]
     [MemberData(nameof(FeatureControllers))]
     [MemberData(nameof(AdminControllers))]
@@ -129,6 +148,7 @@ public class ApiEndpointArchitectureTests
             typeof(OrganizerController),
             typeof(RaceController),
             typeof(TeamController),
+            typeof(BoothController),
             typeof(OrganizersController),
             typeof(RbacAssignmentsController),
             typeof(RbacPermissionsController),

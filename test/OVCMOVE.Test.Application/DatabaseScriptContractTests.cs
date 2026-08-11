@@ -94,12 +94,40 @@ public class DatabaseScriptContractTests
             migrationScript,
             StringComparison.Ordinal);
         Assert.Contains(
-            "UX_Booth_OccupiedTeam",
+            "UX_Booth_ActiveTeam",
             resetScript,
             StringComparison.Ordinal);
         Assert.Contains(
             "[Rules] NVARCHAR(MAX) NOT NULL",
             resetScript,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DurableBoothSessionSchema_GuardsOrganizerAndPendingTeam()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "005_DurableBoothSessions.sql"));
+
+        Assert.Contains(
+            "UX_BoothOrganizer_RaceId_OrganizerId",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ALTER COLUMN [RaceId] UNIQUEIDENTIFIER NOT NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "UX_Booth_ActiveTeam",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[Status] IN (N'pending', N'occupied')",
+            migrationScript,
             StringComparison.Ordinal);
     }
 

@@ -26,7 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
-g
+
 # Copy published files
 COPY --from=publish /app/publish .
 

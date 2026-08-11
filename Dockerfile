@@ -8,7 +8,7 @@ COPY ["src/OVCMOVE.Api/OVCMOVE.Api.csproj", "src/OVCMOVE.Api/"]
 COPY ["src/OVCMOVE.Application/OVCMOVE.Application.csproj", "src/OVCMOVE.Application/"]
 COPY ["src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj", "src/OVCMOVE.Infrastructure/"]
 COPY ["src/OVCMOVE.Domain/OVCMOVE.Domain.csproj", "src/OVCMOVE.Domain/"]
-COPY ["plugin/OVCMOVE2026.Plugin/OVCMOVE.2026.Plugin.csproj", "plugin/OVCMOVE.2026.Plugin/"]
+COPY ["plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj", "plugin/OVCMOVE2026.Plugin/"]
 
 RUN dotnet restore "src/OVCMOVE.Api/OVCMOVE.Api.csproj"
 

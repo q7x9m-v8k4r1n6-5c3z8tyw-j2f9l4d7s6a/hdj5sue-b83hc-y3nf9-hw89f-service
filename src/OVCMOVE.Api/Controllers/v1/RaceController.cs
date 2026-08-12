@@ -247,8 +247,7 @@ public class RaceController : BaseController
         var result = await _mediator.Send(
             request.ToCommand(
                 raceId,
-                GetRequiredCurrentUserId(),
-                User.GetCurrentUserDisplayName("ADMIN")),
+                GetRequiredCurrentUserId()),
             cancellationToken);
         if (result is null)
         {

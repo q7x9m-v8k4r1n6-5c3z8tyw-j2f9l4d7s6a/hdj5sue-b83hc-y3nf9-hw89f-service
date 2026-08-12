@@ -37,6 +37,7 @@ public sealed class SendRaceMessageCommandHandler :
         if (!raceExists) return null;
 
         var actor = request.GetActorOrSystem();
+        var senderName = actor;
         var now = DateTime.UtcNow;
         var recipients = request.Recipients
             .Select(recipient => new RaceMessageRecipientModel
@@ -54,9 +55,7 @@ public sealed class SendRaceMessageCommandHandler :
             Id = Guid.NewGuid(),
             RaceId = request.RaceId,
             SenderId = request.SenderId,
-            SenderName = string.IsNullOrWhiteSpace(request.SenderName)
-                ? "ADMIN"
-                : request.SenderName.Trim(),
+            SenderName = senderName,
             RecipientKeysJson = JsonSerializer.Serialize(recipientKeys),
             RecipientLabelsJson = JsonSerializer.Serialize(recipientLabels),
             Body = body,

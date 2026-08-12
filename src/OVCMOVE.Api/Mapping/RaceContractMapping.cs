@@ -255,14 +255,10 @@ public static class RaceContractMapping
     public static SendRaceMessageCommand ToCommand(
         this RaceContract.SendRaceMessageRequest request,
         Guid raceId,
-        Guid senderId,
-        string senderName) => new()
+        Guid senderId) => new()
         {
             RaceId = raceId,
             SenderId = senderId,
-            SenderName = string.IsNullOrWhiteSpace(request.SenderName)
-                ? senderName
-                : request.SenderName.Trim(),
             Body = request.Body,
             Recipients = request.Recipients
                 .Select(recipient => new RaceMessageRecipientModel

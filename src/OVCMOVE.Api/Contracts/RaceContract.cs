@@ -262,8 +262,6 @@ public static class RaceContract
 
         [Required(ErrorMessage = "Nội dung tin nhắn không được để trống.")]
         public string Body { get; init; } = string.Empty;
-
-        public string? SenderName { get; init; }
     }
 
     public sealed class RaceMessageResponse

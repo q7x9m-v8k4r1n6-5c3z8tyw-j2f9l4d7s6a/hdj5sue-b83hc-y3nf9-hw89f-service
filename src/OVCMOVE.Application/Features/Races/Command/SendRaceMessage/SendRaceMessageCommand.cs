@@ -10,7 +10,6 @@ public sealed class SendRaceMessageCommand :
 {
     public Guid RaceId { get; init; }
     public Guid? SenderId { get; init; }
-    public string SenderName { get; init; } = string.Empty;
     public IReadOnlyCollection<RaceMessageRecipientModel> Recipients { get; init; } = [];
     public string Body { get; init; } = string.Empty;
 }

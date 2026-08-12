@@ -11,7 +11,7 @@ using OVCMOVE2026.Plugin.Repositories.Queries;
 namespace OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 
 // Kiện hàng Query
-public sealed record GetSecretMissionOverviewQuery(Guid TeamId) : IRequest<List<SecretMissionOverviewDto>>;
+public sealed record GetSecretMissionOverviewQuery(Guid TeamId, Guid RaceId) : IRequest<List<SecretMissionOverviewDto>>;
 
 // Handler xử lý Query
 public class GetSecretMissionOverviewQueryHandler : IRequestHandler<GetSecretMissionOverviewQuery, List<SecretMissionOverviewDto>>
@@ -25,10 +25,9 @@ public class GetSecretMissionOverviewQueryHandler : IRequestHandler<GetSecretMis
 
     public async Task<List<SecretMissionOverviewDto>> Handle(GetSecretMissionOverviewQuery request, CancellationToken cancellationToken)
     {
-        // Gọi thẳng SQL, Dapper sẽ tự động map 5 cột SQL vào 5 Property của DTO
         var result = await _db.QueryAsync<SecretMissionOverviewDto>(
             SecretMissionQueries.GetOverviewByTeamIdQuery(),
-            new { request.TeamId },
+            new { request.TeamId, request.RaceId },
             cancellationToken: cancellationToken);
 
         return result.ToList();

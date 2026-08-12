@@ -13,6 +13,7 @@ public class SecretMission : BaseEntity
     /// </summary>
     public bool IsAssigned { get; set;}
     public string? Location { get; set; }
+    public Guid? RaceId {get; set;}
     public Guid? TeamId {get; set;}
     public Guid? ReceivedBy { get; set; }
     public DateTime? ReceivedTime { get; set; }

@@ -207,11 +207,6 @@ public class TeamLeaderboardQueryHandlerTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<Race?>(race.Id == raceId ? race : null);
 
-        public Task<bool> ExistsAsync(
-            Guid raceId,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(race.Id == raceId);
-
         public Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
             Guid? raceId,
             CancellationToken cancellationToken = default) =>

@@ -144,18 +144,6 @@ public class RaceRepository : IRaceRepository
             cancellationToken: cancellationToken);
     }
 
-    public async Task<bool> ExistsAsync(Guid raceId, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var result = await _db.QueryFirstOrDefaultAsync<int>(
-            RaceQueries.RaceExistsQuery(),
-            new { RaceId = raceId },
-            cancellationToken: cancellationToken);
-
-        return result == 1;
-    }
-
     public async Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,

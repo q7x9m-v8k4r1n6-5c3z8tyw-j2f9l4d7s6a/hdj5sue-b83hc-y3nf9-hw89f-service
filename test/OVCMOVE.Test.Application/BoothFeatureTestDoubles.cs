@@ -183,7 +183,6 @@ internal sealed class ValidBoothRaceRepository : IRaceRepository
     public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)> GetPageAsync(int page, int pageSize, Guid? teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-    public Task<bool> ExistsAsync(Guid raceId, CancellationToken cancellationToken = default) => Task.FromResult(true);
     public Task<bool> UpdateAsync(Race race, DateTime expectedModifiedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(Guid? raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<List<BoothListResultModel>> GetBoothListAsync(Guid? raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

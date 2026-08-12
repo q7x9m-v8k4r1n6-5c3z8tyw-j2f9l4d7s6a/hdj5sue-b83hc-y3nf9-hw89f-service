@@ -19,7 +19,6 @@ public interface IRaceRepository
             CancellationToken cancellationToken = default);
     Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default);
-    Task<bool> ExistsAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,

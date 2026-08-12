@@ -44,14 +44,6 @@ public static class RaceQueries
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
-    public static string RaceExistsQuery() => @"
-    SELECT CASE WHEN EXISTS
-    (
-        SELECT 1
-        FROM [dbo].[Race]
-        WHERE [Id] = @RaceId AND [IsDeleted] = 0
-    ) THEN 1 ELSE 0 END;";
-
     public static string GetAllRacesQuery() => @"
     SELECT
         R.[Id],

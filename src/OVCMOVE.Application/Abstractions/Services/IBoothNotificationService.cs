@@ -5,7 +5,7 @@ namespace OVCMOVE.Application.Abstractions.Services;
 public interface IBoothNotificationService
 {
     /// <summary>
-    /// Phat thong bao doi trang thai tram cho cac client thoi gian thuc.
+    /// Phát thông báo đổi trạng thái trạm cho các Client thời gian thực
     /// </summary>
     Task NotifyBoothStatusChangedAsync(
         Guid raceId,

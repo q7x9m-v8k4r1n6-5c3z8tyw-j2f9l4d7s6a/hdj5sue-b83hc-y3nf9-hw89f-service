@@ -33,8 +33,8 @@ public sealed class SendRaceMessageCommandHandler :
         cancellationToken.ThrowIfCancellationRequested();
         Validate(request);
 
-        var raceExists = await _raceRepository.ExistsAsync(request.RaceId, cancellationToken);
-        if (!raceExists) return null;
+        var race = await _raceRepository.GetByIdAsync(request.RaceId, cancellationToken);
+        if (race is null) return null;
 
         var actor = request.GetActorOrSystem();
         var senderName = actor;

@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl,
+            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @Rules,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -27,6 +27,7 @@ public static class RaceQueries
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
             [CoverUrl] = @CoverUrl,
+            [Rules] = @Rules,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
         WHERE [Id] = @Id
@@ -37,7 +38,7 @@ public static class RaceQueries
     public static string GetRaceByIdQuery() => @"
     SELECT
         [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
-        [Status],
+        [Status], [Rules],
         [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
     FROM [dbo].[Race]
@@ -422,7 +423,7 @@ public static class RaceQueries
         ) THEN 1 ELSE 0 END;";
 
     public static string GetRaceRulesQuery() => @"
-    SELECT CAST(N'' AS NVARCHAR(MAX))
+    SELECT [Rules]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
     public static string GetBoothProgressQuery() => @"

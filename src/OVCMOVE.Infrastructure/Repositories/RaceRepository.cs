@@ -171,6 +171,7 @@ public class RaceRepository : IRaceRepository
             race.TimeEnd,
             race.Place,
             race.Status,
+            race.Rules,
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
             race.CoverUrl,

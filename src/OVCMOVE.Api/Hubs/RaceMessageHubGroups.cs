@@ -1,3 +1,5 @@
+using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
+
 namespace OVCMOVE.API.Hubs;
 
 internal static class RaceMessageHubGroups
@@ -19,31 +21,31 @@ internal static class RaceMessageHubGroups
         var groups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in recipientKeys.Select(item => item.Trim()))
         {
-            if (string.Equals(key, "all", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(key, RaceMessageRecipientConstants.All, StringComparison.OrdinalIgnoreCase))
             {
                 groups.Add(All(raceId));
                 continue;
             }
 
-            if (string.Equals(key, "all-teams", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(key, RaceMessageRecipientConstants.AllTeams, StringComparison.OrdinalIgnoreCase))
             {
                 groups.Add(AllTeams(raceId));
                 continue;
             }
 
-            if (string.Equals(key, "all-organizers", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(key, RaceMessageRecipientConstants.AllOrganizers, StringComparison.OrdinalIgnoreCase))
             {
                 groups.Add(AllOrganizers(raceId));
                 continue;
             }
 
-            if (TryParseScopedRecipient(key, "team:", out var teamId))
+            if (TryParseScopedRecipient(key, RaceMessageRecipientConstants.TeamKeyPrefix, out var teamId))
             {
                 groups.Add(Team(raceId, teamId));
                 continue;
             }
 
-            if (TryParseScopedRecipient(key, "organizer:", out var organizerId))
+            if (TryParseScopedRecipient(key, RaceMessageRecipientConstants.OrganizerKeyPrefix, out var organizerId))
             {
                 groups.Add(Organizer(raceId, organizerId));
             }

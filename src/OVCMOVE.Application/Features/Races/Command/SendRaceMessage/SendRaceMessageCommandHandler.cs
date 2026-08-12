@@ -1,6 +1,5 @@
 using System.Text.Json;
 using MediatR;
-using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -14,16 +13,13 @@ public sealed class SendRaceMessageCommandHandler :
 {
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
-    private readonly IUnitOfWork _unitOfWork;
 
     public SendRaceMessageCommandHandler(
         IRaceRepository raceRepository,
-        IBoothNotificationService notificationService,
-        IUnitOfWork unitOfWork)
+        IBoothNotificationService notificationService)
     {
         _raceRepository = raceRepository;
         _notificationService = notificationService;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<RaceMessageResultModel?> Handle(
@@ -31,7 +27,8 @@ public sealed class SendRaceMessageCommandHandler :
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        Validate(request);
+        var body = ValidateBody(request);
+        var recipients = NormalizeRecipients(request);
 
         var race = await _raceRepository.GetByIdAsync(request.RaceId, cancellationToken);
         if (race is null) return null;
@@ -39,17 +36,8 @@ public sealed class SendRaceMessageCommandHandler :
         var actor = request.GetActorOrSystem();
         var senderName = actor;
         var now = DateTime.UtcNow;
-        var recipients = request.Recipients
-            .Select(recipient => new RaceMessageRecipientModel
-            {
-                Key = recipient.Key.Trim(),
-                Label = recipient.Label.Trim(),
-                Type = recipient.Type.Trim()
-            })
-            .ToArray();
         var recipientKeys = recipients.Select(recipient => recipient.Key).ToArray();
         var recipientLabels = recipients.Select(recipient => recipient.Label).ToArray();
-        var body = request.Body.Trim();
         var message = new RaceMessage
         {
             Id = Guid.NewGuid(),
@@ -66,17 +54,7 @@ public sealed class SendRaceMessageCommandHandler :
             IsDeleted = false
         };
 
-        try
-        {
-            await _unitOfWork.BeginAsync(cancellationToken);
-            await _raceRepository.CreateRaceMessageAsync(message, cancellationToken);
-            await _unitOfWork.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackAsync(CancellationToken.None);
-            throw;
-        }
+        await _raceRepository.CreateRaceMessageAsync(message, cancellationToken);
 
         var result = new RaceMessageResultModel
         {
@@ -98,7 +76,7 @@ public sealed class SendRaceMessageCommandHandler :
         return result;
     }
 
-    private static void Validate(SendRaceMessageCommand request)
+    private static string ValidateBody(SendRaceMessageCommand request)
     {
         if (request.RaceId == Guid.Empty)
         {
@@ -110,17 +88,85 @@ public sealed class SendRaceMessageCommandHandler :
             throw new ApplicationValidationException("Message body is required.");
         }
 
+        return request.Body.Trim();
+    }
+
+    private static IReadOnlyCollection<RaceMessageRecipientModel> NormalizeRecipients(
+        SendRaceMessageCommand request)
+    {
         if (request.Recipients.Count == 0)
         {
             throw new ApplicationValidationException("At least one recipient is required.");
         }
 
-        if (request.Recipients.Any(recipient =>
-                string.IsNullOrWhiteSpace(recipient.Key) ||
-                string.IsNullOrWhiteSpace(recipient.Label) ||
-                string.IsNullOrWhiteSpace(recipient.Type)))
+        var recipients = request.Recipients
+            .Select(NormalizeRecipient)
+            .DistinctBy(recipient => recipient.Key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (recipients.Length == 0)
         {
             throw new ApplicationValidationException("Recipient is invalid.");
         }
+
+        return recipients;
+    }
+
+    private static RaceMessageRecipientModel NormalizeRecipient(
+        RaceMessageRecipientModel recipient)
+    {
+        var type = recipient.Type.Trim().ToLowerInvariant();
+        var key = recipient.Key.Trim().ToLowerInvariant();
+        var label = recipient.Label.Trim();
+
+        if (string.IsNullOrWhiteSpace(key) ||
+            string.IsNullOrWhiteSpace(label) ||
+            string.IsNullOrWhiteSpace(type))
+        {
+            throw new ApplicationValidationException("Recipient is invalid.");
+        }
+
+        var normalizedKey = type switch
+        {
+            RaceMessageRecipientConstants.All =>
+                RequireExactKey(key, RaceMessageRecipientConstants.All),
+            RaceMessageRecipientConstants.AllTeams =>
+                RequireExactKey(key, RaceMessageRecipientConstants.AllTeams),
+            RaceMessageRecipientConstants.AllOrganizers =>
+                RequireExactKey(key, RaceMessageRecipientConstants.AllOrganizers),
+            RaceMessageRecipientConstants.Team =>
+                RequireScopedKey(key, RaceMessageRecipientConstants.TeamKeyPrefix),
+            RaceMessageRecipientConstants.Organizer =>
+                RequireScopedKey(key, RaceMessageRecipientConstants.OrganizerKeyPrefix),
+            _ => throw new ApplicationValidationException("Recipient type is invalid.")
+        };
+
+        return new RaceMessageRecipientModel
+        {
+            Key = normalizedKey,
+            Label = label,
+            Type = type
+        };
+    }
+
+    private static string RequireExactKey(string key, string expectedKey)
+    {
+        if (!string.Equals(key, expectedKey, StringComparison.Ordinal))
+        {
+            throw new ApplicationValidationException("Recipient key is invalid.");
+        }
+
+        return expectedKey;
+    }
+
+    private static string RequireScopedKey(string key, string prefix)
+    {
+        if (!key.StartsWith(prefix, StringComparison.Ordinal) ||
+            !Guid.TryParse(key[prefix.Length..], out var id))
+        {
+            throw new ApplicationValidationException("Recipient key is invalid.");
+        }
+
+        return $"{prefix}{id:D}";
     }
 }

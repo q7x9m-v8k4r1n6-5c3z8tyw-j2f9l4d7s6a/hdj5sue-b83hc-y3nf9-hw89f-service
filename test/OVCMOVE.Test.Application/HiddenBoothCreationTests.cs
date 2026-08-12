@@ -1,13 +1,10 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
-using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
-using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Common;
-using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Domain.Constants;
@@ -113,12 +110,12 @@ public sealed class HiddenBoothCreationTests
     {
         var raceId = Guid.NewGuid();
         var organizerId = Guid.NewGuid();
-        var booths = new BoothRepositoryStub();
-        var assignments = new BoothOrganizerRepositoryStub();
+        var booths = new RecordingBoothRepository();
+        var assignments = new RecordingBoothOrganizerRepository();
         var processor = new BoothPatchProcessor(
             booths,
             assignments,
-            new OrganizerRepositoryStub([organizerId]));
+            new ExistingOrganizerRepository([organizerId]));
         var command = HiddenBoothPatch(raceId, organizerId);
 
         await processor.ApplyAsync(
@@ -195,12 +192,12 @@ public sealed class HiddenBoothCreationTests
     [Fact]
     public async Task BoothPatchProcessor_RejectsUnknownOrganizerBeforeWriting()
     {
-        var booths = new BoothRepositoryStub();
-        var assignments = new BoothOrganizerRepositoryStub();
+        var booths = new RecordingBoothRepository();
+        var assignments = new RecordingBoothOrganizerRepository();
         var processor = new BoothPatchProcessor(
             booths,
             assignments,
-            new OrganizerRepositoryStub([]));
+            new ExistingOrganizerRepository([]));
 
         await Assert.ThrowsAsync<ApplicationValidationException>(() =>
             processor.ApplyAsync(
@@ -216,12 +213,12 @@ public sealed class HiddenBoothCreationTests
     [Fact]
     public async Task BoothPatchProcessor_PropagatesCancellationBeforeWriting()
     {
-        var booths = new BoothRepositoryStub();
-        var assignments = new BoothOrganizerRepositoryStub();
+        var booths = new RecordingBoothRepository();
+        var assignments = new RecordingBoothOrganizerRepository();
         var processor = new BoothPatchProcessor(
             booths,
             assignments,
-            new OrganizerRepositoryStub([]));
+            new ExistingOrganizerRepository([]));
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -259,7 +256,7 @@ public sealed class HiddenBoothCreationTests
     }
 
     [Fact]
-    public void BoothQueries_PersistAndReloadHiddenFlag()
+    public void BoothQueries_IncludeHiddenFlagInWriteAndReadContracts()
     {
         Assert.Contains("[IsHidden]", RaceQueries.CreateBoothQuery());
         Assert.Contains("@IsHidden", RaceQueries.CreateBoothQuery());
@@ -289,163 +286,4 @@ public sealed class HiddenBoothCreationTests
             }
         };
 
-    private sealed class BoothRepositoryStub : IBoothRepository
-    {
-        public List<Booth> Created { get; } = [];
-
-        public Task<Guid> CreateAsync(
-            Booth booth,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Created.Add(booth);
-            return Task.FromResult(booth.Id);
-        }
-
-        public Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(
-            Guid raceId,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<IReadOnlyCollection<Booth>>([]);
-        }
-
-        public Task<Booth?> GetByIdAsync(
-            Guid id,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<Booth?> GetActiveByTeamAndRaceAsync(
-            Guid teamId,
-            Guid raceId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> UpdateAsync(
-            Booth booth,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> TryRequestEntryAsync(
-            Guid boothId,
-            Guid teamId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> TryOccupyAsync(
-            Guid boothId,
-            Guid teamId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> TryRejectEntryAsync(
-            Guid boothId,
-            Guid teamId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> TryReleaseAsync(
-            Guid boothId,
-            Guid teamId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task DeleteAsync(
-            Guid boothId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> SubmitScoreAndReleaseAsync(
-            SubmitBoothScoreModel model,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
-
-    private sealed class BoothOrganizerRepositoryStub :
-        IBoothOrganizerRepository
-    {
-        public List<BoothOrganizer> Created { get; } = [];
-
-        public Task CreateAsync(
-            BoothOrganizer boothOrganizer,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Created.Add(boothOrganizer);
-            return Task.CompletedTask;
-        }
-
-        public Task<IReadOnlyCollection<BoothOrganizer>> GetByRaceIdAsync(
-            Guid raceId,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<IReadOnlyCollection<BoothOrganizer>>([]);
-        }
-
-        public Task DeleteByBoothIdAsync(
-            Guid boothId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<BoothOrganizer?> GetByOrganizerAndRaceAsync(
-            Guid organizerId,
-            Guid raceId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> IsAssignedAsync(
-            Guid organizerId,
-            Guid boothId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
-
-    private sealed class OrganizerRepositoryStub(
-        IReadOnlyCollection<Guid> existingIds) : IOrganizerRepository
-    {
-        public Task<IReadOnlyCollection<Guid>> GetExistingIdsAsync(
-            IEnumerable<Guid> organizerIds,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<IReadOnlyCollection<Guid>>(
-                organizerIds.Intersect(existingIds).ToArray());
-        }
-
-        public Task<User?> GetByEmailAsync(
-            string email,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<User?> GetByIdAsync(
-            Guid organizerId,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<(
-            IReadOnlyCollection<GetAllOrganizersResultModel> Items,
-            int TotalItems)> GetPageAsync(
-            string? search,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<IReadOnlyCollection<User>> SearchAsync(
-            string keyword,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> ChangeStatusAsync(
-            Guid organizerId,
-            string status,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<bool> UpdateAsync(
-            User organizer,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
 }

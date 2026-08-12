@@ -85,7 +85,8 @@ public class RaceController : BaseController
                 fileError));
         }
 
-        var request = DeserializePayload<CreateNewRaceRequest>(form.Payload);
+        var request = JsonPayloadDeserializer.Deserialize<CreateNewRaceRequest>(
+            form.Payload);
         var command = request.ToCommand();
         using var coverStream = form.CoverImage?.OpenReadStream();
         if (form.CoverImage is not null && coverStream is not null)
@@ -120,7 +121,8 @@ public class RaceController : BaseController
                 fileError));
         }
 
-        var request = DeserializePayload<PatchRaceRequest>(form.Payload);
+        var request = JsonPayloadDeserializer.Deserialize<PatchRaceRequest>(
+            form.Payload);
         var command = request.ToCommand(raceId);
         using var coverStream = form.CoverImage?.OpenReadStream();
         if (form.CoverImage is not null && coverStream is not null)

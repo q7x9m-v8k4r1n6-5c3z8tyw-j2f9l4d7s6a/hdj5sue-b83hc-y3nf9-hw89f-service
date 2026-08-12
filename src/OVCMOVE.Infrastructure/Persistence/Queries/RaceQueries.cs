@@ -102,7 +102,7 @@ public static class RaceQueries
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description]
+            [Id], [Name], [Place], [Description], [IsHidden]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 
@@ -118,7 +118,7 @@ public static class RaceQueries
 
     public static string GetBoothsByRaceIdQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description],
+            [Id], [Name], [Place], [Description], [IsHidden],
             [RaceID] AS [RaceId]
         FROM [dbo].[Booth]
         WHERE [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -185,11 +185,11 @@ public static class RaceQueries
 
     public static string CreateBoothQuery() => @"
         INSERT INTO [dbo].[Booth]
-            ([Id], [Name], [Place], [RaceID], [Description],
+            ([Id], [Name], [Place], [RaceID], [Description], [IsHidden],
              [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt],
              [IsDeleted])
         VALUES
-            (@Id, @Name, @Place, @RaceId, @Description,
+            (@Id, @Name, @Place, @RaceId, @Description, @IsHidden,
              @CreatedBy, @CreatedAt, @ModifiedBy,
              @ModifiedAt, @IsDeleted);";
 

@@ -65,6 +65,7 @@ internal static class CreateRaceFactory
             Name = input.Name.Trim(),
             Place = input.Place.Trim(),
             Description = input.Description?.Trim() ?? string.Empty,
+            IsHidden = input.IsHidden,
             CreatedAt = now,
             CreatedBy = actor,
             ModifiedAt = now,

@@ -13,10 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
 {
-    builder.Logging.ClearProviders();
-    builder.Logging.AddConsole();
-    builder.Logging.AddDebug();
-
     var envFiles = Env.TraversePath().Load();
 
     if (envFiles.Any())

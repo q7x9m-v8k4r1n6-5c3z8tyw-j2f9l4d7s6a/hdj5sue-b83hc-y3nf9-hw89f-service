@@ -47,6 +47,7 @@ public static class RaceContract
             public string Name { get; set; } = string.Empty;
             public string Place { get; set; } = string.Empty;
             public string? Description { get; set; }
+            public bool IsHidden { get; set; }
             public List<Guid> OrganizerIds { get; set; } = new();
         }
 
@@ -114,6 +115,7 @@ public static class RaceContract
             public string Name { get; set; } = string.Empty;
             public string Place { get; set; } = string.Empty;
             public string? Description { get; set; }
+            public bool IsHidden { get; set; }
             public List<Guid> OrganizerIds { get; set; } = new();
         }
 
@@ -171,6 +173,7 @@ public static class RaceContract
         public string Name { get; init; } = string.Empty;
         public string Place { get; init; } = string.Empty;
         public string Description { get; init; } = string.Empty;
+        public bool IsHidden { get; init; }
         public string OrganizerID { get; init; } = string.Empty;
     }
 

@@ -166,14 +166,15 @@ internal sealed class AssignedBoothOrganizerRepository(bool isAssigned = true)
     public Task<IReadOnlyCollection<BoothOrganizer>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }
 
-internal sealed class ValidBoothRaceRepository : IRaceRepository
+internal sealed class ValidBoothRaceRepository(
+    BoothProgressResultModel? progress = null) : IRaceRepository
 {
     public Task<BoothProgressResultModel> GetBoothProgressAsync(
         Guid raceId,
         Guid teamId,
         Guid boothId,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult(new BoothProgressResultModel
+        Task.FromResult(progress ?? new BoothProgressResultModel
         {
             IsTeamInRace = true
         });

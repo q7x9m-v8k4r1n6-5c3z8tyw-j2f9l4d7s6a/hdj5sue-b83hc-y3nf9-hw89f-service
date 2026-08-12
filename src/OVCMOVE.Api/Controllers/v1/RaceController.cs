@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
@@ -22,9 +21,6 @@ namespace OVCMOVE.Api.Controllers.v1;
 [Route("api/v1/[controller]")]
 public class RaceController : BaseController
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web);
-
     public RaceController(IMediator mediator)
         : base(mediator)
     {
@@ -258,23 +254,4 @@ public class RaceController : BaseController
             UserConstants.UserType.Team,
             StringComparison.OrdinalIgnoreCase);
 
-    private static T DeserializePayload<T>(string payload)
-    {
-        if (string.IsNullOrWhiteSpace(payload))
-        {
-            throw new ArgumentException("Payload không được để trống.");
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(payload, JsonOptions)
-                ?? throw new ArgumentException("Payload không hợp lệ.");
-        }
-        catch (JsonException exception)
-        {
-            throw new ArgumentException(
-                "Payload JSON không hợp lệ.",
-                exception);
-        }
-    }
 }

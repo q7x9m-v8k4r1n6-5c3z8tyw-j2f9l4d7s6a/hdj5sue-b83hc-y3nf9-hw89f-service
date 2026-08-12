@@ -6,6 +6,7 @@ public sealed class RaceBoothModel
     public string Name { get; init; } = string.Empty;
     public string Place { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public bool IsHidden { get; init; }
     public IReadOnlyCollection<Guid> OrganizerIds { get; init; } = [];
 }
 

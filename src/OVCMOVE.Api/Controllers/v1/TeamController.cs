@@ -1,7 +1,5 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Security;
@@ -15,6 +13,7 @@ using OVCMOVE.Application.Features.Teams.Command.DeleteTeam;
 using OVCMOVE.Application.Features.Teams.Command.ResetTeamPassword;
 using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
 using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
+using OVCMOVE.Application.Features.Teams.Query.GetMySession;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -26,6 +25,22 @@ public class TeamController : BaseController
     {
     }
 
+    [HttpGet("my-session")]
+    [RequirePermission(PermissionCodes.BoothEntryRequest)]
+    public async Task<IActionResult> GetMySession(
+        [FromQuery] TeamContract.MySessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetMySessionQuery(
+                request.RaceId!.Value,
+                GetRequiredCurrentUserId()),
+            cancellationToken);
+
+        return Ok(ApiResponse.Success<TeamContract.MySessionResponse?>(
+            result?.ToResponse()));
+    }
+
     [HttpGet("leaderboard")]
     [RequirePermission(PermissionCodes.RaceLeaderboardRead)]
     public async Task<IActionResult> GetLeaderboard(
@@ -35,7 +50,7 @@ public class TeamController : BaseController
         var result = await _mediator.Send(
             new TeamLeaderboardQuery(
                 request.RaceId!.Value,
-                GetCurrentTeamId()),
+                GetRequiredCurrentUserId()),
             cancellationToken);
 
         return Ok(ApiResponse.Success(result.ToResponse()));
@@ -50,7 +65,7 @@ public class TeamController : BaseController
         var result = await _mediator.Send(
             new ScoreHistoryQuery(
                 request.RaceId!.Value,
-                GetCurrentTeamId(),
+                GetRequiredCurrentUserId(),
                 request.Page,
                 request.PageSize),
             cancellationToken);
@@ -190,15 +205,5 @@ public class TeamController : BaseController
             cancellationToken);
         return Ok(ApiResponse.Success(
             result.Select(item => item.ToResponse()).ToArray()));
-    }
-    private Guid GetCurrentTeamId()
-    {
-        var teamIdValue =
-            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
-            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        return Guid.TryParse(teamIdValue, out var teamId)
-            ? teamId
-            : throw new UnauthorizedAccessException("Token không hợp lệ.");
     }
 }

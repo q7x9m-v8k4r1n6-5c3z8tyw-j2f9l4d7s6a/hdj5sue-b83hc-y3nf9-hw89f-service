@@ -2,6 +2,24 @@
 
 public static class TeamContract
 {
+    public sealed class MySessionRequest
+    {
+        [System.ComponentModel.DataAnnotations.Required(
+            ErrorMessage = "Thiếu RaceId để lấy phiên chơi hiện tại.")]
+        public Guid? RaceId { get; init; }
+    }
+
+    public sealed class MySessionResponse
+    {
+        public Guid RaceId { get; init; }
+        public Guid BoothId { get; init; }
+        public string BoothName { get; init; } = string.Empty;
+        public string Place { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public bool IsHidden { get; init; }
+        public string Status { get; init; } = string.Empty;
+    }
+
     public sealed class LeaderboardRequest
     {
         [System.ComponentModel.DataAnnotations.Required(

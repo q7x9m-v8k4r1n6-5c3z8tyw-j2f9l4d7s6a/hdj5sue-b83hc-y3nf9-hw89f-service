@@ -6,6 +6,7 @@ using OVCMOVE.Infrastructure.Persistence.Dapper;
 using OVCMOVE.Infrastructure.Persistence.Queries;
 using OVCMOVE.Application.Common;
 using Microsoft.Data.SqlClient;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Infrastructure.Repositories;
 
@@ -41,6 +42,25 @@ public class BoothRepository : IBoothRepository
             BoothQueries.GetBoothByIdQuery(),
             new { Id = id },
             cancellationToken: cancellationToken);
+    }
+
+    public async Task<Booth?> GetActiveByTeamAndRaceAsync(
+        Guid teamId,
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _db.QueryFirstOrDefaultAsync<Booth>(
+            BoothQueries.GetActiveBoothByTeamAndRaceQuery(),
+            new
+            {
+                TeamId = teamId,
+                RaceId = raceId,
+                PendingStatus = BoothConstants.BoothStatus.Pending,
+                OccupiedStatus = BoothConstants.BoothStatus.Occupied
+            },
+            cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default)

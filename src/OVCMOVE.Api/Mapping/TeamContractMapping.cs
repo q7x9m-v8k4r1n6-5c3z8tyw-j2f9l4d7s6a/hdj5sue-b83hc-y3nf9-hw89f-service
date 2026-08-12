@@ -1,5 +1,6 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Features.Teams.Query.GetAllTeams;
+using OVCMOVE.Application.Features.Teams.Query.GetMySession;
 using OVCMOVE.Application.Features.Teams.Query.ScoreHistory;
 using OVCMOVE.Application.Features.Teams.Query.SearchTeam;
 using OVCMOVE.Application.Features.Teams.Query.TeamLeaderboard;
@@ -8,6 +9,18 @@ namespace OVCMOVE.Api.Mapping;
 
 public static class TeamContractMapping
 {
+    public static TeamContract.MySessionResponse ToResponse(
+        this MySessionResultModel result) => new()
+        {
+            RaceId = result.RaceId,
+            BoothId = result.BoothId,
+            BoothName = result.BoothName,
+            Place = result.Place,
+            Description = result.Description,
+            IsHidden = result.IsHidden,
+            Status = result.Status
+        };
+
     public static TeamContract.LeaderboardResponse ToResponse(
         this TeamLeaderboardResultModel result) => new()
         {

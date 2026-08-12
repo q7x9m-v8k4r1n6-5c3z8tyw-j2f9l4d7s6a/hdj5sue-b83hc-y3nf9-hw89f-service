@@ -216,7 +216,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("{raceId:guid}/messages")]
-    [RequirePermission(PermissionCodes.RaceRead)]
+    [RequirePermission(PermissionCodes.RaceManage)]
     public async Task<IActionResult> GetRaceMessages(
         [FromRoute] Guid raceId,
         [FromQuery] int limit,

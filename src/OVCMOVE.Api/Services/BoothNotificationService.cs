@@ -78,8 +78,16 @@ public class BoothNotificationService : IBoothNotificationService
         RaceMessageResultModel message,
         CancellationToken cancellationToken = default)
     {
+        var groups = RaceMessageHubGroups.FromRecipientKeys(
+            raceId,
+            message.RecipientKeys);
+        if (groups.Count == 0)
+        {
+            return;
+        }
+
         await _hubContext.Clients
-            .Group($"Race_{raceId}")
+            .Groups(groups)
             .ReceiveRaceMessage(message);
     }
 }

@@ -25,6 +25,9 @@ namespace OVCMOVE.Api.Controllers.v1;
 [Route("api/v1/[controller]")]
 public class RaceController : BaseController
 {
+    private static readonly System.Text.Json.JsonSerializerOptions PayloadJsonSerializerOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
+
     public RaceController(IMediator mediator)
         : base(mediator)
     {
@@ -364,10 +367,12 @@ public class RaceController : BaseController
 
         try
         {
-            return JsonSerializer.Deserialize<T>(payload, JsonOptions)
+            return System.Text.Json.JsonSerializer.Deserialize<T>(
+                    payload,
+                    PayloadJsonSerializerOptions)
                 ?? throw new ArgumentException("Payload không hợp lệ.");
         }
-        catch (JsonException exception)
+        catch (System.Text.Json.JsonException exception)
         {
             throw new ArgumentException(
                 "Payload JSON không hợp lệ.",

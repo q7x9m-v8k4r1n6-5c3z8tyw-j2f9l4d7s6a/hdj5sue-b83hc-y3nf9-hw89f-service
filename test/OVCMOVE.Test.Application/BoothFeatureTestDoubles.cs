@@ -5,6 +5,7 @@ using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Common;
+using OVCMOVE.Application.Features.Organizers.Query.GetAllOrganizers;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;

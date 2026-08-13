@@ -11,6 +11,8 @@ using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
+using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
 using OVCMOVE.Application.Features.Races.Query.GetRaceMessages;
@@ -216,7 +218,7 @@ public class RaceController : BaseController
     }
 
     [HttpGet("{raceId:guid}/messages")]
-    [RequirePermission(PermissionCodes.RaceManage)]
+    [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceMessages(
         [FromRoute] Guid raceId,
         [FromQuery] int limit,
@@ -232,7 +234,10 @@ public class RaceController : BaseController
             },
             cancellationToken);
 
-        return Ok(ApiResponse.Success(result.Select(item => item.ToResponse()).ToArray()));
+        return Ok(ApiResponse.Success(result
+            .Where(CanCurrentUserReadRaceMessage)
+            .Select(item => item.ToResponse())
+            .ToArray()));
     }
 
     [HttpPost("{raceId:guid}/messages")]
@@ -303,6 +308,54 @@ public class RaceController : BaseController
             User.FindFirstValue("user_type"),
             UserConstants.UserType.Team,
             StringComparison.OrdinalIgnoreCase);
+
+    private bool IsCurrentUserOrganizer() =>
+        string.Equals(
+            User.FindFirstValue("user_type"),
+            UserConstants.UserType.Organizer,
+            StringComparison.OrdinalIgnoreCase);
+
+    private bool HasPermission(string permissionCode) =>
+        User.Claims.Any(claim =>
+            claim.Type == PermissionAuthorizationHandler.PermissionClaimType &&
+            string.Equals(
+                claim.Value,
+                permissionCode,
+                StringComparison.OrdinalIgnoreCase));
+
+    private bool CanCurrentUserReadRaceMessage(RaceMessageResultModel message)
+    {
+        if (HasPermission(PermissionCodes.RaceManage))
+        {
+            return true;
+        }
+
+        var recipientKeys = message.RecipientKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (recipientKeys.Contains(RaceMessageRecipientConstants.All))
+        {
+            return true;
+        }
+
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId is null)
+        {
+            return false;
+        }
+
+        if (IsCurrentUserTeam())
+        {
+            return recipientKeys.Contains(RaceMessageRecipientConstants.AllTeams) ||
+                recipientKeys.Contains($"{RaceMessageRecipientConstants.TeamKeyPrefix}{currentUserId.Value:D}");
+        }
+
+        if (IsCurrentUserOrganizer())
+        {
+            return recipientKeys.Contains(RaceMessageRecipientConstants.AllOrganizers) ||
+                recipientKeys.Contains($"{RaceMessageRecipientConstants.OrganizerKeyPrefix}{currentUserId.Value:D}");
+        }
+
+        return false;
+    }
 
     private static T DeserializePayload<T>(string payload)
     {

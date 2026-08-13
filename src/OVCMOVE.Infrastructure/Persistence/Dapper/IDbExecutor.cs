@@ -12,6 +12,11 @@ public interface IDbExecutor
         object? param = null,
         CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyCollection<TFirst> First, IReadOnlyCollection<TSecond> Second)> QueryMultipleAsync<TFirst, TSecond>(
+        string sql,
+        object? param = null,
+        CancellationToken cancellationToken = default);
+
     Task<int> ExecuteAsync(
         string sql,
         object? param = null,

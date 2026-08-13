@@ -14,6 +14,8 @@ internal static class RaceMessageHubGroups
 
     public static string Organizer(Guid raceId, Guid organizerId) => $"RaceMessage_{raceId}:organizer:{organizerId}";
 
+    public static string History(Guid raceId) => $"RaceMessage_{raceId}:history";
+
     public static IReadOnlyCollection<string> FromRecipientKeys(
         Guid raceId,
         IEnumerable<string> recipientKeys)

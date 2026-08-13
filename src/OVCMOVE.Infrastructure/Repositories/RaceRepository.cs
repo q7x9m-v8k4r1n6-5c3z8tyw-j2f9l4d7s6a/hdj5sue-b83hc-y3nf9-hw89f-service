@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
@@ -330,10 +331,18 @@ public class RaceRepository : IRaceRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var rows = await _db.QueryAsync<RaceMessageRow>(
-            RaceQueries.GetRaceMessagesQuery(),
-            new { RaceId = raceId, Limit = limit },
-            cancellationToken: cancellationToken);
+        IEnumerable<RaceMessageRow> rows;
+        try
+        {
+            rows = await _db.QueryAsync<RaceMessageRow>(
+                RaceQueries.GetRaceMessagesQuery(),
+                new { RaceId = raceId, Limit = limit },
+                cancellationToken: cancellationToken);
+        }
+        catch (SqlException exception) when (IsRaceMessageStoreMissing(exception))
+        {
+            return [];
+        }
 
         return rows.Select(row => new RaceMessageResultModel
         {
@@ -403,6 +412,9 @@ public class RaceRepository : IRaceRepository
             return [];
         }
     }
+
+    private static bool IsRaceMessageStoreMissing(SqlException exception) =>
+        exception.Errors.Cast<SqlError>().Any(error => error.Number is 207 or 208);
 }
 
 internal sealed class RaceMessageRow

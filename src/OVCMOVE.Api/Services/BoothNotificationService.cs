@@ -81,13 +81,16 @@ public class BoothNotificationService : IBoothNotificationService
         var groups = RaceMessageHubGroups.FromRecipientKeys(
             raceId,
             message.RecipientKeys);
-        if (groups.Count == 0)
+
+        if (groups.Count > 0)
         {
-            return;
+            await _hubContext.Clients
+                .Groups(groups)
+                .ReceiveRaceMessage(message);
         }
 
         await _hubContext.Clients
-            .Groups(groups)
+            .Group(RaceMessageHubGroups.History(raceId))
             .ReceiveRaceMessage(message);
     }
 }

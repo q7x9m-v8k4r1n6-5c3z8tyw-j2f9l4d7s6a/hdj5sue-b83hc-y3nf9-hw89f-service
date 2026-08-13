@@ -47,7 +47,7 @@ public class BoothHub(
         {
             if (!await raceRepository.IsTeamInRaceAsync(raceGuid, userId, Context.ConnectionAborted))
             {
-                throw new HubException("Bạn chưa được gán vào trận đấu này.");
+                return;
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, RaceMessageHubGroups.All(raceGuid));
@@ -64,7 +64,7 @@ public class BoothHub(
                 Context.ConnectionAborted);
             if (boothOrganizer is null)
             {
-                throw new HubException("Bạn chưa được gán vào trận đấu này.");
+                return;
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, RaceMessageHubGroups.All(raceGuid));
@@ -73,7 +73,7 @@ public class BoothHub(
             return;
         }
 
-        throw new HubException("Tài khoản không thể nhận tin nhắn trận đấu.");
+        return;
     }
 
     public async Task LeaveRaceMessageGroups(string raceId)
@@ -101,6 +101,28 @@ public class BoothHub(
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, RaceMessageHubGroups.AllOrganizers(raceGuid));
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, RaceMessageHubGroups.Organizer(raceGuid, userId.Value));
         }
+    }
+
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task JoinRaceMessageHistoryGroup(string raceId)
+    {
+        if (!Guid.TryParse(raceId, out var raceGuid))
+        {
+            throw new HubException("RaceId không hợp lệ.");
+        }
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, RaceMessageHubGroups.History(raceGuid));
+    }
+
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task LeaveRaceMessageHistoryGroup(string raceId)
+    {
+        if (!Guid.TryParse(raceId, out var raceGuid))
+        {
+            return;
+        }
+
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, RaceMessageHubGroups.History(raceGuid));
     }
 
     private Guid GetRequiredUserId() =>

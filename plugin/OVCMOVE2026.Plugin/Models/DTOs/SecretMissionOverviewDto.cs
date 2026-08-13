@@ -10,4 +10,6 @@ public class SecretMissionOverviewDto
     
     public bool HasImageEvidence { get; set; }
     public bool HasVideoEvidence { get; set; }
+
+    public DateTime? LastUpdatedAt { get; set; }
 }

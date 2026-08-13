@@ -16,10 +16,11 @@ public static class SecretMissionQueries
         SELECT 
             m.[Id], m.[Name], m.[IsAssigned], 
             CAST(MAX(CASE WHEN e.[FileType] = 'image' THEN 1 ELSE 0 END) AS BIT) AS HasImageEvidence,
-            CAST(MAX(CASE WHEN e.[FileType] = 'video' THEN 1 ELSE 0 END) AS BIT) AS HasVideoEvidence
+            CAST(MAX(CASE WHEN e.[FileType] = 'video' THEN 1 ELSE 0 END) AS BIT) AS HasVideoEvidence,
+            MAX(e.[CreatedAt]) AS LastUpdatedAt
         FROM [dbo].[SecretMission] m
         LEFT JOIN [dbo].[SecretMissionEvidence] e ON m.Id = e.MissionId AND e.IsDeleted = 0
-        WHERE m.[TeamId] = @TeamId AND m.[IsDeleted] = 0
+        WHERE m.[TeamId] = @TeamId AND m.[RaceId] = @RaceId AND m.[IsDeleted] = 0
         GROUP BY m.[Id], m.[Name], m.[IsAssigned], m.[CreatedAt]
         ORDER BY m.[CreatedAt] DESC;";
 

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Security;
@@ -13,9 +14,10 @@ public class ImageController : BaseController
     public ImageController(IMediator mediator) : base(mediator)
     {
     }
+    // [RequirePermission(PermissionCodes.ImageUpload)]
 
     [HttpPost("upload")]
-    [RequirePermission(PermissionCodes.ImageUpload)]
+    [AllowAnonymous]
     public async Task<IActionResult> Upload(
         IFormFile? file,
         CancellationToken cancellationToken)

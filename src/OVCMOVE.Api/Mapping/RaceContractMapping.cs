@@ -53,6 +53,7 @@ public static class RaceContractMapping
                     Name = booth.Name,
                     Place = booth.Place,
                     Description = booth.Description,
+                    IsHidden = booth.IsHidden,
                     OrganizerIds = booth.OrganizerIds ?? []
                 })
                 .ToList()
@@ -132,6 +133,7 @@ public static class RaceContractMapping
                         Name = item.Name,
                         Place = item.Place,
                         Description = item.Description,
+                        IsHidden = item.IsHidden,
                         OrganizerIds = item.OrganizerIds ?? []
                     }).ToList(),
                 Update = source.Update?.Select(item =>
@@ -215,6 +217,7 @@ public static class RaceContractMapping
             Name = result.Name,
             Place = result.Place,
             Description = result.Description,
+            IsHidden = result.IsHidden,
             OrganizerID = string.Join(',', result.OrganizerIds)
         };
 

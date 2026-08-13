@@ -1,28 +1,23 @@
-using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 using OVCMOVE.Application.Common; 
 using OVCMOVE2026.Plugin.Common; 
+using OVCMOVE2026.Plugin.Models.Contracts; 
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
 using OVCMOVE2026.Plugin.CQRS.Commands.ClaimSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
 using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
-using OVCMOVE2026.Plugin.Models.Contracts;
 
 namespace OVCMOVE2026.Plugin.Controllers;
 
 [Route("api/v1/plugin/secret-mission")]
-[ApiController] 
-public class SecretMissionController : ControllerBase
+public class SecretMissionController : PluginBaseController 
 {
-    private readonly IMediator _mediator;
-
-    public SecretMissionController(IMediator mediator) 
+    public SecretMissionController(IMediator mediator) : base(mediator) 
     {
-        _mediator = mediator;
     }
 
     [HttpPost("{id:guid}/evidence")]
@@ -31,11 +26,7 @@ public class SecretMissionController : ControllerBase
         [FromForm] SubmitMissionEvidenceRequest request,
         CancellationToken cancellationToken)
     {
-        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdString, out var submittedBy))
-        {
-            return Unauthorized(new { code = 401, message = "Không lấy được thông tin người dùng. Vui lòng đăng nhập lại." });
-        }
+        var submittedBy = GetRequiredCurrentUserId(); 
 
         var imageModels = new List<FileUploadModel>();
         if (request.Images?.Any() == true)
@@ -45,7 +36,7 @@ public class SecretMissionController : ControllerBase
                 var error = await MediaFileValidator.ValidateImageAsync(file, cancellationToken);
                 if (error != null)
                 {
-                    return BadRequest(new { code = 400, message = $"Lỗi file ảnh '{file.FileName}': {error}" });
+                    return BadRequest(PluginResponse.Error(400, $"Lỗi file ảnh '{file.FileName}': {error}"));
                 }
                 
                 imageModels.Add(new FileUploadModel(file.OpenReadStream(), file.FileName, file.ContentType));
@@ -60,7 +51,7 @@ public class SecretMissionController : ControllerBase
                 var error = await MediaFileValidator.ValidateVideoAsync(file, cancellationToken);
                 if (error != null)
                 {
-                    return BadRequest(new { code = 400, message = $"Lỗi file video '{file.FileName}': {error}" });
+                    return BadRequest(PluginResponse.Error(400, $"Lỗi file video '{file.FileName}': {error}"));
                 }
                 
                 videoModels.Add(new FileUploadModel(file.OpenReadStream(), file.FileName, file.ContentType));
@@ -69,117 +60,98 @@ public class SecretMissionController : ControllerBase
 
         if (!imageModels.Any() && !videoModels.Any())
         {
-            return BadRequest(new { code = 400, message = "Vui lòng chọn ít nhất 1 ảnh hoặc 1 video." });
+            return BadRequest(PluginResponse.Error(400, "Vui lòng chọn ít nhất 1 ảnh hoặc 1 video."));
         }
 
         var command = new SubmitMissionEvidenceCommand(id, submittedBy, imageModels, videoModels);
         var result = await _mediator.Send(command, cancellationToken);
 
-        return Ok(new { code = 200, message = "Nộp bằng chứng thành công.", data = result });
+        return Ok(PluginResponse.Success(result, "Nộp bằng chứng thành công."));
     }
 
-    [HttpGet("overview")]
-    public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
+    [HttpGet("races/{raceId:guid}/overview")]
+    public async Task<IActionResult> GetOverview(
+        [FromRoute] Guid raceId,
+        CancellationToken cancellationToken)
     {
-        var teamIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(teamIdString, out var teamId))
-        {
-            return Unauthorized(new { code = 401, message = "Không lấy được thông tin đội chơi." });
-        }
+        var teamId = GetRequiredCurrentUserId();
 
-        var query = new GetSecretMissionOverviewQuery(teamId);
+        var query = new GetSecretMissionOverviewQuery(teamId, raceId);
         var result = await _mediator.Send(query, cancellationToken);
 
-        return Ok(new { code = 200, message = "Thành công", data = result });
+        return Ok(PluginResponse.Success(result, "Thành công"));
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetDetail([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetDetail(
+        [FromRoute] Guid id, 
+        CancellationToken cancellationToken)
     {
-        var teamIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(teamIdString, out var teamId))
-        {
-            return Unauthorized(new { code = 401, message = "Không lấy được thông tin đội chơi." });
-        }
+        var teamId = GetRequiredCurrentUserId();
 
         var query = new GetSecretMissionDetailQuery(id, teamId);
         var result = await _mediator.Send(query, cancellationToken);
 
         if (result == null)
         {
-            return NotFound(new { code = 404, message = "Không tìm thấy nhiệm vụ bí mật này hoặc chưa được giao cho đội của bạn." });
+            return NotFound(PluginResponse.Error(404, "Không tìm thấy nhiệm vụ bí mật này hoặc chưa được giao cho đội của bạn."));
         }
 
-        return Ok(new { code = 200, message = "Thành công", data = result });
+        return Ok(PluginResponse.Success(result, "Thành công"));
     }
 
     [HttpPost("{id:guid}/claim")]
-    public async Task<IActionResult> ClaimMission([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> ClaimMission(
+        [FromRoute] Guid id, 
+        CancellationToken cancellationToken)
     {
-        var teamIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(teamIdString, out var teamId))
-        {
-            return Unauthorized(new { code = 401, message = "Không lấy được thông tin đội chơi." });
-        }
+        var teamId = GetRequiredCurrentUserId();
 
         var command = new ClaimSecretMissionCommand(id, teamId);
         var result = await _mediator.Send(command, cancellationToken);
 
         if (result.IsNotFound)
         {
-            return NotFound(new { code = 404, message = result.Message });
+            return NotFound(PluginResponse.Error(404, result.Message));
         }
         
         if (result.IsConflict)
         {
-            return StatusCode(409, new { code = 409, message = result.Message });
+            return StatusCode(409, PluginResponse.Error(409, result.Message));
         }
 
-        return Ok(new { code = 200, message = result.Message, data = true });
+        return Ok(PluginResponse.Success(true, result.Message));
     }
 
-    /// <summary>
-    /// Quét DB và tự động tạo mã QR cho các nhiệm vụ bí mật chưa có QrCodeUrl
-    /// </summary>
     [HttpPost("generate-qrcodes")]
-    public async Task<IActionResult> GenerateQrCodesBatch(CancellationToken cancellationToken)
+    public async Task<IActionResult> GenerateQrCodesBatch(
+        CancellationToken cancellationToken)
     {
         var command = new GenerateMissionQrCodesBatchCommand();
         var result = await _mediator.Send(command, cancellationToken);
 
         if (result.TotalGenerated == 0 && result.TotalFailed == 0)
         {
-            return Ok(new 
-            { 
-                code = 200, 
-                message = "Tất cả các nhiệm vụ đều đã có mã QR. Không cần tạo thêm.", 
-                data = result 
-            });
+            return Ok(PluginResponse.Success(result, "Tất cả các nhiệm vụ đều đã có mã QR. Không cần tạo thêm."));
         }
 
-        return Ok(new 
-        { 
-            code = 200, 
-            message = $"Xử lý hoàn tất. Tạo mới thành công: {result.TotalGenerated} mã. Bị lỗi: {result.TotalFailed} mã.", 
-            data = result 
-        });
+        return Ok(PluginResponse.Success(result, $"Xử lý hoàn tất. Tạo mới thành công: {result.TotalGenerated} mã. Bị lỗi: {result.TotalFailed} mã."));
     }
 
-    /// <summary>
-    /// Xóa một file minh chứng (Ảnh hoặc Video) khỏi nhiệm vụ bí mật
-    /// </summary>
     [HttpDelete("{missionId}/evidence/{fileId}")]
-    public async Task<IActionResult> DeleteEvidence(Guid missionId, Guid fileId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteEvidence(
+        Guid missionId, 
+        Guid fileId, 
+        CancellationToken cancellationToken)
     {
         var command = new DeleteMissionEvidenceCommand(missionId, fileId);
         var result = await _mediator.Send(command, cancellationToken);
 
         if (!result)
         {
-            return NotFound(new { code = 404, message = "Không tìm thấy nhiệm vụ bí mật." });
+            return NotFound(PluginResponse.Error(404, "Không tìm thấy nhiệm vụ bí mật."));
         }
 
-        return Ok(new { code = 200, message = "Xóa file minh chứng thành công." });
+        return Ok(PluginResponse.Success(true, "Xóa file minh chứng thành công."));
     }
-    
 }

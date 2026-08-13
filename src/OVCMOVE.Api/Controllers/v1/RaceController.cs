@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Text.Json;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Extensions;
@@ -26,9 +25,6 @@ namespace OVCMOVE.Api.Controllers.v1;
 [Route("api/v1/[controller]")]
 public class RaceController : BaseController
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web);
-
     public RaceController(IMediator mediator)
         : base(mediator)
     {
@@ -93,7 +89,8 @@ public class RaceController : BaseController
                 fileError));
         }
 
-        var request = DeserializePayload<CreateNewRaceRequest>(form.Payload);
+        var request = JsonPayloadDeserializer.Deserialize<CreateNewRaceRequest>(
+            form.Payload);
         var command = request.ToCommand();
         using var coverStream = form.CoverImage?.OpenReadStream();
         if (form.CoverImage is not null && coverStream is not null)
@@ -128,7 +125,8 @@ public class RaceController : BaseController
                 fileError));
         }
 
-        var request = DeserializePayload<PatchRaceRequest>(form.Payload);
+        var request = JsonPayloadDeserializer.Deserialize<PatchRaceRequest>(
+            form.Payload);
         var command = request.ToCommand(raceId);
         using var coverStream = form.CoverImage?.OpenReadStream();
         if (form.CoverImage is not null && coverStream is not null)

@@ -95,6 +95,7 @@ public class RaceRepository : IRaceRepository
             Name = booth.Name,
             Place = booth.Place,
             Description = booth.Description,
+            IsHidden = booth.IsHidden,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
                 booth.Id,
                 Array.Empty<Guid>())

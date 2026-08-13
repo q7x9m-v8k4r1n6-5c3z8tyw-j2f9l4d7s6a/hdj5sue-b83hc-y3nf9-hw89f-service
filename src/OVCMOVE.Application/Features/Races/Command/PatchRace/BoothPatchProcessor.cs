@@ -180,6 +180,7 @@ public sealed class BoothPatchProcessor
             Name = patch.Name.Trim(),
             Place = patch.Place.Trim(),
             Description = patch.Description?.Trim() ?? string.Empty,
+            IsHidden = patch.IsHidden,
             CreatedAt = now,
             CreatedBy = actor,
             ModifiedAt = now,

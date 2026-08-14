@@ -143,6 +143,7 @@ public static class RaceContractMapping
                         Name = item.Name,
                         Place = item.Place,
                         Description = item.Description,
+                        IsHidden = item.IsHidden,
                         OrganizerIds = item.OrganizerIds
                     }).ToList(),
                 Remove = source.Remove

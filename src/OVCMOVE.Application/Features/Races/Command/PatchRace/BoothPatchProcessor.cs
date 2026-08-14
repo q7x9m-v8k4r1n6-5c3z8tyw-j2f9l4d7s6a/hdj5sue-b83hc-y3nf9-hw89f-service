@@ -164,6 +164,7 @@ public sealed class BoothPatchProcessor
         {
             booth.Description = patch.Description.Trim();
         }
+        if (patch.IsHidden is bool isHidden) booth.IsHidden = isHidden;
 
         booth.ModifiedAt = now;
         booth.ModifiedBy = actor;

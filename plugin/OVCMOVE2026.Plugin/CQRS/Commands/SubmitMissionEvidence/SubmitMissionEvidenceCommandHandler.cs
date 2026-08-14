@@ -32,7 +32,7 @@ public class SubmitMissionEvidenceCommandHandler : IRequestHandler<SubmitMission
 public async Task<bool> Handle(SubmitMissionEvidenceCommand request, CancellationToken cancellationToken)
 {
     var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
-    if (mission == null || !mission.IsAssigned) throw new InvalidOperationException("Nhiệm vụ không hợp lệ.");
+    if (mission == null) throw new InvalidOperationException("Nhiệm vụ không hợp lệ.");
 
     var containerName = _configuration["OVCMOVE_AzureBlobStorage:EviContainerName"] ?? "mission-evidence";
     var newEvidences = new List<EvidenceFile>();

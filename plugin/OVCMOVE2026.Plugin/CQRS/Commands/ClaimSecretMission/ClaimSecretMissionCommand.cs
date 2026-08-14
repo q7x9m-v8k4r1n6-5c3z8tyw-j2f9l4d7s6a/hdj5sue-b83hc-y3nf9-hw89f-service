@@ -31,31 +31,27 @@ public class ClaimSecretMissionCommandHandler : IRequestHandler<ClaimSecretMissi
     public async Task<ClaimSecretMissionResult> Handle(ClaimSecretMissionCommand request, CancellationToken cancellationToken)
     {
         var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
-        
+
         if (mission == null)
         {
             return new ClaimSecretMissionResult { IsNotFound = true, Message = "Không tìm thấy nhiệm vụ bí mật này." };
         }
 
-        // KIỂM TRA STATE
-        if (mission.IsAssigned)
+        // IsAssigned được dùng để phân loại(true = NVBM, false = Tech Cache),
+        // KHÔNG còn dùng để biết "đã có đội nhận chưa" nữa — dùng TeamId thay thế.
+        if (mission.TeamId.HasValue)
         {
             if (mission.TeamId == request.TeamId)
             {
-                // State 2: Lỡ quét lại (Trả về Success để FE đi tiếp)
                 return new ClaimSecretMissionResult { IsSuccess = true, Message = "Đội của bạn đã nhận nhiệm vụ này rồi." };
             }
-            else
-            {
-                // State 3: Bị cướp (Trả về Conflict)
-                return new ClaimSecretMissionResult { IsConflict = true, Message = "Rất tiếc, hộp mù này đã bị đội khác tìm thấy và nhận mất!" };
-            }
+
+            return new ClaimSecretMissionResult { IsConflict = true, Message = "Rất tiếc, hộp mù này đã bị đội khác tìm thấy và nhận mất!" };
         }
 
-        // State 1: Happy Path (Chưa ai nhận)
-        mission.IsAssigned = true;
+        // Happy path
         mission.TeamId = request.TeamId;
-        mission.ReceivedBy = request.TeamId; // Vì TeamId và UserId là một
+        mission.ReceivedBy = request.TeamId;
         mission.ReceivedTime = DateTime.UtcNow;
 
         await _repository.UpdateClaimAsync(mission, cancellationToken);

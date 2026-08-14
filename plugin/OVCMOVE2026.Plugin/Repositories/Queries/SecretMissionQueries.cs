@@ -46,9 +46,8 @@ public static class SecretMissionQueries
     
     public static string DeleteEvidenceQuery() => @"DELETE FROM [dbo].[SecretMissionEvidence] WHERE [Id] = @Id;";
     public static string UpdateClaimQuery() => @"
-        UPDATE [dbo].[SecretMission]
-        SET [IsAssigned] = 1,
-            [TeamId] = @TeamId,
+        UPDATE [dbo].[SecretMission] 
+        SET [TeamId] = @TeamId,
             [ReceivedBy] = @ReceivedBy,
             [ReceivedTime] = @ReceivedTime,
             [ModifiedBy] = 'system-claim-mission',

@@ -44,7 +44,12 @@ public class GenerateMissionQrCodesBatchCommandHandler : IRequestHandler<Generat
         {
             try
             {
-                var qrPayload = mission.Id.ToString();
+                // Chỉ Tech Cache mới cần quét QR để claim — thêm prefix để FE nhận diện.
+                // NVBM (IsAssigned = true) được giao sẵn, không quét QR
+                var qrPayload = mission.IsAssigned
+                    ? mission.Id.ToString()
+                    : $"techcache_{mission.Id}";
+
                 var pngBytes = _qrCodeService.GeneratePngBytes(qrPayload);
 
                 using var stream = new MemoryStream(pngBytes);

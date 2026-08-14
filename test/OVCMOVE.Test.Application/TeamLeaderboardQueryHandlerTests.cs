@@ -1,6 +1,7 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
@@ -280,6 +281,17 @@ public class TeamLeaderboardQueryHandlerTests
 
         public Task CreateScoringLogAsync(
             ScoringLog log,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task CreateRaceMessageAsync(
+            RaceMessage message,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(
+            Guid raceId,
+            int limit,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

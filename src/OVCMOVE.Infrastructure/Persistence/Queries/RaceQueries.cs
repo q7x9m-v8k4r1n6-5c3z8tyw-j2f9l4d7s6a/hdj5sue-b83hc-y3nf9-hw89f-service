@@ -352,6 +352,31 @@ public static class RaceQueries
             @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
             @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
+
+    public static string CreateRaceMessageQuery() => @"
+        INSERT INTO [dbo].[RaceMessage]
+        (
+            [Id], [RaceId], [SenderId], [SenderName],
+            [RecipientKeysJson], [RecipientLabelsJson], [Body],
+            [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
+        )
+        VALUES
+        (
+            @Id, @RaceId, @SenderId, @SenderName,
+            @RecipientKeysJson, @RecipientLabelsJson, @Body,
+            @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
+        );";
+
+    public static string GetRaceMessagesQuery() => @"
+        SELECT TOP (@Limit)
+            [Id], [RaceId], [SenderId], [SenderName],
+            [RecipientKeysJson], [RecipientLabelsJson], [Body],
+            [CreatedAt]
+        FROM [dbo].[RaceMessage]
+        WHERE [RaceId] = @RaceId
+          AND [IsDeleted] = 0
+        ORDER BY [CreatedAt] DESC, [Id] DESC;";
+
     public static string CheckBoothOrganizerAssignmentQuery() => @"
         SELECT CASE WHEN EXISTS
         (

@@ -245,4 +245,37 @@ public static class RaceContract
         public DateTime CreatedAt {get; init;}
         public string CreatedBy {get; init;} = string.Empty;
     }
+
+    public sealed class RaceMessageRecipientRequest
+    {
+        [Required(ErrorMessage = "Thiếu mã người nhận.")]
+        public string Key { get; init; } = string.Empty;
+
+        [Required(ErrorMessage = "Thiếu tên người nhận.")]
+        public string Label { get; init; } = string.Empty;
+
+        [Required(ErrorMessage = "Thiếu loại người nhận.")]
+        public string Type { get; init; } = string.Empty;
+    }
+
+    public sealed class SendRaceMessageRequest
+    {
+        [MinLength(1, ErrorMessage = "Cần chọn ít nhất một người nhận.")]
+        public List<RaceMessageRecipientRequest> Recipients { get; init; } = [];
+
+        [Required(ErrorMessage = "Nội dung tin nhắn không được để trống.")]
+        public string Body { get; init; } = string.Empty;
+    }
+
+    public sealed class RaceMessageResponse
+    {
+        public Guid Id { get; init; }
+        public Guid RaceId { get; init; }
+        public Guid? SenderId { get; init; }
+        public string SenderName { get; init; } = string.Empty;
+        public IReadOnlyCollection<string> RecipientKeys { get; init; } = [];
+        public IReadOnlyCollection<string> RecipientLabels { get; init; } = [];
+        public string Body { get; init; } = string.Empty;
+        public DateTime CreatedAt { get; init; }
+    }
 }

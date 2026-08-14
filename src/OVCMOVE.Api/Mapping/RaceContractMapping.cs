@@ -1,7 +1,9 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
+using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
 using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.DTOs.Race;
@@ -251,6 +253,37 @@ public static class RaceContractMapping
             ScoreBefore = result.ScoreBefore,
             ScoreAfter = result.ScoreAfter,
             Delta = result.Delta
+        };
+
+    public static SendRaceMessageCommand ToCommand(
+        this RaceContract.SendRaceMessageRequest request,
+        Guid raceId,
+        Guid senderId) => new()
+        {
+            RaceId = raceId,
+            SenderId = senderId,
+            Body = request.Body,
+            Recipients = request.Recipients
+                .Select(recipient => new RaceMessageRecipientModel
+                {
+                    Key = recipient.Key,
+                    Label = recipient.Label,
+                    Type = recipient.Type
+                })
+                .ToArray()
+        };
+
+    public static RaceContract.RaceMessageResponse ToResponse(
+        this RaceMessageResultModel result) => new()
+        {
+            Id = result.Id,
+            RaceId = result.RaceId,
+            SenderId = result.SenderId,
+            SenderName = result.SenderName,
+            RecipientKeys = result.RecipientKeys,
+            RecipientLabels = result.RecipientLabels,
+            Body = result.Body,
+            CreatedAt = result.CreatedAt
         };
 
     public static BoothListQuery ToQuery(

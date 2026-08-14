@@ -3,6 +3,7 @@ using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Booths.Commands.RejectEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
 
@@ -238,6 +239,12 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             Guid raceId,
             Guid boothId,
             Guid teamId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task NotifyRaceMessageAsync(
+            Guid raceId,
+            RaceMessageResultModel message,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

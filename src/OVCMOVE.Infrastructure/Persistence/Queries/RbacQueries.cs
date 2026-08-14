@@ -142,4 +142,9 @@ public static class RbacQueries
           AND rp.[IsDeleted] = 0
           AND p.[IsDeleted] = 0
         ORDER BY p.[Module], p.[Action];";
+
+    public static string GetAccessProfileByUserIdQuery() => $@"
+        {GetAccessRolesByUserIdQuery()}
+
+        {GetAccessPermissionsByUserIdQuery()}";
 }

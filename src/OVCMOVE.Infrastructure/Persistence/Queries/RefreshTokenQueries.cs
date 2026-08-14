@@ -5,7 +5,7 @@ public static class RefreshTokenQueries
     private const string RefreshTokenColumns = @"
         [Id], [UserId], [SessionId], [FamilyId], [TokenHash],
         [ReplacedByTokenId], [RevokedAt], [ExpiryDate], [IsRevoked],
-        [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]";
+        [CreatedAt]";
 
     public static string GetByTokenHashQuery()
     {
@@ -32,7 +32,7 @@ public static class RefreshTokenQueries
                 RevokedAt = SYSUTCDATETIME()
             WHERE Id = @Id
               AND IsRevoked = 0
-              AND IsDeleted = 0";
+              AND [IsDeleted] = 0";
     }
 
     public static string TryRotateQuery()
@@ -47,7 +47,7 @@ public static class RefreshTokenQueries
                 ReplacedByTokenId = @NewTokenId
             WHERE TokenHash = @OldTokenHash
               AND IsRevoked = 0
-              AND IsDeleted = 0
+              AND [IsDeleted] = 0
               AND ExpiryDate > @UtcNow;
 
             IF @@ROWCOUNT = 1
@@ -74,7 +74,7 @@ public static class RefreshTokenQueries
                 RevokedAt = @UtcNow
             WHERE FamilyId = @FamilyId
               AND IsRevoked = 0
-              AND IsDeleted = 0";
+              AND [IsDeleted] = 0";
     }
 
     public static string CleanupOldTokensQuery()

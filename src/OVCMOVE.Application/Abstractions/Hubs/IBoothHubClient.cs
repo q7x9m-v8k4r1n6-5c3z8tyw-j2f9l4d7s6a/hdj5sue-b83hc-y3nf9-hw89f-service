@@ -1,4 +1,6 @@
-﻿namespace OVCMOVE.Application.Abstractions.Hubs;
+using OVCMOVE.Application.Features.Races.Common;
+
+namespace OVCMOVE.Application.Abstractions.Hubs;
 
 public interface IBoothHubClient
 {
@@ -15,4 +17,6 @@ public interface IBoothHubClient
     Task ReceiveBoothEntryCancelled(Guid boothId, Guid teamId);
 
     Task ReceiveBoothEntryRejected(Guid boothId, Guid teamId);
+
+    Task ReceiveRaceMessage(RaceMessageResultModel message);
 }

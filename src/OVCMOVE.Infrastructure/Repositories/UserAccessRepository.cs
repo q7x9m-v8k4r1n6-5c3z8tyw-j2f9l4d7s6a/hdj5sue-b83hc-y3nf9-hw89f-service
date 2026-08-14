@@ -16,15 +16,10 @@ public class UserAccessRepository : IUserAccessRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var roles = (await _db.QueryAsync<RoleAccessModel>(
-            RbacQueries.GetAccessRolesByUserIdQuery(),
+        var (roles, permissions) = await _db.QueryMultipleAsync<RoleAccessModel, PermissionAccessModel>(
+            RbacQueries.GetAccessProfileByUserIdQuery(),
             new { UserId = userId },
-            cancellationToken: cancellationToken)).ToArray();
-
-        var permissions = (await _db.QueryAsync<PermissionAccessModel>(
-            RbacQueries.GetAccessPermissionsByUserIdQuery(),
-            new { UserId = userId },
-            cancellationToken: cancellationToken)).ToArray();
+            cancellationToken: cancellationToken);
 
         return new UserAccessProfileModel
         {

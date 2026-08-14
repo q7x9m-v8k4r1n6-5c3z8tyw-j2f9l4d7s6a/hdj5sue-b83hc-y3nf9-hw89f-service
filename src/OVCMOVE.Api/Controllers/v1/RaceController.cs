@@ -4,13 +4,17 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
+using OVCMOVE.Api.Extensions;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
+using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
+using OVCMOVE.Application.Features.Races.Query.GetRaceMessages;
 using OVCMOVE.Application.Features.Races.Query.GetRaceRules;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Domain.Constants;
@@ -21,6 +25,9 @@ namespace OVCMOVE.Api.Controllers.v1;
 [Route("api/v1/[controller]")]
 public class RaceController : BaseController
 {
+    private static readonly System.Text.Json.JsonSerializerOptions PayloadJsonSerializerOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
+
     public RaceController(IMediator mediator)
         : base(mediator)
     {
@@ -211,6 +218,53 @@ public class RaceController : BaseController
         return Ok(ApiResponse.Success(result.ToResponse()));
     }
 
+    [HttpGet("{raceId:guid}/messages")]
+    [RequirePermission(PermissionCodes.RaceRead)]
+    public async Task<IActionResult> GetRaceMessages(
+        [FromRoute] Guid raceId,
+        [FromQuery] int limit,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _mediator.Send(
+            new GetRaceMessagesQuery
+            {
+                RaceId = raceId,
+                Limit = limit <= 0 ? 50 : limit
+            },
+            cancellationToken);
+
+        return Ok(ApiResponse.Success(result
+            .Where(CanCurrentUserReadRaceMessage)
+            .Select(item => item.ToResponse())
+            .ToArray()));
+    }
+
+    [HttpPost("{raceId:guid}/messages")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> SendRaceMessage(
+        [FromRoute] Guid raceId,
+        [FromBody] SendRaceMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = await _mediator.Send(
+            request.ToCommand(
+                raceId,
+                GetRequiredCurrentUserId()),
+            cancellationToken);
+        if (result is null)
+        {
+            return NotFound(ApiResponse.Error(
+                ApiStatus.Codes.NotFound,
+                ApiStatus.Messages.NotFound));
+        }
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
     [HttpGet("{raceId:guid}/rules")]
     [RequirePermission(PermissionCodes.RaceRead)]
     public async Task<IActionResult> GetRaceRules([FromRoute] Guid raceId, CancellationToken cancellationToken)
@@ -256,4 +310,73 @@ public class RaceController : BaseController
             UserConstants.UserType.Team,
             StringComparison.OrdinalIgnoreCase);
 
+    private bool IsCurrentUserOrganizer() =>
+        string.Equals(
+            User.FindFirstValue("user_type"),
+            UserConstants.UserType.Organizer,
+            StringComparison.OrdinalIgnoreCase);
+
+    private bool HasPermission(string permissionCode) =>
+        User.Claims.Any(claim =>
+            claim.Type == PermissionAuthorizationHandler.PermissionClaimType &&
+            string.Equals(
+                claim.Value,
+                permissionCode,
+                StringComparison.OrdinalIgnoreCase));
+
+    private bool CanCurrentUserReadRaceMessage(RaceMessageResultModel message)
+    {
+        if (HasPermission(PermissionCodes.RaceManage))
+        {
+            return true;
+        }
+
+        var recipientKeys = message.RecipientKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (recipientKeys.Contains(RaceMessageRecipientConstants.All))
+        {
+            return true;
+        }
+
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId is null)
+        {
+            return false;
+        }
+
+        if (IsCurrentUserTeam())
+        {
+            return recipientKeys.Contains(RaceMessageRecipientConstants.AllTeams) ||
+                recipientKeys.Contains($"{RaceMessageRecipientConstants.TeamKeyPrefix}{currentUserId.Value:D}");
+        }
+
+        if (IsCurrentUserOrganizer())
+        {
+            return recipientKeys.Contains(RaceMessageRecipientConstants.AllOrganizers) ||
+                recipientKeys.Contains($"{RaceMessageRecipientConstants.OrganizerKeyPrefix}{currentUserId.Value:D}");
+        }
+
+        return false;
+    }
+
+    private static T DeserializePayload<T>(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            throw new ArgumentException("Payload không được để trống.");
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(
+                    payload,
+                    PayloadJsonSerializerOptions)
+                ?? throw new ArgumentException("Payload không hợp lệ.");
+        }
+        catch (System.Text.Json.JsonException exception)
+        {
+            throw new ArgumentException(
+                "Payload JSON không hợp lệ.",
+                exception);
+        }
+    }
 }

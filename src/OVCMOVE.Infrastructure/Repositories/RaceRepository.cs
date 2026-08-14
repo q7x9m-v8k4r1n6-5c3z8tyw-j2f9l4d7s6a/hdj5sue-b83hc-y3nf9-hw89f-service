@@ -1,6 +1,9 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
@@ -308,6 +311,53 @@ public class RaceRepository : IRaceRepository
             cancellationToken: cancellationToken);
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
+
+    public async Task CreateRaceMessageAsync(
+        RaceMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.CreateRaceMessageQuery(),
+            message,
+            cancellationToken: cancellationToken);
+        PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(RaceMessage));
+    }
+
+    public async Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(
+        Guid raceId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IEnumerable<RaceMessageRow> rows;
+        try
+        {
+            rows = await _db.QueryAsync<RaceMessageRow>(
+                RaceQueries.GetRaceMessagesQuery(),
+                new { RaceId = raceId, Limit = limit },
+                cancellationToken: cancellationToken);
+        }
+        catch (SqlException exception) when (IsRaceMessageStoreMissing(exception))
+        {
+            return [];
+        }
+
+        return rows.Select(row => new RaceMessageResultModel
+        {
+            Id = row.Id,
+            RaceId = row.RaceId,
+            SenderId = row.SenderId,
+            SenderName = row.SenderName,
+            RecipientKeys = ParseJsonArray(row.RecipientKeysJson),
+            RecipientLabels = ParseJsonArray(row.RecipientLabelsJson),
+            Body = row.Body,
+            CreatedAt = row.CreatedAt
+        }).ToArray();
+    }
+
     public async Task<bool> IsTeamInRaceAsync(
     Guid raceId,
     Guid teamId,
@@ -349,6 +399,35 @@ public class RaceRepository : IRaceRepository
             },
             cancellationToken) ?? new BoothProgressResultModel();
     }
+
+    private static IReadOnlyCollection<string> ParseJsonArray(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsRaceMessageStoreMissing(SqlException exception) =>
+        exception.Errors.Cast<SqlError>().Any(error => error.Number is 207 or 208);
+}
+
+internal sealed class RaceMessageRow
+{
+    public Guid Id { get; init; }
+    public Guid RaceId { get; init; }
+    public Guid? SenderId { get; init; }
+    public string SenderName { get; init; } = string.Empty;
+    public string RecipientKeysJson { get; init; } = "[]";
+    public string RecipientLabelsJson { get; init; } = "[]";
+    public string Body { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
 }
 
 internal sealed class BoothOrganizerRow

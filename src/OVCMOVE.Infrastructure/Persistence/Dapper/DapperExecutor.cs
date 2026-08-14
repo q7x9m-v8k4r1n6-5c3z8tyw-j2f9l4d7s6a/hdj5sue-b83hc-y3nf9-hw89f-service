@@ -67,6 +67,31 @@ public class DapperExecutor : IDbExecutor
         }
     }
 
+    public async Task<(IReadOnlyCollection<TFirst> First, IReadOnlyCollection<TSecond> Second)> QueryMultipleAsync<TFirst, TSecond>(
+        string sql,
+        object? param = null,
+        CancellationToken cancellationToken = default)
+    {
+        var scope = await OpenConnectionAsync(cancellationToken);
+
+        try
+        {
+            var command = new CommandDefinition(
+                sql,
+                param,
+                scope.Transaction,
+                cancellationToken: cancellationToken);
+            using var reader = await scope.Connection.QueryMultipleAsync(command);
+            var first = (await reader.ReadAsync<TFirst>()).ToArray();
+            var second = (await reader.ReadAsync<TSecond>()).ToArray();
+            return (first, second);
+        }
+        finally
+        {
+            DisposeConnection(scope);
+        }
+    }
+
     public async Task<int> ExecuteAsync(
         string sql,
         object? param = null,

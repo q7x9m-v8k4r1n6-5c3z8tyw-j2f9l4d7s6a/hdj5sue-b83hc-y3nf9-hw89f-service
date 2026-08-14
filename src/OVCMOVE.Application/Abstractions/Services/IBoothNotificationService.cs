@@ -1,4 +1,6 @@
-﻿namespace OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Features.Races.Common;
+
+namespace OVCMOVE.Application.Abstractions.Services;
 
 public interface IBoothNotificationService
 {
@@ -29,5 +31,10 @@ public interface IBoothNotificationService
         Guid raceId,
         Guid boothId,
         Guid teamId,
+        CancellationToken cancellationToken = default);
+
+    Task NotifyRaceMessageAsync(
+        Guid raceId,
+        RaceMessageResultModel message,
         CancellationToken cancellationToken = default);
 }

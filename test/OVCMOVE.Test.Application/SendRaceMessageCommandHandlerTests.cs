@@ -1,6 +1,7 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Booths.Common;
 using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
@@ -49,6 +50,18 @@ public sealed class SendRaceMessageCommandHandlerTests
         var handler = new SendRaceMessageCommandHandler(repository, notification);
         var teamId = Guid.NewGuid();
         var raceId = Guid.NewGuid();
+        repository.RaceDetail = new RaceDetailResultModel
+        {
+            Id = raceId,
+            RaceTeam =
+            [
+                new RaceTeamModel
+                {
+                    TeamId = teamId,
+                    Name = "Team A"
+                }
+            ]
+        };
 
         var result = await handler.Handle(
             new SendRaceMessageCommand
@@ -104,6 +117,7 @@ public sealed class SendRaceMessageCommandHandlerTests
     private sealed class RaceRepositoryDouble : IRaceRepository
     {
         public RaceMessage? CreatedMessage { get; private set; }
+        public RaceDetailResultModel? RaceDetail { get; set; }
 
         public Task CreateRaceMessageAsync(RaceMessage message, CancellationToken cancellationToken = default)
         {
@@ -121,7 +135,7 @@ public sealed class SendRaceMessageCommandHandlerTests
             throw new NotSupportedException();
 
         public Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            Task.FromResult<RaceDetailResultModel?>(RaceDetail ?? new RaceDetailResultModel { Id = raceId });
 
         public Task<bool> UpdateAsync(Race race, DateTime expectedModifiedAt, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();

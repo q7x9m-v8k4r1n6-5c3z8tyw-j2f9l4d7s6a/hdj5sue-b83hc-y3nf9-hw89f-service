@@ -3,6 +3,8 @@ using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Race;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Domain.Entities;
 
@@ -28,11 +30,11 @@ public sealed class SendRaceMessageCommandHandler :
     {
         cancellationToken.ThrowIfCancellationRequested();
         var body = ValidateBody(request);
-        var recipients = NormalizeRecipients(request);
 
-        var race = await _raceRepository.GetByIdAsync(request.RaceId, cancellationToken);
+        var race = await _raceRepository.GetDetailAsync(request.RaceId, cancellationToken);
         if (race is null) return null;
 
+        var recipients = NormalizeRecipients(request, race);
         var actor = request.GetActorOrSystem();
         var senderName = actor;
         var now = DateTime.UtcNow;
@@ -92,7 +94,8 @@ public sealed class SendRaceMessageCommandHandler :
     }
 
     private static IReadOnlyCollection<RaceMessageRecipientModel> NormalizeRecipients(
-        SendRaceMessageCommand request)
+        SendRaceMessageCommand request,
+        RaceDetailResultModel race)
     {
         if (request.Recipients.Count == 0)
         {
@@ -109,7 +112,7 @@ public sealed class SendRaceMessageCommandHandler :
             throw new ApplicationValidationException("Recipient is invalid.");
         }
 
-        return recipients;
+        return EnsureRecipientsBelongToRace(recipients, race);
     }
 
     private static RaceMessageRecipientModel NormalizeRecipient(
@@ -168,5 +171,77 @@ public sealed class SendRaceMessageCommandHandler :
         }
 
         return $"{prefix}{id:D}";
+    }
+
+    private static IReadOnlyCollection<RaceMessageRecipientModel> EnsureRecipientsBelongToRace(
+        IReadOnlyCollection<RaceMessageRecipientModel> recipients,
+        RaceDetailResultModel race)
+    {
+        var teamsByKey = race.RaceTeam.ToDictionary(
+            team => $"{RaceMessageRecipientConstants.TeamKeyPrefix}{team.TeamId:D}",
+            team => string.IsNullOrWhiteSpace(team.Name)
+                ? team.LeaderEmail
+                : team.Name,
+            StringComparer.OrdinalIgnoreCase);
+        var organizersByKey = race.Organizers
+            .Concat(race.OrganizerId.Select(id => new RaceOrganizerModel { Id = id }))
+            .GroupBy(
+                organizer => $"{RaceMessageRecipientConstants.OrganizerKeyPrefix}{organizer.Id:D}",
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var organizer = group.FirstOrDefault(item =>
+                        !string.IsNullOrWhiteSpace(item.DisplayName) ||
+                        !string.IsNullOrWhiteSpace(item.Email));
+                    return string.IsNullOrWhiteSpace(organizer?.DisplayName)
+                        ? organizer?.Email ?? "Ban tổ chức"
+                        : organizer.DisplayName;
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        return recipients.Select(recipient => recipient.Type switch
+        {
+            RaceMessageRecipientConstants.All => WithLabel(
+                recipient,
+                "Tất cả mọi người"),
+            RaceMessageRecipientConstants.AllTeams => WithLabel(
+                recipient,
+                "Tất cả team"),
+            RaceMessageRecipientConstants.AllOrganizers => WithLabel(
+                recipient,
+                "Tất cả ban tổ chức"),
+            RaceMessageRecipientConstants.Team => WithLabel(
+                recipient,
+                GetAssignedRecipientLabel(teamsByKey, recipient.Key)),
+            RaceMessageRecipientConstants.Organizer => WithLabel(
+                recipient,
+                GetAssignedRecipientLabel(organizersByKey, recipient.Key)),
+            _ => throw new ApplicationValidationException("Recipient type is invalid.")
+        }).ToArray();
+
+        static RaceMessageRecipientModel WithLabel(
+            RaceMessageRecipientModel recipient,
+            string label) => new()
+            {
+                Key = recipient.Key,
+                Label = label,
+                Type = recipient.Type
+            };
+    }
+
+    private static string GetAssignedRecipientLabel(
+        IReadOnlyDictionary<string, string> recipientsByKey,
+        string key)
+    {
+        if (!recipientsByKey.TryGetValue(key, out var label))
+        {
+            throw new ApplicationValidationException("Recipient is not assigned to this race.");
+        }
+
+        return string.IsNullOrWhiteSpace(label)
+            ? "Người nhận"
+            : label;
     }
 }

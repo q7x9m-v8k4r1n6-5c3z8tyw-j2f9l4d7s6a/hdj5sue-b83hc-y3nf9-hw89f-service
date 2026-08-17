@@ -44,6 +44,16 @@ public class RaceController : BaseController
         }
 
         var query = request.ToQuery();
+        if (IsCurrentUserTeam())
+        {
+            query.RuntimeStatusesOnly = true;
+        }
+        else if (request.ParticipantView && IsCurrentUserOrganizer())
+        {
+            query.OrganizerId = GetCurrentUserId() ?? Guid.Empty;
+            query.RuntimeStatusesOnly = true;
+        }
+
         var result = await _mediator.Send(query, cancellationToken);
         return Ok(ApiResponse.Success(result.ToResponse()));
     }

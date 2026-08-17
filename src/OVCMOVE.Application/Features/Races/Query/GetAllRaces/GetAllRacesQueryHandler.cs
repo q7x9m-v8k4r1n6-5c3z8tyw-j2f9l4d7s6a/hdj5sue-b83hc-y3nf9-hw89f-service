@@ -27,6 +27,8 @@ public class GetAllRacesQueryHandler :
             page,
             pageSize,
             request.TeamId,
+            request.OrganizerId,
+            request.RuntimeStatusesOnly,
             cancellationToken);
 
         return new PagedResult<RaceItemResultModel>

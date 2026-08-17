@@ -58,6 +58,10 @@ public static class RaceQueries
     FROM [dbo].[Race] R
     WHERE R.[IsDeleted] = 0
       AND (
+          @RuntimeStatusesOnly = 0
+          OR R.[Status] IN (@Ongoing, @Paused, @Completed)
+      )
+      AND (
           @TeamId IS NULL
           OR EXISTS (
               SELECT 1
@@ -67,12 +71,33 @@ public static class RaceQueries
                 AND RT.[IsDeleted] = 0
           )
       )
+      AND (
+          @OrganizerId IS NULL
+          OR EXISTS (
+              SELECT 1
+              FROM [dbo].[RaceOrganizer] RO
+              WHERE RO.[RaceID] = R.[Id]
+                AND RO.[OrganizerID] = @OrganizerId
+                AND RO.[IsDeleted] = 0
+          )
+          OR EXISTS (
+              SELECT 1
+              FROM [dbo].[BoothOrganizer] BO
+              WHERE BO.[RaceId] = R.[Id]
+                AND BO.[OrganizerId] = @OrganizerId
+                AND BO.[IsDeleted] = 0
+          )
+      )
     ORDER BY R.[CreatedAt] DESC
     OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
     public static string CountRacesQuery() => @"
         SELECT COUNT(1)
         FROM [dbo].[Race] R
         WHERE R.[IsDeleted] = 0
+          AND (
+              @RuntimeStatusesOnly = 0
+              OR R.[Status] IN (@Ongoing, @Paused, @Completed)
+          )
           AND (
               @TeamId IS NULL
               OR EXISTS (
@@ -81,6 +106,23 @@ public static class RaceQueries
                   WHERE RT.[RaceID] = R.[Id]
                     AND RT.[TeamID] = @TeamId
                     AND RT.[IsDeleted] = 0
+              )
+          )
+          AND (
+              @OrganizerId IS NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[RaceOrganizer] RO
+                  WHERE RO.[RaceID] = R.[Id]
+                    AND RO.[OrganizerID] = @OrganizerId
+                    AND RO.[IsDeleted] = 0
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM [dbo].[BoothOrganizer] BO
+                  WHERE BO.[RaceId] = R.[Id]
+                    AND BO.[OrganizerId] = @OrganizerId
+                    AND BO.[IsDeleted] = 0
               )
           );";
 

@@ -42,6 +42,8 @@ public class RaceRepository : IRaceRepository
         int page,
         int pageSize,
         Guid? teamId,
+        Guid? organizerId,
+        bool runtimeStatusesOnly,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -52,12 +54,25 @@ public class RaceRepository : IRaceRepository
             {
                 Offset = (page - 1) * pageSize,
                 PageSize = pageSize,
-                TeamId = teamId
+                TeamId = teamId,
+                OrganizerId = organizerId,
+                RuntimeStatusesOnly = runtimeStatusesOnly,
+                Ongoing = RaceConstants.RaceStatus.Ongoing,
+                Paused = RaceConstants.RaceStatus.Paused,
+                Completed = RaceConstants.RaceStatus.Completed
             },
             cancellationToken: cancellationToken);
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             RaceQueries.CountRacesQuery(),
-            new { TeamId = teamId },
+            new
+            {
+                TeamId = teamId,
+                OrganizerId = organizerId,
+                RuntimeStatusesOnly = runtimeStatusesOnly,
+                Ongoing = RaceConstants.RaceStatus.Ongoing,
+                Paused = RaceConstants.RaceStatus.Paused,
+                Completed = RaceConstants.RaceStatus.Completed
+            },
             cancellationToken: cancellationToken);
 
         return (races.ToArray(), totalItems);

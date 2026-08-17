@@ -222,6 +222,8 @@ public class TeamLeaderboardQueryHandlerTests
                 int page,
                 int pageSize,
                 Guid? teamId,
+                Guid? organizerId,
+                bool runtimeStatusesOnly,
                 CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

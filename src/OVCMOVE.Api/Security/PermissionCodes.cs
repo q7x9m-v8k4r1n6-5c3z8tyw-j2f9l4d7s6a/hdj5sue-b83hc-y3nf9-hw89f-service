@@ -13,6 +13,7 @@ public static class PermissionCodes
     public const string RaceLeaderboardRead = "race.leaderboard.read";
     public const string RaceManage = "race.manage";
     public const string RaceScoreManage = "race.score.manage";
+    public const string WorkflowManage = "workflow.manage";
     public const string TeamRead = "team.read";
     public const string TeamManage = "team.manage";
     public const string ImageUpload = "image.upload";

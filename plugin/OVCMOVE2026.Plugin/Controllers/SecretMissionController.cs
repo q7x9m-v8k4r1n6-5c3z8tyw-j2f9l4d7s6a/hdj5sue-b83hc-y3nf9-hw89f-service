@@ -1,15 +1,17 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-
 using OVCMOVE.Application.Common; 
 using OVCMOVE2026.Plugin.Common; 
-using OVCMOVE2026.Plugin.Models.Contracts; 
+using OVCMOVE2026.Plugin.CQRS.Commands.ClaimSecretMission;
+using OVCMOVE2026.Plugin.CQRS.Commands.CreateSecretMission;
+using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
+using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
+using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
-using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
-using OVCMOVE2026.Plugin.CQRS.Commands.ClaimSecretMission;
-using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
-using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
+using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminOverview;
+using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminDetail;
+using OVCMOVE2026.Plugin.Models.Contracts; 
 
 namespace OVCMOVE2026.Plugin.Controllers;
 
@@ -153,5 +155,54 @@ public class SecretMissionController : PluginBaseController
         }
 
         return Ok(PluginResponse.Success(true, "Xóa file minh chứng thành công."));
+    }
+    [HttpPost]
+    public async Task<IActionResult> CreateMission(
+    [FromBody] CreateSecretMissionRequest request,
+    CancellationToken cancellationToken)
+    {
+        var command = new CreateSecretMissionCommand(
+            request.RaceId,
+            request.TeamId,
+            request.Name,
+            request.Description);
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return result.IsConflict
+                ? StatusCode(409, PluginResponse.Error(409, result.Message))
+                : BadRequest(PluginResponse.Error(400, result.Message));
+        }
+
+        return Ok(PluginResponse.Success(new { missionId = result.MissionId }, result.Message));
+    }
+
+    [HttpGet("races/{raceId:guid}/admin-overview")]
+    public async Task<IActionResult> GetAdminOverview(
+        [FromRoute] Guid raceId,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetSecretMissionAdminOverviewQuery(raceId);
+        var result = await _mediator.Send(query, cancellationToken);
+
+        return Ok(PluginResponse.Success(result, "Thành công"));
+    }
+
+    [HttpGet("{id:guid}/admin")]
+    public async Task<IActionResult> GetAdminDetail(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetSecretMissionAdminDetailQuery(id);
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (result == null)
+        {
+            return NotFound(PluginResponse.Error(404, "Không tìm thấy nhiệm vụ bí mật này."));
+        }
+
+        return Ok(PluginResponse.Success(result, "Thành công"));
     }
 }

@@ -132,11 +132,7 @@ public sealed class SendRaceMessageCommandHandlerTests
             throw new NotSupportedException();
 
         public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)> GetPageAsync(
-            int page,
-            int pageSize,
-            Guid? teamId,
-            Guid? organizerId,
-            bool runtimeStatusesOnly,
+            RacePageRequestModel request,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

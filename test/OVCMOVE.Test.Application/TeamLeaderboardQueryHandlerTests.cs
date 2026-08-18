@@ -1,5 +1,6 @@
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
@@ -219,11 +220,7 @@ public class TeamLeaderboardQueryHandlerTests
 
         public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)>
             GetPageAsync(
-                int page,
-                int pageSize,
-                Guid? teamId,
-                Guid? organizerId,
-                bool runtimeStatusesOnly,
+                RacePageRequestModel request,
                 CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

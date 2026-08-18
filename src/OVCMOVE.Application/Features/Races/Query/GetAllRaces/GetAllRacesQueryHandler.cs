@@ -1,6 +1,7 @@
 using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 
 namespace OVCMOVE.Application.Features.Races.Query.GetAllRaces;
@@ -24,11 +25,14 @@ public class GetAllRacesQueryHandler :
             request.Page,
             request.PageSize);
         var (items, totalItems) = await _raceRepository.GetPageAsync(
-            page,
-            pageSize,
-            request.TeamId,
-            request.OrganizerId,
-            request.RuntimeStatusesOnly,
+            new RacePageRequestModel
+            {
+                Page = page,
+                PageSize = pageSize,
+                TeamId = request.TeamId,
+                OrganizerId = request.OrganizerId,
+                RuntimeStatusesOnly = request.RuntimeStatusesOnly
+            },
             cancellationToken);
 
         return new PagedResult<RaceItemResultModel>

@@ -39,9 +39,7 @@ public class RaceRepository : IRaceRepository
     public async Task<(
         IReadOnlyCollection<RaceItemResultModel> Items,
         int TotalItems)> GetPageAsync(
-        int page,
-        int pageSize,
-        Guid? teamId,
+        RacePageRequestModel request,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -50,14 +48,27 @@ public class RaceRepository : IRaceRepository
             RaceQueries.GetAllRacesQuery(),
             new
             {
-                Offset = (page - 1) * pageSize,
-                PageSize = pageSize,
-                TeamId = teamId
+                Offset = (request.Page - 1) * request.PageSize,
+                request.PageSize,
+                request.TeamId,
+                request.OrganizerId,
+                request.RuntimeStatusesOnly,
+                Ongoing = RaceConstants.RaceStatus.Ongoing,
+                Paused = RaceConstants.RaceStatus.Paused,
+                Completed = RaceConstants.RaceStatus.Completed
             },
             cancellationToken: cancellationToken);
         var totalItems = await _db.QueryFirstOrDefaultAsync<int>(
             RaceQueries.CountRacesQuery(),
-            new { TeamId = teamId },
+            new
+            {
+                request.TeamId,
+                request.OrganizerId,
+                request.RuntimeStatusesOnly,
+                Ongoing = RaceConstants.RaceStatus.Ongoing,
+                Paused = RaceConstants.RaceStatus.Paused,
+                Completed = RaceConstants.RaceStatus.Completed
+            },
             cancellationToken: cancellationToken);
 
         return (races.ToArray(), totalItems);

@@ -1,4 +1,5 @@
 ﻿using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Common;
@@ -13,9 +14,7 @@ public interface IRaceRepository
     Task CreateAsync(Race race, CancellationToken cancellationToken = default);
     Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)>
         GetPageAsync(
-            int page,
-            int pageSize,
-            Guid? teamId,
+            RacePageRequestModel request,
             CancellationToken cancellationToken = default);
     Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default);
     Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default);

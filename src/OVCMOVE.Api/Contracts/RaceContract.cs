@@ -19,6 +19,7 @@ public static class RaceContract
     public class GetAllRacesRequest : PagedRequest
     {
         public Guid? TeamId { get; set; }
+        public bool ParticipantView { get; set; }
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Application.Features.Booths.Common;
@@ -182,7 +183,9 @@ internal sealed class ValidBoothRaceRepository(
         });
 
     public Task CreateAsync(Race race, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-    public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)> GetPageAsync(int page, int pageSize, Guid? teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)> GetPageAsync(
+        RacePageRequestModel request,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<RaceDetailResultModel?> GetDetailAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<Race?> GetByIdAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<bool> UpdateAsync(Race race, DateTime expectedModifiedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();

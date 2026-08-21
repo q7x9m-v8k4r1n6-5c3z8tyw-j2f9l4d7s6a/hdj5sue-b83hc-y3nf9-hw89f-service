@@ -41,6 +41,16 @@ public class ApiEndpointArchitectureTests
             typeof(BoothController),
             "api/v1/[controller]",
             6
+        },
+        {
+            typeof(WorkflowController),
+            "api/v1/workflows",
+            9
+        },
+        {
+            typeof(FunctionCardController),
+            "api/v1/function-cards",
+            6
         }
     };
 
@@ -149,6 +159,8 @@ public class ApiEndpointArchitectureTests
             typeof(RaceController),
             typeof(TeamController),
             typeof(BoothController),
+            typeof(WorkflowController),
+            typeof(FunctionCardController),
             typeof(OrganizersController),
             typeof(RbacAssignmentsController),
             typeof(RbacPermissionsController),

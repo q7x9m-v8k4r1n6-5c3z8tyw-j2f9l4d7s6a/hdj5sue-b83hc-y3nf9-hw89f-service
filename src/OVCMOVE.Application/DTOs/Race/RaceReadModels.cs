@@ -1,5 +1,14 @@
 namespace OVCMOVE.Application.DTOs.Race;
 
+public sealed class RacePageRequestModel
+{
+    public int Page { get; init; }
+    public int PageSize { get; init; }
+    public Guid? TeamId { get; init; }
+    public Guid? OrganizerId { get; init; }
+    public bool RuntimeStatusesOnly { get; init; }
+}
+
 public sealed class RaceBoothModel
 {
     public Guid Id { get; init; }

@@ -98,6 +98,13 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
                 request.Score,
                 cancellationToken);
 
+            await _notificationService.NotifyBoothCompletedAsync(
+                booth.Id,
+                request.TeamID,
+                booth.Name,
+                request.Score,
+                cancellationToken);
+
             await _notificationService.NotifyBoothStatusChangedAsync(
                 booth.RaceId,
                 request.BoothID,

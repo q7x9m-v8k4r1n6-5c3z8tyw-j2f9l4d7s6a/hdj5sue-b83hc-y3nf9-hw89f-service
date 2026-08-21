@@ -37,4 +37,11 @@ public interface IBoothNotificationService
         Guid raceId,
         RaceMessageResultModel message,
         CancellationToken cancellationToken = default);
+
+    Task NotifyBoothCompletedAsync(
+        Guid boothId,
+        Guid teamId,
+        string boothName,
+        int score,
+        CancellationToken cancellationToken = default);
 }

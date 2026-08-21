@@ -19,4 +19,10 @@ public interface IBoothHubClient
     Task ReceiveBoothEntryRejected(Guid boothId, Guid teamId);
 
     Task ReceiveRaceMessage(RaceMessageResultModel message);
+
+    Task ReceiveBoothCompleted(
+        Guid boothId,
+        Guid teamId,
+        string boothName,
+        int score);
 }

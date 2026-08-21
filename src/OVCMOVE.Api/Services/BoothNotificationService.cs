@@ -93,4 +93,14 @@ public class BoothNotificationService : IBoothNotificationService
             .Group(RaceMessageHubGroups.History(raceId))
             .ReceiveRaceMessage(message);
     }
+
+    public Task NotifyBoothCompletedAsync(
+        Guid boothId,
+        Guid teamId,
+        string boothName,
+        int score,
+        CancellationToken cancellationToken = default) =>
+        _hubContext.Clients
+            .User(teamId.ToString())
+            .ReceiveBoothCompleted(boothId, teamId, boothName, score);
 }

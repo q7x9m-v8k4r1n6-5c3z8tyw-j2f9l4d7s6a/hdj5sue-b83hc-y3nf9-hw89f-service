@@ -94,6 +94,12 @@ public sealed class BoothSessionCommandHandlerTests
         Assert.Contains(
             notifications.ScoreChanges,
             change => change.TeamId == teamId && change.Delta == 0);
+        Assert.Contains(
+            notifications.CompletedBooths,
+            completion => completion.BoothId == booth.Id &&
+                completion.TeamId == teamId &&
+                completion.BoothName == booth.Name &&
+                completion.Score == 0);
     }
 
     [Fact]

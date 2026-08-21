@@ -224,6 +224,7 @@ internal sealed class BoothNotificationSpy : IBoothNotificationService
     public int CancelledCount => _cancelledCount;
     public List<(Guid RaceId, Guid TeamId, int Delta)> ScoreChanges { get; } = [];
     public List<(Guid RaceId, Guid BoothId, string Status)> StatusChanges { get; } = [];
+    public List<(Guid BoothId, Guid TeamId, string BoothName, int Score)> CompletedBooths { get; } = [];
 
     public Task NotifyBoothStatusChangedAsync(Guid raceId, Guid boothId, string status, Guid? teamId, string? teamName, CancellationToken cancellationToken = default)
     {
@@ -257,6 +258,15 @@ internal sealed class BoothNotificationSpy : IBoothNotificationService
 
     public Task NotifyRaceMessageAsync(Guid raceId, RaceMessageResultModel message, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public Task NotifyBoothCompletedAsync(Guid boothId, Guid teamId, string boothName, int score, CancellationToken cancellationToken = default)
+    {
+        lock (CompletedBooths)
+        {
+            CompletedBooths.Add((boothId, teamId, boothName, score));
+        }
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class UnitOfWorkSpy : IUnitOfWork

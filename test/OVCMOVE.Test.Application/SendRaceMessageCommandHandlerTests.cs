@@ -93,6 +93,9 @@ public sealed class SendRaceMessageCommandHandlerTests
         public Task NotifyBoothEntryRejectedAsync(Guid raceId, Guid boothId, Guid teamId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
+        public Task NotifyBoothCompletedAsync(Guid boothId, Guid teamId, string boothName, int score, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
         public Task NotifyRaceMessageAsync(Guid raceId, RaceMessageResultModel message, CancellationToken cancellationToken = default)
         {
             RaceId = raceId;

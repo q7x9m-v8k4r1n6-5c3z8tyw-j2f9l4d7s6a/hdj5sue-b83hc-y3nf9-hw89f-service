@@ -247,5 +247,13 @@ public sealed class RejectEntryToBoothCommandHandlerTests
             RaceMessageResultModel message,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task NotifyBoothCompletedAsync(
+            Guid boothId,
+            Guid teamId,
+            string boothName,
+            int score,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

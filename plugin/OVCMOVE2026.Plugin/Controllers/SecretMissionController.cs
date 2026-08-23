@@ -7,10 +7,12 @@ using OVCMOVE2026.Plugin.CQRS.Commands.CreateSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
 using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
 using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
+using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminDetail;
+using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminOverview;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
-using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminOverview;
-using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminDetail;
+using OVCMOVE2026.Plugin.CQRS.Commands.UpdateSecretMission;
+using OVCMOVE2026.Plugin.CQRS.Commands.DeleteSecretMission;
 using OVCMOVE2026.Plugin.Models.Contracts; 
 
 namespace OVCMOVE2026.Plugin.Controllers;
@@ -204,5 +206,32 @@ public class SecretMissionController : PluginBaseController
         }
 
         return Ok(PluginResponse.Success(result, "Thành công"));
+    }
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateMission(
+    [FromRoute] Guid id,
+    [FromBody] UpdateSecretMissionRequest request,
+    CancellationToken cancellationToken)
+    {
+        var command = new UpdateSecretMissionCommand(id, request.TeamId, request.Name, request.Description);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsNotFound) return NotFound(PluginResponse.Error(404, result.Message));
+        if (result.IsConflict) return StatusCode(409, PluginResponse.Error(409, result.Message));
+        if (!result.IsSuccess) return BadRequest(PluginResponse.Error(400, result.Message));
+
+        return Ok(PluginResponse.Success(true, result.Message));
+    }
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteMission(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var command = new DeleteSecretMissionCommand(id);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result) return NotFound(PluginResponse.Error(404, "Không tìm thấy nhiệm vụ bí mật."));
+
+        return Ok(PluginResponse.Success(true, "Xóa nhiệm vụ thành công."));
     }
 }

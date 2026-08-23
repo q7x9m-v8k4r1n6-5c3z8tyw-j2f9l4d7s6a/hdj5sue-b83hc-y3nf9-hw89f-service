@@ -72,8 +72,8 @@ public static class SecretMissionQueries
     WHERE [RaceId] = @RaceId
       AND [TeamId] = @TeamId
       AND [IsAssigned] = 1
-      AND [IsDeleted] = 0;";
-
+      AND [IsDeleted] = 0
+      AND (@ExcludeMissionId IS NULL OR [Id] <> @ExcludeMissionId);";
     public static string CreateAssignedMissionQuery() => @"
     INSERT INTO [dbo].[SecretMission]
     (
@@ -90,7 +90,7 @@ public static class SecretMissionQueries
 
     public static string GetAdminOverviewByRaceIdQuery() => @"
     SELECT
-        m.[Id], m.[Name], m.[IsAssigned], m.[TeamId],
+        m.[Id], m.[Name], m.[Description], m.[IsAssigned], m.[TeamId],
         COALESCE(NULLIF(u.[DisplayName], N''), u.[Username], u.[LinkedEmail]) AS TeamName,
         CAST(MAX(CASE WHEN e.[FileType] = 'image' THEN 1 ELSE 0 END) AS BIT) AS HasImageEvidence,
         CAST(MAX(CASE WHEN e.[FileType] = 'video' THEN 1 ELSE 0 END) AS BIT) AS HasVideoEvidence,
@@ -99,7 +99,7 @@ public static class SecretMissionQueries
     LEFT JOIN [dbo].[Users] u ON u.[Id] = m.[TeamId] AND u.[IsDeleted] = 0
     LEFT JOIN [dbo].[SecretMissionEvidence] e ON m.Id = e.MissionId AND e.IsDeleted = 0
     WHERE m.[RaceId] = @RaceId AND m.[IsDeleted] = 0
-    GROUP BY m.[Id], m.[Name], m.[IsAssigned], m.[TeamId], u.[DisplayName], u.[Username], u.[LinkedEmail], m.[CreatedAt]
+    GROUP BY m.[Id], m.[Name], m.[Description], m.[IsAssigned], m.[TeamId], u.[DisplayName], u.[Username], u.[LinkedEmail], m.[CreatedAt]
     ORDER BY m.[CreatedAt] DESC;";
 
     public static string GetAdminDetailByIdQuery() => @"
@@ -109,4 +109,19 @@ public static class SecretMissionQueries
     FROM [dbo].[SecretMission] m
     LEFT JOIN [dbo].[Users] u ON u.[Id] = m.[TeamId] AND u.[IsDeleted] = 0
     WHERE m.[Id] = @Id AND m.[IsDeleted] = 0;";
+    public static string UpdateMissionQuery() => @"
+    UPDATE [dbo].[SecretMission]
+    SET [Name] = @Name,
+        [Description] = @Description,
+        [TeamId] = @TeamId,
+        [ModifiedBy] = 'admin-update-mission',
+        [ModifiedAt] = SYSUTCDATETIME()
+    WHERE [Id] = @Id AND [IsDeleted] = 0;";
+
+    public static string SoftDeleteQuery() => @"
+    UPDATE [dbo].[SecretMission]
+    SET [IsDeleted] = 1,
+        [ModifiedBy] = 'admin-delete-mission',
+        [ModifiedAt] = SYSUTCDATETIME()
+    WHERE [Id] = @Id;";
 }

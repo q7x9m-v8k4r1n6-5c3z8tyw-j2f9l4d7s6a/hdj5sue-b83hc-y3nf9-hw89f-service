@@ -86,11 +86,11 @@ public class SecretMissionRepository : ISecretMissionRepository
             new { Id = id, QrCodeUrl = qrCodeUrl }, 
             cancellationToken);
     public async Task<bool> HasAssignedMissionForTeamAsync(
-    Guid raceId, Guid teamId, CancellationToken cancellationToken = default)
+      Guid raceId, Guid teamId, CancellationToken cancellationToken = default, Guid? excludeMissionId = null)
     {
         var count = await _db.QueryFirstOrDefaultAsync<int>(
             SecretMissionQueries.CheckTeamHasAssignedMissionQuery(),
-            new { RaceId = raceId, TeamId = teamId },
+            new { RaceId = raceId, TeamId = teamId, ExcludeMissionId = excludeMissionId },
             cancellationToken);
         return count > 0;
     }
@@ -100,6 +100,17 @@ public class SecretMissionRepository : ISecretMissionRepository
         await _db.ExecuteAsync(
             SecretMissionQueries.CreateAssignedMissionQuery(),
             mission,
+            cancellationToken);
+    public async Task UpdateMissionAsync(
+    Guid missionId, Guid teamId, string name, string description, CancellationToken cancellationToken = default) =>
+    await _db.ExecuteAsync(
+        SecretMissionQueries.UpdateMissionQuery(),
+        new { Id = missionId, TeamId = teamId, Name = name, Description = description },
+        cancellationToken);
+    public async Task SoftDeleteAsync(Guid missionId, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(
+            SecretMissionQueries.SoftDeleteQuery(),
+            new { Id = missionId },
             cancellationToken);
 
     public async Task<SecretMissionAdminDetailDto?> GetAdminDetailAsync(

@@ -13,9 +13,9 @@ using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 using OVCMOVE2026.Plugin.CQRS.Commands.UpdateSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Commands.DeleteSecretMission;
-using OVCMOVE2026.Plugin.Models.Contracts; 
+using OVCMOVE2026.Plugin.Models.Contracts;
 
-namespace OVCMOVE2026.Plugin.Controllers;
+namespace OVCMOVE.Api.Controllers.plugin;
 
 [Route("api/v1/plugin/secret-mission")]
 public class SecretMissionController : PluginBaseController 

@@ -25,4 +25,18 @@ public static class FunctionCardContract
         public Guid? TeamId { get; init; }
         [Required] public DateTime ExpectedModifiedAt { get; init; }
     }
+
+    public sealed class CardListResponse
+    {
+        public Guid CardId {get; init;}
+        public string? CardUrl {get; init;}
+        public string CardName {get; init;} = string.Empty;
+        public string CardType {get; init;} = string.Empty;
+        public string CardStatus {get; init;} = string.Empty;
+    }
+
+    public sealed class CardInfoResponse
+    {
+        public string CardInfo {get; init;} = string.Empty;
+    }
 }

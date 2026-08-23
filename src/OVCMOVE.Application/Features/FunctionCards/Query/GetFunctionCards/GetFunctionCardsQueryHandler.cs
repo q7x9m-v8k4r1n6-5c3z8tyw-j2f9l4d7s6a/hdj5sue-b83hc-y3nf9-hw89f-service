@@ -1,15 +1,10 @@
 using MediatR;
-using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.FunctionCards.Common;
+using OVCMOVE.Application.Abstractions.Repositories;
 
-namespace OVCMOVE.Application.Features.FunctionCards.Query;
 
-public sealed record GetFunctionCardsQuery(Guid RaceId)
-    : IRequest<IReadOnlyCollection<FunctionCardResultModel>>;
-
-public sealed record GetFunctionCardDetailQuery(Guid CardId)
-    : IRequest<FunctionCardResultModel>;
+namespace OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCards;
 
 public sealed class GetFunctionCardsQueryHandler(
     IFunctionCardRepository repository,
@@ -28,14 +23,4 @@ public sealed class GetFunctionCardsQueryHandler(
             .Select(item => item.ToResult())
             .ToArray();
     }
-}
-
-public sealed class GetFunctionCardDetailQueryHandler(IFunctionCardRepository repository)
-    : IRequestHandler<GetFunctionCardDetailQuery, FunctionCardResultModel>
-{
-    public async Task<FunctionCardResultModel> Handle(
-        GetFunctionCardDetailQuery request,
-        CancellationToken cancellationToken) =>
-        (await repository.GetDetailAsync(request.CardId, cancellationToken))?.ToResult()
-        ?? throw new ApplicationNotFoundException("Không tìm thấy thẻ chức năng.");
 }

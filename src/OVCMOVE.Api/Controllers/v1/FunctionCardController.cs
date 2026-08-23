@@ -5,7 +5,8 @@ using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
 using OVCMOVE.Application.Features.FunctionCards.Command;
-using OVCMOVE.Application.Features.FunctionCards.Query;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCards;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCardDetail;
 
 namespace OVCMOVE.Api.Controllers.v1;
 

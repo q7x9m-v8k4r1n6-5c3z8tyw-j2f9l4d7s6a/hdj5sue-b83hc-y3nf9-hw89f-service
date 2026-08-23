@@ -28,7 +28,8 @@ public sealed class WorkflowDefinitionValidator
     public void Validate(
         WorkflowDefinitionModel definition,
         string triggerType,
-        bool requirePublishable)
+        bool requirePublishable,
+        IReadOnlySet<string>? cardInputKeys = null)
     {
         if (definition.SchemaVersion != 1)
             throw Invalid("Chỉ hỗ trợ schemaVersion = 1.");
@@ -49,7 +50,7 @@ public sealed class WorkflowDefinitionValidator
         {
             if (!AllowedNodeTypes.Contains(node.Type))
                 throw Invalid($"Loại node '{node.Type}' không được hỗ trợ.");
-            ValidateNodeConfig(node);
+            ValidateNodeConfig(node, cardInputKeys);
         }
 
         var expectedTriggerNodeType = triggerType switch
@@ -110,7 +111,9 @@ public sealed class WorkflowDefinitionValidator
         }
     }
 
-    private static void ValidateNodeConfig(WorkflowNodeModel node)
+    private static void ValidateNodeConfig(
+        WorkflowNodeModel node,
+        IReadOnlySet<string>? cardInputKeys)
     {
         if (node.Type.StartsWith("trigger.", StringComparison.Ordinal) ||
             node.Type == WorkflowConstants.NodeType.Scope ||
@@ -141,8 +144,12 @@ public sealed class WorkflowDefinitionValidator
                     throw Invalid($"Khoảng random của node '{node.Id}' không hợp lệ hoặc quá lớn.");
                 break;
             case WorkflowConstants.NodeType.ReadInputValue:
-                RequireMaxLength(GetRequiredString(node.Config, "inputKey", node.Id), 100, node.Id, "inputKey");
+                var inputKey = GetRequiredString(node.Config, "inputKey", node.Id);
+                RequireMaxLength(inputKey, 100, node.Id, "inputKey");
                 RequireMaxLength(GetRequiredString(node.Config, "variableName", node.Id), 100, node.Id, "variableName");
+                if (cardInputKeys is not null && !cardInputKeys.Contains(inputKey))
+                    throw Invalid(
+                        $"Node '{node.Id}' tham chiếu input '{inputKey}' không tồn tại trong thẻ.");
                 break;
             case WorkflowConstants.NodeType.AdjustScore:
                 ValidateTarget(node.Config, node.Id, false);

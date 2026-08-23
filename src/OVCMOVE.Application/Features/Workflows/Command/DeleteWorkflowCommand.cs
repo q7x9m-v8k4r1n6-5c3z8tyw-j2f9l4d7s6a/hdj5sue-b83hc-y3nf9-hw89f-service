@@ -1,6 +1,7 @@
 using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Features.Workflows.Common;
 
 namespace OVCMOVE.Application.Features.Workflows.Command;
 
@@ -16,6 +17,7 @@ public sealed class DeleteWorkflowCommandHandler(IWorkflowRepository repository)
         DeleteWorkflowCommand request,
         CancellationToken cancellationToken)
     {
+        WorkflowCommandRules.ValidateWorkflowId(request.WorkflowId);
         if (!await repository.SoftDeleteAsync(
             request.WorkflowId,
             request.GetActorOrSystem(),

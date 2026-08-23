@@ -23,6 +23,9 @@ public sealed class ChangeWorkflowStatusCommandHandler(
         ChangeWorkflowStatusCommand request,
         CancellationToken cancellationToken)
     {
+        WorkflowCommandRules.ValidateConcurrency(
+            request.WorkflowId,
+            request.ExpectedModifiedAt);
         var status = request.Status.Trim().ToLowerInvariant();
         if (status is not (WorkflowConstants.Status.Draft or WorkflowConstants.Status.Published or WorkflowConstants.Status.Disabled))
             throw new ApplicationValidationException("Trạng thái workflow không hợp lệ.");

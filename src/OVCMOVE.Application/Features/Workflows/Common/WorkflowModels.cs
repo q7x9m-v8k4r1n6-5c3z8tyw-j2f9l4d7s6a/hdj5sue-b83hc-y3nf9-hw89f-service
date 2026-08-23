@@ -18,6 +18,20 @@ public static class WorkflowConstants
         public const string Disabled = "disabled";
     }
 
+    public static class RunStatus
+    {
+        public const string Running = "running";
+        public const string Succeeded = "succeeded";
+        public const string Failed = "failed";
+        public const string Canceled = "canceled";
+    }
+
+    public static class TraceStatus
+    {
+        public const string Succeeded = "succeeded";
+        public const string Failed = "failed";
+    }
+
     public static class NodeType
     {
         public const string TriggerActivated = "trigger.activated";

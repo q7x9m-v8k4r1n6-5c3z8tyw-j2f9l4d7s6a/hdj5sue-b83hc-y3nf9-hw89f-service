@@ -76,6 +76,20 @@ public sealed class WorkflowDefinitionValidatorTests
     }
 
     [Fact]
+    public void EmptyWorkflowId_IsRejected()
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.ValidateWorkflowId(Guid.Empty));
+    }
+
+    [Fact]
+    public void MissingExpectedModifiedAt_IsRejected()
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.ValidateConcurrency(Guid.NewGuid(), default));
+    }
+
+    [Fact]
     public void Catalog_ContainsCodeReplacementBuildingBlocks()
     {
         var types = WorkflowCatalog.Items.Select(item => item.Type).ToHashSet();

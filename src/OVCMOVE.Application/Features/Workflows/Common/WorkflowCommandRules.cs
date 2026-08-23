@@ -20,6 +20,19 @@ internal static class WorkflowCommandRules
             throw new ApplicationValidationException("Tên workflow phải có từ 1 đến 255 ký tự.");
     }
 
+    public static void ValidateWorkflowId(Guid workflowId)
+    {
+        if (workflowId == Guid.Empty)
+            throw new ApplicationValidationException("WorkflowId là bắt buộc.");
+    }
+
+    public static void ValidateConcurrency(Guid workflowId, DateTime expectedModifiedAt)
+    {
+        ValidateWorkflowId(workflowId);
+        if (expectedModifiedAt == default)
+            throw new ApplicationValidationException("ExpectedModifiedAt là bắt buộc.");
+    }
+
     public static string TriggerForCard(string category) =>
         string.Equals(
             category,

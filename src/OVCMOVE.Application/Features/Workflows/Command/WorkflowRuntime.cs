@@ -54,7 +54,7 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                     trace.Add(new WorkflowTraceItemModel(
                         current.Id,
                         current.Type,
-                        "succeeded",
+                        WorkflowConstants.TraceStatus.Succeeded,
                         "Đã bắt đầu nhánh Try."));
                     current = nodes[tryEdge.Target];
                     continue;
@@ -85,7 +85,7 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                 trace.Add(new WorkflowTraceItemModel(
                     current.Id,
                     current.Type,
-                    "succeeded",
+                    WorkflowConstants.TraceStatus.Succeeded,
                     detail));
                 if (current.Type == WorkflowConstants.NodeType.Stop) break;
 
@@ -101,7 +101,7 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                 trace.Add(new WorkflowTraceItemModel(
                     current!.Id,
                     current.Type,
-                    "failed",
+                    WorkflowConstants.TraceStatus.Failed,
                     exception.Message));
                 current = nodes[catchTargets.Pop()];
             }

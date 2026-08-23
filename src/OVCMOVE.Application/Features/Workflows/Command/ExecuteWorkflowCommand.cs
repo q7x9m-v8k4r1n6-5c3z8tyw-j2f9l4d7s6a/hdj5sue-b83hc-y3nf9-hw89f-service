@@ -26,6 +26,7 @@ public sealed class ExecuteWorkflowCommandHandler(
         ExecuteWorkflowCommand request,
         CancellationToken cancellationToken)
     {
+        WorkflowCommandRules.ValidateWorkflowId(request.WorkflowId);
         var workflow = await repository.GetByIdAsync(request.WorkflowId, cancellationToken)
             ?? throw new ApplicationNotFoundException("Không tìm thấy workflow.");
         if (!request.IsSimulation && workflow.Status != WorkflowConstants.Status.Published)
@@ -51,7 +52,7 @@ public sealed class ExecuteWorkflowCommandHandler(
             CardKey = workflow.CardKey,
             TriggerType = workflow.TriggerType,
             EventId = string.IsNullOrWhiteSpace(request.Input.EventId) ? null : request.Input.EventId.Trim(),
-            Status = "running",
+            Status = WorkflowConstants.RunStatus.Running,
             IsSimulation = request.IsSimulation,
             InputJson = JsonSerializer.Serialize(request.Input, WorkflowJson.Options),
             OutputJson = "{}",
@@ -74,7 +75,7 @@ public sealed class ExecuteWorkflowCommandHandler(
                 cancellationToken);
             var result = new WorkflowExecutionResultModel(
                 run.Id,
-                "succeeded",
+                WorkflowConstants.RunStatus.Succeeded,
                 request.IsSimulation,
                 outcome.Trace,
                 outcome.Effects,
@@ -88,7 +89,7 @@ public sealed class ExecuteWorkflowCommandHandler(
         }
         catch (OperationCanceledException)
         {
-            run.Status = "canceled";
+            run.Status = WorkflowConstants.RunStatus.Canceled;
             run.Error = "Workflow execution was cancelled.";
             run.CompletedAt = DateTime.UtcNow;
             run.ModifiedAt = run.CompletedAt.Value;
@@ -97,7 +98,7 @@ public sealed class ExecuteWorkflowCommandHandler(
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            run.Status = "failed";
+            run.Status = WorkflowConstants.RunStatus.Failed;
             run.Error = exception.Message.Length > 2000
                 ? exception.Message[..2000]
                 : exception.Message;

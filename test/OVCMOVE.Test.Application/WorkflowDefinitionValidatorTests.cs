@@ -72,7 +72,7 @@ public sealed class WorkflowDefinitionValidatorTests
     [InlineData("defense", WorkflowConstants.Trigger.Attacked)]
     public void Trigger_IsDerivedFromCardCategory(string category, string expected)
     {
-        Assert.Equal(expected, CreateWorkflowCommandHandler.TriggerForCard(category));
+        Assert.Equal(expected, WorkflowCommandRules.TriggerForCard(category));
     }
 
     [Fact]
@@ -108,6 +108,30 @@ public sealed class WorkflowDefinitionValidatorTests
         ]);
 
         _validator.Validate(definition, WorkflowConstants.Trigger.Activated, true);
+    }
+
+    [Fact]
+    public void InputValueNode_RejectsInputKeyMissingFromCard()
+    {
+        var definition = Definition(
+        [
+            Node("trigger", WorkflowConstants.NodeType.TriggerActivated),
+            Node("input", WorkflowConstants.NodeType.ReadInputValue, new
+            {
+                inputKey = "deleted_input",
+                variableName = "selectedTeam"
+            })
+        ],
+        [Edge("a", "trigger", "input")]);
+
+        var exception = Assert.Throws<ApplicationValidationException>(() =>
+            _validator.Validate(
+                definition,
+                WorkflowConstants.Trigger.Activated,
+                true,
+                new HashSet<string> { "target_team" }));
+
+        Assert.Contains("không tồn tại trong thẻ", exception.Message);
     }
 
     [Fact]
@@ -185,7 +209,11 @@ public sealed class WorkflowDefinitionValidatorTests
         ],
         [Edge("a", "trigger", "input")]);
 
-        _validator.Validate(definition, WorkflowConstants.Trigger.Activated, true);
+        _validator.Validate(
+            definition,
+            WorkflowConstants.Trigger.Activated,
+            true,
+            new HashSet<string> { "target_team" });
     }
 
     private static WorkflowDefinitionModel Definition(

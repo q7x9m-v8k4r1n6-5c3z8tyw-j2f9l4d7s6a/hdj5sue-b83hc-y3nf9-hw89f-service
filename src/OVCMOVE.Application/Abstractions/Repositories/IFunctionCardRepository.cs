@@ -1,4 +1,5 @@
 using OVCMOVE.Application.Features.FunctionCards.Common;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardInventory;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
@@ -13,4 +14,6 @@ public interface IFunctionCardRepository
     Task<bool> UpdateAsync(FunctionCard card, DateTime expectedModifiedAt, CancellationToken cancellationToken = default);
     Task<bool> AssignTeamAsync(Guid cardId, Guid? teamId, string actor, DateTime expectedModifiedAt, DateTime modifiedAt, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteAsync(Guid cardId, string actor, DateTime modifiedAt, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<TeamCardInventoryItemModel>> GetByTeamIdAsync(Guid raceId, Guid teamId, string activeStatus, CancellationToken cancellationToken = default);
+    Task<string?> GetCardDescriptionByIdAsync(Guid cardId, Guid teamId, string activeStatus, CancellationToken cancellationToken = default);
 }

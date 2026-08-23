@@ -4,9 +4,12 @@ using OVCMOVE.Api.Common;
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Api.Security;
-using OVCMOVE.Application.Features.FunctionCards.Command;
-using OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCards;
-using OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCardDetail;
+using OVCMOVE.Application.Features.FunctionCards.Command.AssignFunctionCardTeam;
+using OVCMOVE.Application.Features.FunctionCards.Command.DeleteFunctionCard;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetRaceCardsForAdmin;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetCardDetailForAdmin;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardInventory;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardDetail;
 
 namespace OVCMOVE.Api.Controllers.v1;
 
@@ -16,12 +19,12 @@ public sealed class FunctionCardController(IMediator mediator) : BaseController(
     [HttpGet]
     [RequirePermission(PermissionCodes.RaceManage)]
     public async Task<IActionResult> GetByRace([FromQuery] Guid raceId, CancellationToken cancellationToken) =>
-        Ok(ApiResponse.Success(await _mediator.Send(new GetFunctionCardsQuery(raceId), cancellationToken)));
+        Ok(ApiResponse.Success(await _mediator.Send(new GetRaceCardsForAdminQuery(raceId), cancellationToken)));
 
     [HttpGet("{cardId:guid}")]
     [RequirePermission(PermissionCodes.RaceManage)]
     public async Task<IActionResult> GetDetail(Guid cardId, CancellationToken cancellationToken) =>
-        Ok(ApiResponse.Success(await _mediator.Send(new GetFunctionCardDetailQuery(cardId), cancellationToken)));
+        Ok(ApiResponse.Success(await _mediator.Send(new GetCardDetailForAdminQuery(cardId), cancellationToken)));
 
     [HttpPost("races/{raceId:guid}")]
     [RequirePermission(PermissionCodes.RaceManage)]
@@ -57,4 +60,24 @@ public sealed class FunctionCardController(IMediator mediator) : BaseController(
     public async Task<IActionResult> Delete(Guid cardId, CancellationToken cancellationToken) =>
         Ok(ApiResponse.Success(await _mediator.Send(
             new DeleteFunctionCardCommand { CardId = cardId }, cancellationToken)));
+
+    [HttpGet("team/races/{raceId:guid}")]
+    // [RequirePermission(PermissionCodes.RaceManage)] // Tạm thời comment RBAC chờ xử lý sau
+    public async Task<IActionResult> GetTeamInventory(Guid raceId, CancellationToken cancellationToken)
+    {
+        var teamId = GetRequiredCurrentUserId(); 
+        var result = await _mediator.Send(new GetTeamCardInventoryQuery(raceId, teamId), cancellationToken);
+
+        return Ok(ApiResponse.Success(result.Select(x => x.ToResponse())));
+    }
+
+    [HttpGet("team/cards/{cardId:guid}")]
+    // [RequirePermission(PermissionCodes.RaceManage)] // Tạm thời comment RBAC chờ xử lý sau
+    public async Task<IActionResult> GetTeamCardDetail(Guid cardId, CancellationToken cancellationToken)
+    {
+        var teamId = GetRequiredCurrentUserId(); 
+        var result = await _mediator.Send(new GetTeamCardDetailQuery(cardId, teamId), cancellationToken);
+
+        return Ok(ApiResponse.Success(result.ToResponse()));
+    }
 }

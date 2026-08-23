@@ -1,5 +1,8 @@
 using OVCMOVE.Api.Contracts;
-using OVCMOVE.Application.Features.FunctionCards.Command;
+using OVCMOVE.Application.Features.FunctionCards.Command.CreateFunctionCard;
+using OVCMOVE.Application.Features.FunctionCards.Command.UpdateFunctionCard;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardDetail;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardInventory;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -31,4 +34,18 @@ public static class FunctionCardContractMapping
             BackgroundUrl = request.BackgroundUrl,
             Inputs = request.Inputs
         };
+
+    public static FunctionCardContract.CardsResponse ToResponse(this TeamCardInventoryItemModel model) => new()
+    {
+        CardId = model.CardId,
+        CardUrl = model.CardUrl,
+        CardName = model.CardName,
+        CardType = model.CardType,
+        CardStatus = model.CardStatus
+    };
+
+    public static FunctionCardContract.CardInfoResponse ToResponse(this TeamCardDetailModel model) => new()
+    {
+        CardInfo = model.CardInfo
+    };
 }

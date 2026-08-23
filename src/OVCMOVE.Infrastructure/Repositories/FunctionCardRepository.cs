@@ -2,6 +2,7 @@ using System.Data;
 using Dapper;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.FunctionCards.Common;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardInventory;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
 using OVCMOVE.Infrastructure.Persistence.Dapper;
@@ -93,4 +94,24 @@ public sealed class FunctionCardRepository(IDbExecutor db) : IFunctionCardReposi
             FunctionCardQueries.SoftDelete,
             new { CardId = cardId, Actor = actor, ModifiedAt = modifiedAt },
             cancellationToken) == 1;
+
+    public async Task<IReadOnlyCollection<TeamCardInventoryItemModel>> GetByTeamIdAsync(
+        Guid raceId, 
+        Guid teamId, 
+        string activeStatus,
+        CancellationToken cancellationToken = default) =>
+        (await db.QueryAsync<TeamCardInventoryItemModel>(
+            FunctionCardQueries.SelectByTeamId,
+            new { RaceId = raceId, TeamId = teamId, ActiveStatus = activeStatus },
+            cancellationToken)).ToArray();
+
+    public Task<string?> GetCardDescriptionByIdAsync(
+        Guid cardId, 
+        Guid teamId, 
+        string activeStatus,
+        CancellationToken cancellationToken = default) =>
+        db.QueryFirstOrDefaultAsync<string>(
+            FunctionCardQueries.SelectCardDescriptionById,
+            new { CardId = cardId, TeamId = teamId, ActiveStatus = activeStatus },
+            cancellationToken);
 }

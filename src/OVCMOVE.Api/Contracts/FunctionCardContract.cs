@@ -26,7 +26,7 @@ public static class FunctionCardContract
         [Required] public DateTime ExpectedModifiedAt { get; init; }
     }
 
-    public sealed class CardListResponse
+    public sealed class CardsResponse
     {
         public Guid CardId {get; init;}
         public string? CardUrl {get; init;}

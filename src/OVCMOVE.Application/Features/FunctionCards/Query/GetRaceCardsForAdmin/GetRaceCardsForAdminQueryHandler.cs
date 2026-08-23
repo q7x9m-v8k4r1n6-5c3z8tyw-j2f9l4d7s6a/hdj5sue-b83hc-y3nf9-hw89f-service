@@ -4,15 +4,15 @@ using OVCMOVE.Application.Features.FunctionCards.Common;
 using OVCMOVE.Application.Abstractions.Repositories;
 
 
-namespace OVCMOVE.Application.Features.FunctionCards.Query.GetFunctionCards;
+namespace OVCMOVE.Application.Features.FunctionCards.Query.GetRaceCardsForAdmin;
 
-public sealed class GetFunctionCardsQueryHandler(
+public sealed class GetRaceCardsForAdminQueryHandler(
     IFunctionCardRepository repository,
     IRaceRepository raceRepository)
-    : IRequestHandler<GetFunctionCardsQuery, IReadOnlyCollection<FunctionCardResultModel>>
+    : IRequestHandler<GetRaceCardsForAdminQuery, IReadOnlyCollection<FunctionCardResultModel>>
 {
     public async Task<IReadOnlyCollection<FunctionCardResultModel>> Handle(
-        GetFunctionCardsQuery request,
+        GetRaceCardsForAdminQuery request,
         CancellationToken cancellationToken)
     {
         if (request.RaceId == Guid.Empty)

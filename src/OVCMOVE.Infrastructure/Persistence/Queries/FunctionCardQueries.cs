@@ -107,4 +107,31 @@ public static class FunctionCardQueries
         COMMIT TRANSACTION;
         SELECT @Deleted;
         """;
+
+    public const string SelectByTeamId = """
+        SELECT 
+            FC.[Id] AS [CardId],
+            FC.[BackgroundUrl] AS [CardUrl],
+            FC.[Name] AS [CardName],
+            W.[TriggerType] AS [CardType],
+            W.[Status] AS [CardStatus]
+        FROM [dbo].[FunctionCards] FC
+        INNER JOIN [dbo].[Workflows] W ON W.[CardId] = FC.[Id] AND W.[IsDeleted] = 0
+        WHERE FC.[RaceId] = @RaceId 
+          AND FC.[TeamId] = @TeamId 
+          AND FC.[IsDeleted] = 0
+          AND W.[Status] = @ActiveStatus
+        ORDER BY FC.[CreatedAt] DESC;
+        """;
+
+    public const string SelectCardDescriptionById = """
+        SELECT 
+            FC.[Description]
+        FROM [dbo].[FunctionCards] FC
+        INNER JOIN [dbo].[Workflows] W ON W.[CardId] = FC.[Id] AND W.[IsDeleted] = 0
+        WHERE FC.[Id] = @CardId 
+          AND FC.[TeamId] = @TeamId 
+          AND FC.[IsDeleted] = 0
+          AND W.[Status] = @ActiveStatus;
+        """;
 }

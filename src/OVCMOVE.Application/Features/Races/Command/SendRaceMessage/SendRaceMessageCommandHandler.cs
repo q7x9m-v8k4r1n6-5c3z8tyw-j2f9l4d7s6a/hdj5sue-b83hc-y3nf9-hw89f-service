@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MediatR;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
@@ -15,13 +16,16 @@ public sealed class SendRaceMessageCommandHandler :
 {
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public SendRaceMessageCommandHandler(
         IRaceRepository raceRepository,
-        IBoothNotificationService notificationService)
+        IBoothNotificationService notificationService,
+        IUnitOfWork unitOfWork)
     {
         _raceRepository = raceRepository;
         _notificationService = notificationService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<RaceMessageResultModel?> Handle(
@@ -70,10 +74,14 @@ public sealed class SendRaceMessageCommandHandler :
             CreatedAt = message.CreatedAt
         };
 
-        await _notificationService.NotifyRaceMessageAsync(
-            request.RaceId,
-            result,
-            cancellationToken);
+        if (!_unitOfWork.HasActiveTransaction &&
+            request.PublishRealtimeNotification)
+        {
+            await _notificationService.NotifyRaceMessageAsync(
+                request.RaceId,
+                result,
+                cancellationToken);
+        }
 
         return result;
     }

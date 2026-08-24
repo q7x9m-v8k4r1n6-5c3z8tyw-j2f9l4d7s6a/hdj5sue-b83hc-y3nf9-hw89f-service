@@ -35,10 +35,12 @@ public sealed class UpdateTeamScoreCommandHandler :
         var actor = request.GetActorOrSystem();
         var now = DateTime.UtcNow;
         var reason = request.Reason.Trim();
+        var ownsTransaction = !_unitOfWork.HasActiveTransaction;
 
         try
         {
-            await _unitOfWork.BeginAsync(cancellationToken);
+            if (ownsTransaction)
+                await _unitOfWork.BeginAsync(cancellationToken);
 
             var scoreBefore = await _raceRepository.GetRaceTeamScoreAsync(
                 request.RaceId,
@@ -46,7 +48,8 @@ public sealed class UpdateTeamScoreCommandHandler :
                 cancellationToken);
             if (scoreBefore is null)
             {
-                await _unitOfWork.RollbackAsync(CancellationToken.None);
+                if (ownsTransaction)
+                    await _unitOfWork.RollbackAsync(CancellationToken.None);
                 return null;
             }
 
@@ -60,7 +63,8 @@ public sealed class UpdateTeamScoreCommandHandler :
                 cancellationToken);
             if (!updated)
             {
-                await _unitOfWork.RollbackAsync(CancellationToken.None);
+                if (ownsTransaction)
+                    await _unitOfWork.RollbackAsync(CancellationToken.None);
                 return null;
             }
 
@@ -87,12 +91,16 @@ public sealed class UpdateTeamScoreCommandHandler :
                 },
                 cancellationToken);
 
-            await _unitOfWork.CommitAsync(cancellationToken);
-            await _notificationService.NotifyRaceScoreChangedAsync(
-                request.RaceId,
-                request.TeamId,
-                request.Delta,
-                cancellationToken);
+            if (ownsTransaction)
+                await _unitOfWork.CommitAsync(cancellationToken);
+            if (ownsTransaction && request.PublishRealtimeNotification)
+            {
+                await _notificationService.NotifyRaceScoreChangedAsync(
+                    request.RaceId,
+                    request.TeamId,
+                    request.Delta,
+                    cancellationToken);
+            }
 
             return new UpdateTeamScoreResult(
                 request.RaceId,
@@ -103,7 +111,8 @@ public sealed class UpdateTeamScoreCommandHandler :
         }
         catch
         {
-            await _unitOfWork.RollbackAsync(CancellationToken.None);
+            if (ownsTransaction)
+                await _unitOfWork.RollbackAsync(CancellationToken.None);
             throw;
         }
     }

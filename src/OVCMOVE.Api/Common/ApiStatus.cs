@@ -15,6 +15,7 @@ public static class ApiStatus
         public const int Conflict = StatusCodes.Status409Conflict;
         public const int InternalServerError = StatusCodes.Status500InternalServerError;
         public const int TooManyRequests = StatusCodes.Status429TooManyRequests;
+        public const int ServiceUnavailable = StatusCodes.Status503ServiceUnavailable;
     }
 
     public static class Messages
@@ -27,5 +28,6 @@ public static class ApiStatus
         public const string Conflict = "Conflict";
         public const string InternalServerError = "Internal Server Error";
         public const string TooManyRequests = "Too Many Requests";
+        public const string ServiceUnavailable = "Service Unavailable";
     }
 }

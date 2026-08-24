@@ -18,6 +18,20 @@ public static class WorkflowConstants
         public const string Disabled = "disabled";
     }
 
+    public static class RunStatus
+    {
+        public const string Running = "running";
+        public const string Succeeded = "succeeded";
+        public const string Failed = "failed";
+        public const string Canceled = "canceled";
+    }
+
+    public static class TraceStatus
+    {
+        public const string Succeeded = "succeeded";
+        public const string Failed = "failed";
+    }
+
     public static class NodeType
     {
         public const string TriggerActivated = "trigger.activated";
@@ -107,7 +121,7 @@ public sealed class WorkflowExecutionInputModel
     public Guid? TargetTeamId { get; init; }
     public IReadOnlyDictionary<string, JsonElement> Variables { get; init; } =
         new Dictionary<string, JsonElement>();
-    public JsonElement Payload { get; init; }
+    public JsonElement Payload { get; init; } = WorkflowJson.ToElement(new { });
 }
 
 public sealed record WorkflowTraceItemModel(
@@ -128,7 +142,9 @@ public sealed record WorkflowExecutionResultModel(
     bool IsSimulation,
     IReadOnlyCollection<WorkflowTraceItemModel> Trace,
     IReadOnlyCollection<WorkflowEffectModel> Effects,
-    IReadOnlyDictionary<string, JsonElement> Variables);
+    IReadOnlyDictionary<string, JsonElement> Variables,
+    bool RealtimeSynced = true,
+    string? Message = null);
 
 public static class WorkflowJson
 {

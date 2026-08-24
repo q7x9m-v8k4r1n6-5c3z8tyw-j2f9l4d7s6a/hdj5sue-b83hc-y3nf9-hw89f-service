@@ -34,5 +34,6 @@ public static class FunctionCardValidator
             throw new ApplicationValidationException("Inputs của thẻ phải là một mảng JSON.");
         if (inputs.GetRawText().Length > 100_000)
             throw new ApplicationValidationException("Cấu hình input của thẻ quá lớn.");
+        FunctionCardInputDefinition.GetKeys(inputs);
     }
 }

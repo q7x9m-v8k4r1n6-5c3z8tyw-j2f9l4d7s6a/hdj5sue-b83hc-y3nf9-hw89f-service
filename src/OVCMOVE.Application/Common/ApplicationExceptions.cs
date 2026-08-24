@@ -43,3 +43,27 @@ public class ApplicationForbiddenException : Exception
 {
     public ApplicationForbiddenException(string message) : base(message) { }
 }
+
+public sealed class ApplicationServiceUnavailableException : Exception
+{
+    public ApplicationServiceUnavailableException(
+        string message,
+        Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>
+/// The database connection failed while committing, so the caller must verify
+/// the persisted result instead of repeating a potentially committed command.
+/// </summary>
+public sealed class ApplicationCommitOutcomeUnknownException : Exception
+{
+    public ApplicationCommitOutcomeUnknownException(
+        string message,
+        Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

@@ -10,7 +10,7 @@ env:
   DOTNET_VERSION: '10.0.x'
 
 jobs:
-  build-and-test:
+  build-and-unit-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -27,5 +27,36 @@ jobs:
       - name: Build
         run: dotnet build OVCMOVE.slnx --no-restore -c Release
 
-      - name: Test
-        run: dotnet test OVCMOVE.slnx --no-build -c Release --verbosity normal
+      - name: Unit test
+        run: dotnet test OVCMOVE.slnx --no-build -c Release --filter "Category!=Integration" --verbosity normal
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: build-and-unit-test
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: "OVCMove_test_2026!"
+        ports:
+          - 1433:1433
+    env:
+      OVCMOVE_TEST_SQLSERVER_MASTER: "Server=localhost,1433;Database=master;User Id=sa;Password=OVCMove_test_2026!;Encrypt=false;TrustServerCertificate=true;Connection Timeout=30"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore OVCMOVE.slnx
+
+      - name: Build
+        run: dotnet build OVCMOVE.slnx --no-restore -c Release
+
+      - name: SQL integration test
+        run: dotnet test OVCMOVE.slnx --no-build -c Release --filter "Category=Integration" --verbosity normal

@@ -11,6 +11,7 @@ public sealed class UpdateTeamScoreCommand :
     public Guid TeamId { get; init; }
     public int Delta { get; init; }
     public string Reason { get; init; } = string.Empty;
+    public bool PublishRealtimeNotification { get; init; } = true;
 }
 
 public sealed record UpdateTeamScoreResult(

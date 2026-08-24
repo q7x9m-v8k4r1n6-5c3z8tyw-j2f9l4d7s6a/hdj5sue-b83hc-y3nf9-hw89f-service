@@ -4,7 +4,8 @@ public static class WorkflowConstants
 {
     public static class WorkflowStatus
     {
-        public const string Active = "active";
-        public const string Inactive = "inactive";
+        public const string Published = "published";
+        public const string Draft = "draft";
+        public const string Disabled = "disabled";
     }
 }

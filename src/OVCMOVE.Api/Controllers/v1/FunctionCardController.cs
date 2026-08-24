@@ -63,7 +63,7 @@ public sealed class FunctionCardController(IMediator mediator) : BaseController(
 
     [HttpGet("team/races/{raceId:guid}")]
     // [RequirePermission(PermissionCodes.RaceManage)] // Tạm thời comment RBAC chờ xử lý sau
-    public async Task<IActionResult> GetTeamInventory(Guid raceId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTeamCardInventory(Guid raceId, CancellationToken cancellationToken)
     {
         var teamId = GetRequiredCurrentUserId(); 
         var result = await _mediator.Send(new GetTeamCardInventoryQuery(raceId, teamId), cancellationToken);

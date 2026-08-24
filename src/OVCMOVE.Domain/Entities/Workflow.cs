@@ -13,7 +13,7 @@ public sealed class Workflow : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string TriggerType { get; set; } = string.Empty;
-    public string Status { get; set; } = WorkflowStatus.Active;
+    public string Status { get; set; } = WorkflowStatus.Draft;
     public int Version { get; set; }
     public string DefinitionJson { get; set; } = string.Empty;
 }

@@ -13,6 +13,6 @@ public sealed class GetTeamCardInventoryQueryHandler(IFunctionCardRepository rep
         await repository.GetByTeamIdAsync(
             request.RaceId, 
             request.TeamId, 
-            WorkflowConstants.WorkflowStatus.Active, 
+            WorkflowConstants.WorkflowStatus.Draft, 
             cancellationToken);
 }

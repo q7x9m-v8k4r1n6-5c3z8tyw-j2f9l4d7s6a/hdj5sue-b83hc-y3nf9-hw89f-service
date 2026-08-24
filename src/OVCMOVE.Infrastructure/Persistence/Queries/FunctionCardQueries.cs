@@ -120,7 +120,7 @@ public static class FunctionCardQueries
         WHERE FC.[RaceId] = @RaceId 
           AND FC.[TeamId] = @TeamId 
           AND FC.[IsDeleted] = 0
-          AND W.[Status] = @ActiveStatus
+          AND W.[Status] <> @ExcludedStatus
         ORDER BY FC.[CreatedAt] DESC;
         """;
 
@@ -132,6 +132,6 @@ public static class FunctionCardQueries
         WHERE FC.[Id] = @CardId 
           AND FC.[TeamId] = @TeamId 
           AND FC.[IsDeleted] = 0
-          AND W.[Status] = @ActiveStatus;
+          AND W.[Status] <> @ExcludedStatus;
         """;
 }

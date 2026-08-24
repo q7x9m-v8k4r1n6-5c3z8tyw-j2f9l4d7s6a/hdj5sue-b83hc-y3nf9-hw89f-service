@@ -98,20 +98,20 @@ public sealed class FunctionCardRepository(IDbExecutor db) : IFunctionCardReposi
     public async Task<IReadOnlyCollection<TeamCardInventoryItemModel>> GetByTeamIdAsync(
         Guid raceId, 
         Guid teamId, 
-        string activeStatus,
+        string excludedStatus,
         CancellationToken cancellationToken = default) =>
         (await db.QueryAsync<TeamCardInventoryItemModel>(
             FunctionCardQueries.SelectByTeamId,
-            new { RaceId = raceId, TeamId = teamId, ActiveStatus = activeStatus },
+            new { RaceId = raceId, TeamId = teamId, ExcludedStatus = excludedStatus }, // Map đúng tên biến
             cancellationToken)).ToArray();
 
     public Task<string?> GetCardDescriptionByIdAsync(
         Guid cardId, 
         Guid teamId, 
-        string activeStatus,
+        string excludedStatus,
         CancellationToken cancellationToken = default) =>
         db.QueryFirstOrDefaultAsync<string>(
             FunctionCardQueries.SelectCardDescriptionById,
-            new { CardId = cardId, TeamId = teamId, ActiveStatus = activeStatus },
+            new { CardId = cardId, TeamId = teamId, ExcludedStatus = excludedStatus }, // Map đúng tên biến
             cancellationToken);
 }

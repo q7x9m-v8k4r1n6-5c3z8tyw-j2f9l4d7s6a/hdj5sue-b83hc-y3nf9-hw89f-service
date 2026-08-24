@@ -10,19 +10,15 @@ public sealed class GetTeamCardDetailQueryHandler(IFunctionCardRepository reposi
 {
     public async Task<TeamCardDetailModel> Handle(
         GetTeamCardDetailQuery request,
-        CancellationToken cancellationToken)
-    {
-        var description = await repository.GetCardDescriptionByIdAsync(
-            request.CardId, 
-            request.TeamId, 
-            WorkflowConstants.WorkflowStatus.Active, 
-            cancellationToken);
-
-        if (description is null)
+        CancellationToken cancellationToken) =>
+        new TeamCardDetailModel
         {
-            throw new ApplicationNotFoundException("Không tìm thấy thẻ hoặc bạn không có quyền truy cập thẻ này.");
-        }
+            CardInfo = await repository.GetCardDescriptionByIdAsync(
+                request.CardId, 
+                request.TeamId, 
+                WorkflowConstants.WorkflowStatus.Active, 
+                cancellationToken)
+                    ?? throw new ApplicationNotFoundException("Không tìm thấy thẻ hoặc bạn không có quyền truy cập thẻ này.")   
+        };
 
-        return new TeamCardDetailModel { CardInfo = description };
-    }
 }

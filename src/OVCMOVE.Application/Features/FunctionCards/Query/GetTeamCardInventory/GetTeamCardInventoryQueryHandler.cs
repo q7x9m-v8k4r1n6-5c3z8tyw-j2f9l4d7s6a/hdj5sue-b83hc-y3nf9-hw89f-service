@@ -9,12 +9,10 @@ public sealed class GetTeamCardInventoryQueryHandler(IFunctionCardRepository rep
 {
     public async Task<IReadOnlyCollection<TeamCardInventoryItemModel>> Handle(
         GetTeamCardInventoryQuery request,
-        CancellationToken cancellationToken)
-    {
-        return await repository.GetByTeamIdAsync(
+        CancellationToken cancellationToken) =>
+        await repository.GetByTeamIdAsync(
             request.RaceId, 
             request.TeamId, 
             WorkflowConstants.WorkflowStatus.Active, 
             cancellationToken);
-    }
 }

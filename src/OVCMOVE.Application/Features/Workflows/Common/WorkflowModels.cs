@@ -121,7 +121,7 @@ public sealed class WorkflowExecutionInputModel
     public Guid? TargetTeamId { get; init; }
     public IReadOnlyDictionary<string, JsonElement> Variables { get; init; } =
         new Dictionary<string, JsonElement>();
-    public JsonElement Payload { get; init; }
+    public JsonElement Payload { get; init; } = WorkflowJson.ToElement(new { });
 }
 
 public sealed record WorkflowTraceItemModel(
@@ -142,7 +142,9 @@ public sealed record WorkflowExecutionResultModel(
     bool IsSimulation,
     IReadOnlyCollection<WorkflowTraceItemModel> Trace,
     IReadOnlyCollection<WorkflowEffectModel> Effects,
-    IReadOnlyDictionary<string, JsonElement> Variables);
+    IReadOnlyDictionary<string, JsonElement> Variables,
+    bool RealtimeSynced = true,
+    string? Message = null);
 
 public static class WorkflowJson
 {

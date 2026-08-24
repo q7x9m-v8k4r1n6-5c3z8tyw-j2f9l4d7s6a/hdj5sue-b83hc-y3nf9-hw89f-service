@@ -271,22 +271,26 @@ internal sealed class UnitOfWorkSpy : IUnitOfWork
     public int BeginCount => _beginCount;
     public int CommitCount => _commitCount;
     public int RollbackCount => _rollbackCount;
+    public bool HasActiveTransaction { get; private set; }
 
     public Task BeginAsync(CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _beginCount);
+        HasActiveTransaction = true;
         return Task.CompletedTask;
     }
 
     public Task CommitAsync(CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _commitCount);
+        HasActiveTransaction = false;
         return Task.CompletedTask;
     }
 
     public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _rollbackCount);
+        HasActiveTransaction = false;
         return Task.CompletedTask;
     }
 }

@@ -10,7 +10,7 @@ public sealed class ChangeWorkflowStatusCommand : AuditedRequest, IRequest<Workf
 {
     public Guid WorkflowId { get; init; }
     public DateTime ExpectedModifiedAt { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public string? Status { get; init; }
 }
 
 public sealed class ChangeWorkflowStatusCommandHandler(
@@ -26,9 +26,7 @@ public sealed class ChangeWorkflowStatusCommandHandler(
         WorkflowCommandRules.ValidateConcurrency(
             request.WorkflowId,
             request.ExpectedModifiedAt);
-        var status = request.Status.Trim().ToLowerInvariant();
-        if (status is not (WorkflowConstants.Status.Draft or WorkflowConstants.Status.Published or WorkflowConstants.Status.Disabled))
-            throw new ApplicationValidationException("Trạng thái workflow không hợp lệ.");
+        var status = WorkflowCommandRules.NormalizeStatus(request.Status);
         var workflow = await repository.GetByIdAsync(request.WorkflowId, cancellationToken)
             ?? throw new ApplicationNotFoundException("Không tìm thấy workflow.");
         if (status == WorkflowConstants.Status.Published)

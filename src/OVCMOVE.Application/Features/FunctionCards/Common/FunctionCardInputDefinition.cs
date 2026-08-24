@@ -22,7 +22,10 @@ internal static class FunctionCardInputDefinition
                 throw new ApplicationValidationException(
                     "Mỗi input của thẻ phải có key.");
 
-            var key = keyElement.GetString()!.Trim();
+            var key = keyElement.GetString()!;
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+                throw new ApplicationValidationException(
+                    "Input key không được chứa khoảng trắng ở đầu hoặc cuối.");
             if (key.Length > 100)
                 throw new ApplicationValidationException(
                     "Input key không được vượt quá 100 ký tự.");

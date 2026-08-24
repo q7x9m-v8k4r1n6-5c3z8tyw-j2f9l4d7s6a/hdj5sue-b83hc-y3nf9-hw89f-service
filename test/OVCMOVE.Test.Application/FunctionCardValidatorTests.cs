@@ -73,4 +73,17 @@ public sealed class FunctionCardValidatorTests
             FunctionCardValidator.Validate(
                 "card-key", "Card name", "", "attack", null, inputs));
     }
+
+    [Theory]
+    [InlineData(" target_team")]
+    [InlineData("target_team ")]
+    [InlineData(" target_team ")]
+    public void InputKeyWithOuterWhitespace_IsRejected(string key)
+    {
+        var inputs = JsonSerializer.SerializeToElement(new[] { new { key } });
+
+        Assert.Throws<ApplicationValidationException>(() =>
+            FunctionCardValidator.Validate(
+                "card-key", "Card name", "", "attack", null, inputs));
+    }
 }

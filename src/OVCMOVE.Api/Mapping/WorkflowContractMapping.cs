@@ -44,7 +44,8 @@ public static class WorkflowContractMapping
                 EventId = request.EventId,
                 ActorTeamId = request.ActorTeamId,
                 TargetTeamId = request.TargetTeamId,
-                Variables = request.Variables,
+                Variables = request.Variables ??
+                    new Dictionary<string, JsonElement>(),
                 Payload = request.Payload
             }
         };

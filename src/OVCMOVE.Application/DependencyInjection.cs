@@ -29,6 +29,9 @@ public static class DependencyInjection
         services.AddScoped<AuthSessionIssuer>();
         services.AddScoped<WorkflowDefinitionValidator>();
         services.AddScoped<WorkflowRuntime>();
+        services.AddScoped<WorkflowRetryPolicy>();
+        services.AddScoped<WorkflowRealtimeBuffer>();
+        services.AddScoped<WorkflowRealtimePublisher>();
         services.AddScoped<ICardWorkflowDispatcher, CardWorkflowDispatcher>();
 
         return services;

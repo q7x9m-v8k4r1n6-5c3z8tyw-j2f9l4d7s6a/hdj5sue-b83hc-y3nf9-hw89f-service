@@ -89,6 +89,25 @@ public sealed class WorkflowDefinitionValidatorTests
             WorkflowCommandRules.ValidateConcurrency(Guid.NewGuid(), default));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MissingWorkflowStatus_IsRejected(string? status)
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.NormalizeStatus(status));
+    }
+
+    [Theory]
+    [InlineData("draft", WorkflowConstants.Status.Draft)]
+    [InlineData(" PUBLISHED ", WorkflowConstants.Status.Published)]
+    [InlineData("Disabled", WorkflowConstants.Status.Disabled)]
+    public void WorkflowStatus_IsNormalized(string status, string expected)
+    {
+        Assert.Equal(expected, WorkflowCommandRules.NormalizeStatus(status));
+    }
+
     [Fact]
     public void Catalog_ContainsCodeReplacementBuildingBlocks()
     {

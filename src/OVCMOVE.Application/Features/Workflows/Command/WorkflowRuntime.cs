@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
 using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
@@ -15,7 +16,11 @@ public sealed record WorkflowRuntimeOutcome(
     IReadOnlyCollection<WorkflowEffectModel> Effects,
     IReadOnlyDictionary<string, JsonElement> Variables);
 
-public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository repository)
+public sealed class WorkflowRuntime(
+    ISender sender,
+    IWorkflowRepository repository,
+    WorkflowRealtimeBuffer realtimeBuffer,
+    ITransientErrorDetector transientErrorDetector)
 {
     public async Task<WorkflowRuntimeOutcome> ExecuteAsync(
         Workflow workflow,
@@ -96,7 +101,9 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                 current = nextEdge is null ? null : nodes[nextEdge.Target];
             }
             catch (Exception exception) when (
-                exception is not OperationCanceledException && catchTargets.Count > 0)
+                exception is not OperationCanceledException &&
+                !transientErrorDetector.IsTransient(exception) &&
+                catchTargets.Count > 0)
             {
                 trace.Add(new WorkflowTraceItemModel(
                     current!.Id,
@@ -178,10 +185,15 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                             RaceId = workflow.RaceId,
                             TeamId = teamId,
                             Delta = delta,
-                            Reason = reason
+                            Reason = reason,
+                            PublishRealtimeNotification = false
                         }, cancellationToken);
                         if (scoreResult is null)
                             throw new ApplicationNotFoundException("Không tìm thấy đội trong race.");
+                        realtimeBuffer.EnqueueScoreChanged(
+                            workflow.RaceId,
+                            teamId,
+                            delta);
                     }
                     var data = WorkflowJson.ToElement(new { teamId, delta, reason });
                     effects.Add(new WorkflowEffectModel(
@@ -216,10 +228,14 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                     {
                         RaceId = workflow.RaceId,
                         Recipients = recipients,
-                        Body = message
+                        Body = message,
+                        PublishRealtimeNotification = false
                     }, cancellationToken);
                     if (messageResult is null)
                         throw new ApplicationNotFoundException("Không tìm thấy race.");
+                    realtimeBuffer.EnqueueRaceMessage(
+                        workflow.RaceId,
+                        messageResult);
                 }
                 effects.Add(new WorkflowEffectModel(
                     "notify.send_message",
@@ -331,10 +347,15 @@ public sealed class WorkflowRuntime(ISender sender, IWorkflowRepository reposito
                     RaceId = workflow.RaceId,
                     TeamId = change.TeamId,
                     Delta = change.Delta,
-                    Reason = $"Tấn công: {subAction}"
+                    Reason = $"Tấn công: {subAction}",
+                    PublishRealtimeNotification = false
                 }, cancellationToken);
                 if (result is null)
                     throw new ApplicationNotFoundException("Không tìm thấy đội trong race.");
+                realtimeBuffer.EnqueueScoreChanged(
+                    workflow.RaceId,
+                    change.TeamId,
+                    change.Delta);
             }
         }
 

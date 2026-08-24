@@ -103,6 +103,7 @@ public static class DependencyInjection
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
+        services.AddScoped<ITransientErrorDetector, SqlServerTransientErrorDetector>();
         services.AddSingleton<ILoginRateLimitService, LoginRateLimitService>();
         #endregion
 

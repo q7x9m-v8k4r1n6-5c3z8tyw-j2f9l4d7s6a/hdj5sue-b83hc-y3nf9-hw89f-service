@@ -102,6 +102,15 @@ public class GlobalExceptionMiddleware
                 ApiStatus.Messages.TooManyRequests,
                 ex.Message);
         }
+        catch (ApplicationServiceUnavailableException ex)
+        {
+            _logger.LogError(ex, "Thao tác thất bại sau khi retry lỗi tạm thời.");
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.ServiceUnavailable,
+                ApiStatus.Messages.ServiceUnavailable,
+                ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi hệ thống không mong muốn: {Message}", ex.Message);

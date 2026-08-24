@@ -43,3 +43,13 @@ public class ApplicationForbiddenException : Exception
 {
     public ApplicationForbiddenException(string message) : base(message) { }
 }
+
+public sealed class ApplicationServiceUnavailableException : Exception
+{
+    public ApplicationServiceUnavailableException(
+        string message,
+        Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

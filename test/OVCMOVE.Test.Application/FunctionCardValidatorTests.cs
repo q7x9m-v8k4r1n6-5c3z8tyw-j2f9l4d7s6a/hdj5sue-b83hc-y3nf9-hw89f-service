@@ -27,11 +27,63 @@ public sealed class FunctionCardValidatorTests
     }
 
     [Fact]
+    public void InputWithKey_IsAccepted()
+    {
+        var inputs = JsonSerializer.SerializeToElement(new[]
+        {
+            new { key = "target_team", label = "Đội mục tiêu" }
+        });
+
+        FunctionCardValidator.Validate(
+            "card-key", "Card name", "", "attack", null, inputs);
+    }
+
+    [Fact]
     public void UnknownCategory_IsRejected()
     {
         Assert.Throws<ApplicationValidationException>(() =>
             FunctionCardValidator.Validate(
                 "card-key", "Card name", "", "unknown", null,
                 JsonSerializer.SerializeToElement(Array.Empty<object>())));
+    }
+
+    [Fact]
+    public void InputWithoutKey_IsRejected()
+    {
+        var inputs = JsonSerializer.SerializeToElement(new[]
+        {
+            new { label = "Đội mục tiêu" }
+        });
+
+        Assert.Throws<ApplicationValidationException>(() =>
+            FunctionCardValidator.Validate(
+                "card-key", "Card name", "", "attack", null, inputs));
+    }
+
+    [Fact]
+    public void DuplicateInputKeys_AreRejected()
+    {
+        var inputs = JsonSerializer.SerializeToElement(new[]
+        {
+            new { key = "target_team" },
+            new { key = "target_team" }
+        });
+
+        Assert.Throws<ApplicationValidationException>(() =>
+            FunctionCardValidator.Validate(
+                "card-key", "Card name", "", "attack", null, inputs));
+    }
+
+    [Theory]
+    [InlineData(" target_team")]
+    [InlineData("target_team ")]
+    [InlineData(" target_team ")]
+    public void InputKeyWithOuterWhitespace_IsRejected(string key)
+    {
+        var inputs = JsonSerializer.SerializeToElement(new[] { new { key } });
+
+        Assert.Throws<ApplicationValidationException>(() =>
+            FunctionCardValidator.Validate(
+                "card-key", "Card name", "", "attack", null, inputs));
     }
 }

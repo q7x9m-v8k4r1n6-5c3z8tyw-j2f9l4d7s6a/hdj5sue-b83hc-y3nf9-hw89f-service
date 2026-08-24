@@ -17,6 +17,7 @@ public sealed class UnitOfWork : IUnitOfWork, IDisposable
     }
 
     internal IDbTransaction? Transaction { get; private set; }
+    public bool HasActiveTransaction => Transaction is not null;
 
     /// <summary>Starts the transaction shared by all repositories in this scope.</summary>
     public async Task BeginAsync(

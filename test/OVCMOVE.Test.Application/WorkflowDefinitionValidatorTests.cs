@@ -76,6 +76,39 @@ public sealed class WorkflowDefinitionValidatorTests
     }
 
     [Fact]
+    public void EmptyWorkflowId_IsRejected()
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.ValidateWorkflowId(Guid.Empty));
+    }
+
+    [Fact]
+    public void MissingExpectedModifiedAt_IsRejected()
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.ValidateConcurrency(Guid.NewGuid(), default));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MissingWorkflowStatus_IsRejected(string? status)
+    {
+        Assert.Throws<ApplicationValidationException>(() =>
+            WorkflowCommandRules.NormalizeStatus(status));
+    }
+
+    [Theory]
+    [InlineData("draft", WorkflowConstants.Status.Draft)]
+    [InlineData(" PUBLISHED ", WorkflowConstants.Status.Published)]
+    [InlineData("Disabled", WorkflowConstants.Status.Disabled)]
+    public void WorkflowStatus_IsNormalized(string status, string expected)
+    {
+        Assert.Equal(expected, WorkflowCommandRules.NormalizeStatus(status));
+    }
+
+    [Fact]
     public void Catalog_ContainsCodeReplacementBuildingBlocks()
     {
         var types = WorkflowCatalog.Items.Select(item => item.Type).ToHashSet();

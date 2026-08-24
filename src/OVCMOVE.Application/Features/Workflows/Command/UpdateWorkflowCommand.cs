@@ -28,8 +28,9 @@ public sealed class UpdateWorkflowCommandHandler(
         UpdateWorkflowCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.WorkflowId == Guid.Empty || request.ExpectedModifiedAt == default)
-            throw new ApplicationValidationException("WorkflowId và expectedModifiedAt là bắt buộc.");
+        WorkflowCommandRules.ValidateConcurrency(
+            request.WorkflowId,
+            request.ExpectedModifiedAt);
         WorkflowCommandRules.ValidateIdentity(request.CardId, request.Name);
 
         var workflow = await repository.GetByIdAsync(request.WorkflowId, cancellationToken)

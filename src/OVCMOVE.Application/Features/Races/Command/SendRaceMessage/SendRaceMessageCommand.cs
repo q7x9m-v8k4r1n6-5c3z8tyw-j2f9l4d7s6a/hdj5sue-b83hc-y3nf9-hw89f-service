@@ -12,6 +12,7 @@ public sealed class SendRaceMessageCommand :
     public Guid? SenderId { get; init; }
     public IReadOnlyCollection<RaceMessageRecipientModel> Recipients { get; init; } = [];
     public string Body { get; init; } = string.Empty;
+    public bool PublishRealtimeNotification { get; init; } = true;
 }
 
 public sealed class RaceMessageRecipientModel

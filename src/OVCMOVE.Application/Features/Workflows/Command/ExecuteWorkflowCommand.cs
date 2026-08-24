@@ -1,5 +1,7 @@
 using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.FunctionCards.Common;
@@ -19,13 +21,19 @@ public sealed class ExecuteWorkflowCommandHandler(
     IWorkflowRepository repository,
     IFunctionCardRepository functionCardRepository,
     WorkflowDefinitionValidator validator,
-    WorkflowRuntime runtime)
+    WorkflowRuntime runtime,
+    IUnitOfWork unitOfWork,
+    WorkflowRetryPolicy retryPolicy,
+    WorkflowRealtimeBuffer realtimeBuffer,
+    WorkflowRealtimePublisher realtimePublisher,
+    ILogger<ExecuteWorkflowCommandHandler> logger)
     : IRequestHandler<ExecuteWorkflowCommand, WorkflowExecutionResultModel>
 {
     public async Task<WorkflowExecutionResultModel> Handle(
         ExecuteWorkflowCommand request,
         CancellationToken cancellationToken)
     {
+        WorkflowCommandRules.ValidateWorkflowId(request.WorkflowId);
         var workflow = await repository.GetByIdAsync(request.WorkflowId, cancellationToken)
             ?? throw new ApplicationNotFoundException("Không tìm thấy workflow.");
         if (!request.IsSimulation && workflow.Status != WorkflowConstants.Status.Published)
@@ -51,7 +59,7 @@ public sealed class ExecuteWorkflowCommandHandler(
             CardKey = workflow.CardKey,
             TriggerType = workflow.TriggerType,
             EventId = string.IsNullOrWhiteSpace(request.Input.EventId) ? null : request.Input.EventId.Trim(),
-            Status = "running",
+            Status = WorkflowConstants.RunStatus.Running,
             IsSimulation = request.IsSimulation,
             InputJson = JsonSerializer.Serialize(request.Input, WorkflowJson.Options),
             OutputJson = "{}",
@@ -64,47 +72,176 @@ public sealed class ExecuteWorkflowCommandHandler(
 
         await repository.CreateRunAsync(run, cancellationToken);
 
-        try
+        if (request.IsSimulation || unitOfWork.HasActiveTransaction)
         {
-            var outcome = await runtime.ExecuteAsync(
+            return await ExecuteWithoutOwnedTransactionAsync(
                 workflow,
                 definition,
-                request.Input,
-                request.IsSimulation,
+                request,
+                run,
                 cancellationToken);
-            var result = new WorkflowExecutionResultModel(
-                run.Id,
-                "succeeded",
-                request.IsSimulation,
-                outcome.Trace,
-                outcome.Effects,
-                outcome.Variables);
-            run.Status = result.Status;
-            run.OutputJson = JsonSerializer.Serialize(result, WorkflowJson.Options);
-            run.CompletedAt = DateTime.UtcNow;
-            run.ModifiedAt = run.CompletedAt.Value;
-            await repository.CompleteRunAsync(run, CancellationToken.None);
-            return result;
+        }
+
+        try
+        {
+            var result = await retryPolicy.ExecuteAsync(
+                async (_, attemptCancellationToken) =>
+                {
+                    realtimeBuffer.Reset();
+                    await unitOfWork.BeginAsync(attemptCancellationToken);
+                    var commitStarted = false;
+                    try
+                    {
+                        var attemptResult = await ExecuteAndCompleteAsync(
+                            workflow,
+                            definition,
+                            request,
+                            run,
+                            attemptCancellationToken);
+                        commitStarted = true;
+                        await unitOfWork.CommitAsync(attemptCancellationToken);
+                        return attemptResult;
+                    }
+                    catch (Exception exception) when (commitStarted)
+                    {
+                        await TryRollbackForCleanupAsync();
+                        realtimeBuffer.Reset();
+                        throw new ApplicationCommitOutcomeUnknownException(
+                            "Hệ thống chưa thể xác nhận kết quả cập nhật. Vui lòng tải lại để kiểm tra trước khi thử lại.",
+                            exception);
+                    }
+                    catch
+                    {
+                        await TryRollbackForCleanupAsync();
+                        realtimeBuffer.Reset();
+                        throw;
+                    }
+                },
+                cancellationToken);
+
+            var realtimeSynced = await realtimePublisher.PublishAsync(
+                realtimeBuffer.Snapshot(),
+                CancellationToken.None);
+            realtimeBuffer.Reset();
+            return realtimeSynced
+                ? result
+                : result with
+                {
+                    RealtimeSynced = false,
+                    Message = "Thao tác đã được ghi nhận, nhưng dữ liệu trực tiếp chưa thể đồng bộ. Vui lòng tải lại để xem trạng thái mới nhất."
+                };
         }
         catch (OperationCanceledException)
         {
-            run.Status = "canceled";
-            run.Error = "Workflow execution was cancelled.";
-            run.CompletedAt = DateTime.UtcNow;
-            run.ModifiedAt = run.CompletedAt.Value;
-            await repository.CompleteRunAsync(run, CancellationToken.None);
+            realtimeBuffer.Reset();
+            await CompleteFailedRunAsync(
+                run,
+                WorkflowConstants.RunStatus.Canceled,
+                "Workflow execution was cancelled.");
             throw;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (ApplicationCommitOutcomeUnknownException)
         {
-            run.Status = "failed";
-            run.Error = exception.Message.Length > 2000
-                ? exception.Message[..2000]
-                : exception.Message;
-            run.CompletedAt = DateTime.UtcNow;
-            run.ModifiedAt = run.CompletedAt.Value;
-            await repository.CompleteRunAsync(run, CancellationToken.None);
+            realtimeBuffer.Reset();
             throw;
         }
+        catch (Exception exception)
+        {
+            realtimeBuffer.Reset();
+            await CompleteFailedRunAsync(
+                run,
+                WorkflowConstants.RunStatus.Failed,
+                exception.Message);
+            throw;
+        }
+    }
+
+    private async Task TryRollbackForCleanupAsync()
+    {
+        try
+        {
+            await unitOfWork.RollbackAsync(CancellationToken.None);
+        }
+        catch (Exception rollbackException)
+        {
+            logger.LogError(
+                rollbackException,
+                "Không thể cleanup transaction sau khi workflow thất bại.");
+        }
+    }
+
+    private async Task<WorkflowExecutionResultModel> ExecuteWithoutOwnedTransactionAsync(
+        Workflow workflow,
+        WorkflowDefinitionModel definition,
+        ExecuteWorkflowCommand request,
+        WorkflowRun run,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteAndCompleteAsync(
+                workflow,
+                definition,
+                request,
+                run,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await CompleteFailedRunAsync(
+                run,
+                WorkflowConstants.RunStatus.Canceled,
+                "Workflow execution was cancelled.");
+            throw;
+        }
+        catch (Exception exception)
+        {
+            await CompleteFailedRunAsync(
+                run,
+                WorkflowConstants.RunStatus.Failed,
+                exception.Message);
+            throw;
+        }
+    }
+
+    private async Task<WorkflowExecutionResultModel> ExecuteAndCompleteAsync(
+        Workflow workflow,
+        WorkflowDefinitionModel definition,
+        ExecuteWorkflowCommand request,
+        WorkflowRun run,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await runtime.ExecuteAsync(
+            workflow,
+            definition,
+            request.Input,
+            request.IsSimulation,
+            cancellationToken);
+        var result = new WorkflowExecutionResultModel(
+            run.Id,
+            WorkflowConstants.RunStatus.Succeeded,
+            request.IsSimulation,
+            outcome.Trace,
+            outcome.Effects,
+            outcome.Variables);
+        run.Status = result.Status;
+        run.OutputJson = JsonSerializer.Serialize(result, WorkflowJson.Options);
+        run.Error = null;
+        run.CompletedAt = DateTime.UtcNow;
+        run.ModifiedAt = run.CompletedAt.Value;
+        await repository.CompleteRunAsync(run, cancellationToken);
+        return result;
+    }
+
+    private async Task CompleteFailedRunAsync(
+        WorkflowRun run,
+        string status,
+        string error)
+    {
+        run.Status = status;
+        run.Error = error.Length > 2000 ? error[..2000] : error;
+        run.CompletedAt = DateTime.UtcNow;
+        run.ModifiedAt = run.CompletedAt.Value;
+        await repository.CompleteRunAsync(run, CancellationToken.None);
     }
 }

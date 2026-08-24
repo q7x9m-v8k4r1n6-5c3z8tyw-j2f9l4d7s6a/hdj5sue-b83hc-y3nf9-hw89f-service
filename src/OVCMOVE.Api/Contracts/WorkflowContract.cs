@@ -22,7 +22,7 @@ public static class WorkflowContract
     public sealed class ChangeWorkflowStatusRequest
     {
         [Required] public DateTime ExpectedModifiedAt { get; init; }
-        [Required] public string Status { get; init; } = string.Empty;
+        [Required] public string? Status { get; init; }
     }
 
     public sealed class ExecuteWorkflowRequest
@@ -31,7 +31,8 @@ public static class WorkflowContract
         [MaxLength(100)] public string? EventId { get; init; }
         public Guid? ActorTeamId { get; init; }
         public Guid? TargetTeamId { get; init; }
-        public Dictionary<string, JsonElement> Variables { get; init; } = [];
-        public JsonElement Payload { get; init; }
+        public Dictionary<string, JsonElement>? Variables { get; init; } = [];
+        public JsonElement Payload { get; init; } =
+            JsonSerializer.SerializeToElement(new { });
     }
 }

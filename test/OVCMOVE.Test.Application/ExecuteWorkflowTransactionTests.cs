@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.FunctionCards.Common;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Workflows.Command;
@@ -49,7 +50,8 @@ public sealed class ExecuteWorkflowTransactionTests
             realtimeBuffer,
             new WorkflowRealtimePublisher(
                 new NotificationServiceDouble(),
-                NullLogger<WorkflowRealtimePublisher>.Instance));
+                NullLogger<WorkflowRealtimePublisher>.Instance),
+            NullLogger<ExecuteWorkflowCommandHandler>.Instance);
 
         var result = await handler.Handle(
             new ExecuteWorkflowCommand
@@ -67,6 +69,69 @@ public sealed class ExecuteWorkflowTransactionTests
         Assert.Equal(WorkflowRetryPolicy.MaximumAttempts, unitOfWork.BeginCount);
         Assert.Equal(2, unitOfWork.RollbackCount);
         Assert.Equal(1, unitOfWork.CommitCount);
+        Assert.False(unitOfWork.HasActiveTransaction);
+    }
+
+    [Fact]
+    public async Task Handle_does_not_retry_when_commit_outcome_is_unknown()
+    {
+        var workflowId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        var raceId = Guid.NewGuid();
+        var unitOfWork = new UnitOfWorkSpy
+        {
+            CommitException = new TransientTestException()
+        };
+        var repository = new WorkflowRepositoryDouble(
+            CreateWorkflow(workflowId, cardId, raceId),
+            unitOfWork,
+            transientFailuresBeforeSuccess: 0);
+        var cardRepository = new FunctionCardRepositoryDouble(
+            new FunctionCard
+            {
+                Id = cardId,
+                RaceId = raceId,
+                CardKey = "shield",
+                Name = "Shield",
+                Category = "defense",
+                InputsJson = "[]"
+            });
+        var transientDetector = new TransientErrorDetectorDouble();
+        var realtimeBuffer = new WorkflowRealtimeBuffer();
+        var runtime = new WorkflowRuntime(
+            null!,
+            repository,
+            realtimeBuffer,
+            transientDetector);
+        var handler = new ExecuteWorkflowCommandHandler(
+            repository,
+            cardRepository,
+            new WorkflowDefinitionValidator(),
+            runtime,
+            unitOfWork,
+            new WorkflowRetryPolicy(transientDetector),
+            realtimeBuffer,
+            new WorkflowRealtimePublisher(
+                new NotificationServiceDouble(),
+                NullLogger<WorkflowRealtimePublisher>.Instance),
+            NullLogger<ExecuteWorkflowCommandHandler>.Instance);
+
+        await Assert.ThrowsAsync<ApplicationCommitOutcomeUnknownException>(
+            () => handler.Handle(
+                new ExecuteWorkflowCommand
+                {
+                    WorkflowId = workflowId,
+                    Input = new WorkflowExecutionInputModel
+                    {
+                        EventId = $"event:{Guid.NewGuid():N}"
+                    }
+                },
+                CancellationToken.None));
+
+        Assert.Equal(1, repository.CompleteAttempts);
+        Assert.Equal(1, unitOfWork.BeginCount);
+        Assert.Equal(1, unitOfWork.CommitCount);
+        Assert.Equal(1, unitOfWork.RollbackCount);
         Assert.False(unitOfWork.HasActiveTransaction);
     }
 

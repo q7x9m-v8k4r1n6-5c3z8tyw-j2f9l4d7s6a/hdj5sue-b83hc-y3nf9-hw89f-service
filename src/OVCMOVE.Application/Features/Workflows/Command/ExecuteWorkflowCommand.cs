@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
@@ -24,7 +25,8 @@ public sealed class ExecuteWorkflowCommandHandler(
     IUnitOfWork unitOfWork,
     WorkflowRetryPolicy retryPolicy,
     WorkflowRealtimeBuffer realtimeBuffer,
-    WorkflowRealtimePublisher realtimePublisher)
+    WorkflowRealtimePublisher realtimePublisher,
+    ILogger<ExecuteWorkflowCommandHandler> logger)
     : IRequestHandler<ExecuteWorkflowCommand, WorkflowExecutionResultModel>
 {
     public async Task<WorkflowExecutionResultModel> Handle(
@@ -87,6 +89,7 @@ public sealed class ExecuteWorkflowCommandHandler(
                 {
                     realtimeBuffer.Reset();
                     await unitOfWork.BeginAsync(attemptCancellationToken);
+                    var commitStarted = false;
                     try
                     {
                         var attemptResult = await ExecuteAndCompleteAsync(
@@ -95,12 +98,21 @@ public sealed class ExecuteWorkflowCommandHandler(
                             request,
                             run,
                             attemptCancellationToken);
+                        commitStarted = true;
                         await unitOfWork.CommitAsync(attemptCancellationToken);
                         return attemptResult;
                     }
+                    catch (Exception exception) when (commitStarted)
+                    {
+                        await TryRollbackForCleanupAsync();
+                        realtimeBuffer.Reset();
+                        throw new ApplicationCommitOutcomeUnknownException(
+                            "Hệ thống chưa thể xác nhận kết quả cập nhật. Vui lòng tải lại để kiểm tra trước khi thử lại.",
+                            exception);
+                    }
                     catch
                     {
-                        await unitOfWork.RollbackAsync(CancellationToken.None);
+                        await TryRollbackForCleanupAsync();
                         realtimeBuffer.Reset();
                         throw;
                     }
@@ -128,6 +140,11 @@ public sealed class ExecuteWorkflowCommandHandler(
                 "Workflow execution was cancelled.");
             throw;
         }
+        catch (ApplicationCommitOutcomeUnknownException)
+        {
+            realtimeBuffer.Reset();
+            throw;
+        }
         catch (Exception exception)
         {
             realtimeBuffer.Reset();
@@ -136,6 +153,20 @@ public sealed class ExecuteWorkflowCommandHandler(
                 WorkflowConstants.RunStatus.Failed,
                 exception.Message);
             throw;
+        }
+    }
+
+    private async Task TryRollbackForCleanupAsync()
+    {
+        try
+        {
+            await unitOfWork.RollbackAsync(CancellationToken.None);
+        }
+        catch (Exception rollbackException)
+        {
+            logger.LogError(
+                rollbackException,
+                "Không thể cleanup transaction sau khi workflow thất bại.");
         }
     }
 

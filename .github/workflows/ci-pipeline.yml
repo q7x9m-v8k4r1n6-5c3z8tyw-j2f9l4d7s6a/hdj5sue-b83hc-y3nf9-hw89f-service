@@ -12,6 +12,16 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: "OVCMove_test_2026!"
+        ports:
+          - 1433:1433
+    env:
+      OVCMOVE_TEST_SQLSERVER_MASTER: "Server=localhost,1433;Database=master;User Id=sa;Password=OVCMove_test_2026!;Encrypt=false;TrustServerCertificate=true;Connection Timeout=30"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

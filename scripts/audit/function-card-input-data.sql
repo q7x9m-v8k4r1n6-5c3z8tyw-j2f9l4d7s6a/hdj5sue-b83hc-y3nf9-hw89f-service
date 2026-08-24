@@ -1,6 +1,9 @@
 SET NOCOUNT ON;
 
-/* Read-only audit. This script does not update or delete data. */
+/*
+Run before enabling strict FunctionCard input-key validation in an existing database.
+Read-only audit: this script does not update or delete data.
+*/
 WITH CardInputs AS
 (
     SELECT

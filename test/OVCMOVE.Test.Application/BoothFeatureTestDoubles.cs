@@ -272,6 +272,7 @@ internal sealed class UnitOfWorkSpy : IUnitOfWork
     public int CommitCount => _commitCount;
     public int RollbackCount => _rollbackCount;
     public bool HasActiveTransaction { get; private set; }
+    public Exception? CommitException { get; set; }
 
     public Task BeginAsync(CancellationToken cancellationToken = default)
     {
@@ -283,6 +284,8 @@ internal sealed class UnitOfWorkSpy : IUnitOfWork
     public Task CommitAsync(CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _commitCount);
+        if (CommitException is not null)
+            throw CommitException;
         HasActiveTransaction = false;
         return Task.CompletedTask;
     }

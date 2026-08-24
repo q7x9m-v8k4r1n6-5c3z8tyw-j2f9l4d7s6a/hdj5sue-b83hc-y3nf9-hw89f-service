@@ -19,6 +19,7 @@ public sealed class WorkflowRetryPolicy(ITransientErrorDetector transientErrorDe
             }
             catch (Exception exception) when (
                 exception is not OperationCanceledException &&
+                exception is not ApplicationCommitOutcomeUnknownException &&
                 transientErrorDetector.IsTransient(exception))
             {
                 if (attempt == MaximumAttempts)

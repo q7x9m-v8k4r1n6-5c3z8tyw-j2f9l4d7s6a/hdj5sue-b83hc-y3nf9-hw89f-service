@@ -111,6 +111,17 @@ public class GlobalExceptionMiddleware
                 ApiStatus.Messages.ServiceUnavailable,
                 ex.Message);
         }
+        catch (ApplicationCommitOutcomeUnknownException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Không thể xác định kết quả transaction sau khi bắt đầu commit.");
+            await WriteErrorAsync(
+                context,
+                ApiStatus.Codes.ServiceUnavailable,
+                ApiStatus.Messages.ServiceUnavailable,
+                ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi hệ thống không mong muốn: {Message}", ex.Message);

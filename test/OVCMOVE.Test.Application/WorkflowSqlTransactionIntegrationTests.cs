@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Dapper;
 using MediatR;
@@ -19,9 +20,10 @@ using OVCMOVE.Infrastructure.Services;
 
 namespace OVCMOVE.Test.Application;
 
+[Collection(SqlServerIntegrationCollection.Name)]
 public sealed class WorkflowSqlTransactionIntegrationTests : IAsyncLifetime
 {
-    private readonly string _databaseName = $"OVCMOVE_WorkflowTest_{Guid.NewGuid():N}";
+    private readonly string _databaseName = $"ovcmove_test_{Guid.NewGuid():N}";
     private string _masterConnectionString = string.Empty;
     private string _databaseConnectionString = string.Empty;
 
@@ -33,36 +35,38 @@ public sealed class WorkflowSqlTransactionIntegrationTests : IAsyncLifetime
             InitialCatalog = "master",
             Encrypt = false,
             TrustServerCertificate = true,
-            Pooling = false
+            Pooling = false,
+            ConnectTimeout = 30
         };
         _masterConnectionString = builder.ConnectionString;
         builder.InitialCatalog = _databaseName;
         _databaseConnectionString = builder.ConnectionString;
 
-        await using (var connection = new SqlConnection(_masterConnectionString))
+        await WaitUntilSqlServerIsReadyAsync(
+            _masterConnectionString,
+            TimeSpan.FromSeconds(60));
+
+        try
         {
-            await connection.OpenAsync();
-            await connection.ExecuteAsync($"CREATE DATABASE [{_databaseName}];");
+            await using (var connection = new SqlConnection(_masterConnectionString))
+            {
+                await connection.OpenAsync();
+                await connection.ExecuteAsync($"CREATE DATABASE [{_databaseName}];");
+            }
+
+            await ExecuteDatabaseAsync(SchemaSql);
         }
-
-        await ExecuteDatabaseAsync(SchemaSql);
+        catch
+        {
+            await DropTemporaryDatabaseAsync();
+            throw;
+        }
     }
 
-    public async Task DisposeAsync()
-    {
-        SqlConnection.ClearAllPools();
-        await using var connection = new SqlConnection(_masterConnectionString);
-        await connection.OpenAsync();
-        await connection.ExecuteAsync($"""
-            IF DB_ID(N'{_databaseName}') IS NOT NULL
-            BEGIN
-                ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                DROP DATABASE [{_databaseName}];
-            END;
-            """);
-    }
+    public Task DisposeAsync() => DropTemporaryDatabaseAsync();
 
     [SqlServerIntegrationFact]
+    [Trait("Category", "Integration")]
     public async Task Failed_second_score_action_rolls_back_first_score_and_scoring_log()
     {
         var raceId = Guid.NewGuid();
@@ -101,6 +105,7 @@ public sealed class WorkflowSqlTransactionIntegrationTests : IAsyncLifetime
     }
 
     [SqlServerIntegrationFact]
+    [Trait("Category", "Integration")]
     public async Task Successful_score_actions_commit_once_and_publish_realtime_after_commit()
     {
         var raceId = Guid.NewGuid();
@@ -317,6 +322,57 @@ public sealed class WorkflowSqlTransactionIntegrationTests : IAsyncLifetime
         await connection.ExecuteAsync(sql, parameters);
     }
 
+    private async Task DropTemporaryDatabaseAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_masterConnectionString))
+            return;
+
+        SqlConnection.ClearAllPools();
+        await using var connection = new SqlConnection(_masterConnectionString);
+        await connection.OpenAsync();
+        await connection.ExecuteAsync($"""
+            IF DB_ID(N'{_databaseName}') IS NOT NULL
+            BEGIN
+                ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE [{_databaseName}];
+            END;
+            """);
+    }
+
+    private static async Task WaitUntilSqlServerIsReadyAsync(
+        string connectionString,
+        TimeSpan timeout)
+    {
+        var readinessConnectionString = new SqlConnectionStringBuilder(connectionString)
+        {
+            InitialCatalog = "master",
+            ConnectTimeout = 3,
+            Pooling = false
+        }.ConnectionString;
+        var stopwatch = Stopwatch.StartNew();
+        Exception? lastException = null;
+
+        while (stopwatch.Elapsed < timeout)
+        {
+            try
+            {
+                await using var connection = new SqlConnection(readinessConnectionString);
+                await connection.OpenAsync();
+                await connection.ExecuteScalarAsync<int>("SELECT 1;");
+                return;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                lastException = exception;
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new TimeoutException(
+            $"SQL Server was not ready after {timeout.TotalSeconds:0} seconds.",
+            lastException);
+    }
+
     private static string GetMasterConnectionString() =>
         Environment.GetEnvironmentVariable("OVCMOVE_TEST_SQLSERVER_MASTER")
         ?? throw new InvalidOperationException(
@@ -485,4 +541,10 @@ public sealed class SqlServerIntegrationFactAttribute : FactAttribute
             Skip = "Set OVCMOVE_TEST_SQLSERVER_MASTER to run SQL Server integration tests.";
         }
     }
+}
+
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class SqlServerIntegrationCollection
+{
+    public const string Name = "SQL Server integration";
 }

@@ -7,6 +7,7 @@ using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Workflows.Command;
 using OVCMOVE.Application.Features.Workflows.Common;
 using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Features.FunctionCards.Query.GetTeamCardInventory;
 
 namespace OVCMOVE.Test.Application;
 
@@ -246,6 +247,12 @@ public sealed class ExecuteWorkflowTransactionTests
             throw new NotSupportedException();
 
         public Task<bool> SoftDeleteAsync(Guid cardId, string actor, DateTime modifiedAt, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+            
+        public Task<IReadOnlyCollection<TeamCardInventoryItemModel>> GetByTeamIdAsync(Guid raceId, Guid teamId, string excludedStatus, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<string?> GetCardDescriptionByIdAsync(Guid cardId, Guid teamId, string excludedStatus, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 

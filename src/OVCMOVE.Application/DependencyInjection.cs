@@ -3,9 +3,8 @@ using OVCMOVE.Application.Behaviors;
 using OVCMOVE.Application.Features.Auth;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
-using OVCMOVE.Application.Features.Workflows.Command;
-using OVCMOVE.Application.Features.Workflows.Common;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Abstractions.Plugins;
 
 namespace OVCMOVE.Application;
 
@@ -27,12 +26,7 @@ public static class DependencyInjection
         services.AddScoped<RaceOrganizerPatchProcessor>();
         services.AddScoped<CreateRaceRelationValidator>();
         services.AddScoped<AuthSessionIssuer>();
-        services.AddScoped<WorkflowDefinitionValidator>();
-        services.AddScoped<WorkflowRuntime>();
-        services.AddScoped<WorkflowRetryPolicy>();
-        services.AddScoped<WorkflowRealtimeBuffer>();
-        services.AddScoped<WorkflowRealtimePublisher>();
-        services.AddScoped<ICardWorkflowDispatcher, CardWorkflowDispatcher>();
+        services.AddScoped<IPluginHub, NoopPluginHub>();
 
         return services;
     }

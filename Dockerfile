@@ -8,18 +8,20 @@ COPY ["src/OVCMOVE.Api/OVCMOVE.Api.csproj", "src/OVCMOVE.Api/"]
 COPY ["src/OVCMOVE.Application/OVCMOVE.Application.csproj", "src/OVCMOVE.Application/"]
 COPY ["src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj", "src/OVCMOVE.Infrastructure/"]
 COPY ["src/OVCMOVE.Domain/OVCMOVE.Domain.csproj", "src/OVCMOVE.Domain/"]
-COPY ["plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj", "plugin/OVCMOVE2026.Plugin/"]
-
 RUN dotnet restore "src/OVCMOVE.Api/OVCMOVE.Api.csproj"
 
 # Copy toàn bộ source
 COPY . .
+RUN if test -f "plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj"; then dotnet restore "plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj"; fi
 WORKDIR "/src/src/OVCMOVE.Api"
 RUN dotnet build "OVCMOVE.Api.csproj" -c Release --no-restore
+RUN if test -f "/src/plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj"; then dotnet build "/src/plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" -c Release --no-restore; fi
 
 # ===== Publish Stage =====
 FROM build AS publish
 RUN dotnet publish "OVCMOVE.Api.csproj" -c Release --no-build -o /app/publish
+RUN mkdir -p /app/plugin-publish
+RUN if test -f "/src/plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj"; then dotnet publish "/src/plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" -c Release --no-build -o /app/plugin-publish; fi
 
 # ===== Runtime Stage =====
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
@@ -29,6 +31,7 @@ EXPOSE 80
 
 # Copy published files
 COPY --from=publish /app/publish .
+COPY --from=publish /app/plugin-publish .
 
 # Entrypoint
 ENTRYPOINT ["dotnet", "OVCMOVE.Api.dll"]

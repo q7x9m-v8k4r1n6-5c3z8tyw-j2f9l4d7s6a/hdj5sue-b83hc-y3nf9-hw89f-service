@@ -7,7 +7,6 @@ using OVCMOVE.API.Hubs;
 using OVCMOVE.Application;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Infrastructure;
-using OVCMOVE2026.Plugin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,8 +34,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddAppRateLimit(builder.Configuration);
 
-builder.Services.AddMove2026Plugin();
+// Register the core MVC services first so an optional plugin can safely add
+// its application part without being overwritten by a later AddControllers call.
 builder.Services.AddApiControllers();
+OptionalPluginLoader.RegisterMove2026(builder.Services, builder.Configuration);
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActorProvider, HttpContextCurrentActorProvider>();

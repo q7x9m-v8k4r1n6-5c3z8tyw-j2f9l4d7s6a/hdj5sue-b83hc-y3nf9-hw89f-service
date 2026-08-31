@@ -1,7 +1,4 @@
 <Solution>
-  <Folder Name="/plugin/">
-    <Project Path="plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" Id="59f23049-6f9e-482b-a311-9f309725ad32" />
-  </Folder>
   <Folder Name="/src/">
     <Project Path="src/OVCMOVE.Api/OVCMOVE.Api.csproj" />
     <Project Path="src/OVCMOVE.Application/OVCMOVE.Application.csproj" />

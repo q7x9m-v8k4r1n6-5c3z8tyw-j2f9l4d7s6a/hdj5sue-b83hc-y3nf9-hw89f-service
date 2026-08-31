@@ -274,14 +274,6 @@ BEGIN TRY
             N'manage'
         ),
         (
-            '03A82242-4FD6-4DBB-8F8D-9F0B00740109',
-            N'Workflow Manage',
-            N'workflow.manage',
-            N'Create, publish, simulate, execute, and inspect card workflows.',
-            N'workflow',
-            N'manage'
-        ),
-        (
             '5E04F9D4-F62A-431B-8A6C-AAA1F0EBE10A',
             N'Team Read',
             N'team.read',

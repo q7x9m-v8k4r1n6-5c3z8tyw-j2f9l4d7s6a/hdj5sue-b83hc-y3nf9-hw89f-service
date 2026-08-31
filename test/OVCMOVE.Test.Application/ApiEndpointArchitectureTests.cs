@@ -42,16 +42,6 @@ public class ApiEndpointArchitectureTests
             "api/v1/[controller]",
             6
         },
-        {
-            typeof(WorkflowController),
-            "api/v1/workflows",
-            9
-        },
-        {
-            typeof(FunctionCardController),
-            "api/v1/function-cards",
-            8
-        }
     };
 
     public static TheoryData<Type, string, int> AdminControllers => new()
@@ -159,8 +149,6 @@ public class ApiEndpointArchitectureTests
             typeof(RaceController),
             typeof(TeamController),
             typeof(BoothController),
-            typeof(WorkflowController),
-            typeof(FunctionCardController),
             typeof(OrganizersController),
             typeof(RbacAssignmentsController),
             typeof(RbacPermissionsController),

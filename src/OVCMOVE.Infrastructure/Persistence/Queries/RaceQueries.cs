@@ -264,15 +264,8 @@ public static class RaceQueries
         WHERE [Id] = @BoothId;";
 
     public static string DeleteRaceTeamQuery() => @"
-        SET XACT_ABORT ON;
-        BEGIN TRANSACTION;
-        UPDATE [dbo].[FunctionCards]
-        SET [TeamId] = NULL, [ModifiedBy] = N'system', [ModifiedAt] = SYSUTCDATETIME()
-        WHERE [RaceId] = @RaceId AND [TeamId] = @TeamId AND [IsDeleted] = 0;
-
         DELETE FROM [dbo].[RaceTeam]
-        WHERE [RaceID] = @RaceId AND [TeamID] = @TeamId;
-        COMMIT TRANSACTION;";
+        WHERE [RaceID] = @RaceId AND [TeamID] = @TeamId;";
 
     public static string DeleteRaceOrganizerQuery() => @"
         DELETE FROM [dbo].[RaceOrganizer]

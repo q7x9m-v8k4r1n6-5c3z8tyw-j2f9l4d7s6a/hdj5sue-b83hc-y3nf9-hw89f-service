@@ -1,4 +1,5 @@
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE.Application.Features.Booths.Commands.CancelBoothSession;
 using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
@@ -24,7 +25,8 @@ public sealed class BoothSessionCommandHandlerTests
             repository,
             new ValidBoothRaceRepository(),
             notifications,
-            new StubTeamUserRepository(team));
+            new StubTeamUserRepository(team),
+            new NoopPluginHub());
 
         var result = await handler.Handle(
             new RequestEntryToBoothCommand

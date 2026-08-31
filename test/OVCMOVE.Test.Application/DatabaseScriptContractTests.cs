@@ -132,54 +132,21 @@ public class DatabaseScriptContractTests
     }
 
     [Fact]
-    public void WorkflowSchema_VersionsDefinitionsAndGuardsDuplicateEvents()
+    public void LegacyCardWorkflowSqlIsRemovedAndCleanupMigrationExists()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var migrationScript = File.ReadAllText(Path.Combine(
+        var resetScript = File.ReadAllText(
+            Path.Combine(repositoryRoot, "sql", "000_ResetDatabase.sql"));
+        var cleanupScript = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "sql",
-            "006_CardWorkflows.sql"));
-        var resetScript = File.ReadAllText(Path.Combine(
-            repositoryRoot,
-            "sql",
-            "000_ResetDatabase.sql"));
+            "006_RemoveLegacyCardWorkflowTables.sql"));
 
-        Assert.Contains("[DefinitionJson] NVARCHAR(MAX) NOT NULL", migrationScript);
-        Assert.Contains("[Version] INT NOT NULL", migrationScript);
-        Assert.Contains("UX_WorkflowRuns_Workflow_Event", migrationScript);
-        Assert.Contains("UX_WorkflowRuns_Workflow_Event", resetScript);
-    }
-
-    [Fact]
-    public void FunctionCardSchema_ConnectsOneOptionalTeamAndOneWorkflow()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var migrationScript = File.ReadAllText(Path.Combine(
-            repositoryRoot, "sql", "007_FunctionCards.sql"));
-        var resetScript = File.ReadAllText(Path.Combine(
-            repositoryRoot, "sql", "000_ResetDatabase.sql"));
-
-        Assert.Contains("CREATE TABLE [dbo].[FunctionCards]", migrationScript);
-        Assert.Contains("[TeamId] UNIQUEIDENTIFIER NULL", migrationScript);
-        Assert.Contains("UX_FunctionCards_Race_CardKey", migrationScript);
-        Assert.Contains("UX_Workflows_CardId", migrationScript);
-        Assert.Contains("FOREIGN KEY ([CardId])", migrationScript);
-        Assert.Contains("[CardId] UNIQUEIDENTIFIER NOT NULL", resetScript);
-        Assert.Contains("ON [dbo].[Workflows] ([CardId])", resetScript);
-    }
-
-    [Fact]
-    public void WorkflowRunMigration_AddsCanceledStatusAndActivatesSavedWorkflows()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var migrationScript = File.ReadAllText(Path.Combine(
-            repositoryRoot, "sql", "008_WorkflowRunsAndAttack.sql"));
-        var resetScript = File.ReadAllText(Path.Combine(
-            repositoryRoot, "sql", "000_ResetDatabase.sql"));
-
-        Assert.Contains("N'canceled'", migrationScript);
-        Assert.Contains("[Status] = N'published'", migrationScript);
-        Assert.Contains("N'canceled'", resetScript);
+        Assert.DoesNotContain("FunctionCards", resetScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflows", resetScript, StringComparison.Ordinal);
+        Assert.Contains("DROP TABLE [dbo].[WorkflowRuns]", cleanupScript);
+        Assert.Contains("DROP TABLE [dbo].[Workflows]", cleanupScript);
+        Assert.Contains("DROP TABLE [dbo].[FunctionCards]", cleanupScript);
     }
 
     private static string FindRepositoryRoot()

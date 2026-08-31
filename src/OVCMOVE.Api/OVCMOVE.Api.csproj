@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj" />
     <ProjectReference Include="..\OVCMOVE.Application\OVCMOVE.Application.csproj" />
     <ProjectReference Include="..\OVCMOVE.Infrastructure\OVCMOVE.Infrastructure.csproj" />
   </ItemGroup>
@@ -26,5 +25,25 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!--
+    Keep the plugin optional at compile time, while making local builds include
+    it automatically when its project exists. If the plugin folder is removed,
+    this target is skipped and the core API remains buildable.
+  -->
+  <Target Name="CopyOptionalMove2026Plugin" AfterTargets="Build"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj')">
+    <MSBuild
+      Projects="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj"
+      Targets="Restore;Build"
+      Properties="Configuration=$(Configuration)" />
+    <ItemGroup>
+      <OptionalMovePluginFiles Include="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\bin\$(Configuration)\net10.0\*.dll" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(OptionalMovePluginFiles)"
+      DestinationFolder="$(OutputPath)"
+      SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

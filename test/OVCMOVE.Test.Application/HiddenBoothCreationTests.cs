@@ -1,6 +1,7 @@
 using OVCMOVE.Api.Contracts;
 using OVCMOVE.Api.Mapping;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
@@ -165,7 +166,8 @@ public sealed class HiddenBoothCreationTests
                 CompletedHiddenBooths = 0
             }),
             new BoothNotificationSpy(),
-            new StubTeamUserRepository(team));
+            new StubTeamUserRepository(team),
+            new NoopPluginHub());
 
         var result = await handler.Handle(
             new RequestEntryToBoothCommand

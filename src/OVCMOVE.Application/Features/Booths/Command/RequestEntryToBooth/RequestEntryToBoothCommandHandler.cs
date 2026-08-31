@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
+using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.Features.Booths.Common;
 
@@ -13,17 +14,20 @@ public class RequestEntryToBoothCommandHandler
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
+    private readonly IPluginHub _pluginHub;
 
     public RequestEntryToBoothCommandHandler(
         IBoothRepository boothRepository,
         IRaceRepository raceRepository,
         IBoothNotificationService notificationService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPluginHub pluginHub)
     {
         _boothRepository = boothRepository;
         _raceRepository = raceRepository;
         _notificationService = notificationService;
         _userRepository = userRepository;
+        _pluginHub = pluginHub;
     }
 
     public async Task<(bool IsSuccess, string Message)> Handle(
@@ -73,6 +77,18 @@ public class RequestEntryToBoothCommandHandler
             BoothConstants.BoothStatus.Pending,
             request.TeamId,
             teamName,
+            cancellationToken);
+
+        // Optional plugins observe a successful request. The hub implementation
+        // isolates plugin failures so a missing/broken plugin cannot break core.
+        await _pluginHub.DispatchAsync(
+            new PluginEventContext(
+                PluginEventNames.BoothEntryRequested,
+                booth.RaceId,
+                request.TeamId,
+                request.BoothId,
+                DateTime.UtcNow,
+                $"booth-entry:{request.BoothId:N}:{request.TeamId:N}:{DateTime.UtcNow.Ticks}"),
             cancellationToken);
 
         return (true, "Đã gửi yêu cầu vào trạm. Vui lòng chờ Ban tổ chức xác nhận!");

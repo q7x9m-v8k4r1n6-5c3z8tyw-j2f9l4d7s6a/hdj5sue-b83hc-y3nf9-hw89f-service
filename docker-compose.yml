@@ -8,6 +8,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - OVCMOVE_DbConfig__SQLServer__ConnectionString=${OVCMOVE_DbConfig__SQLServer__ConnectionString}
+      - OVCMOVE_MongoDb__ConnectionString=${OVCMOVE_MongoDb__ConnectionString}
+      - OVCMOVE_MongoDb__DatabaseName=${OVCMOVE_MongoDb__DatabaseName:-ovcmove}
+      - OVCMOVE_MongoDb__CollectionName=${OVCMOVE_MongoDb__CollectionName:-race_cards}
       - OVCMOVE_ExternalServicesConfig__EmailService__Email=${OVCMOVE_ExternalServicesConfig__EmailService__Email}
       - OVCMOVE_ExternalServicesConfig__EmailService__Password=${OVCMOVE_ExternalServicesConfig__EmailService__Password}
       - OVCMOVE_AzureBlobStorage__ConnectionString=${OVCMOVE_AzureBlobStorage__ConnectionString}

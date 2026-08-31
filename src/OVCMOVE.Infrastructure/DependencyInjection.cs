@@ -93,8 +93,6 @@ public static class DependencyInjection
         services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<IUserAccessRepository, UserAccessRepository>();
-        services.AddScoped<IWorkflowRepository, WorkflowRepository>();
-        services.AddScoped<IFunctionCardRepository, FunctionCardRepository>();
         #endregion
 
         #region ==================== Services ====================

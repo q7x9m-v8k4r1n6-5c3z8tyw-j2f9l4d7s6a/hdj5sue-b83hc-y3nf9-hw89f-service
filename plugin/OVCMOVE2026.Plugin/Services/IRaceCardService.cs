@@ -15,5 +15,5 @@ public interface IRaceCardService
     Task<CardTeamResponse> AssignAsync(Guid raceId, string cardId, Guid teamId, string teamName, string reason, CancellationToken cancellationToken = default);
     Task DeleteAssignmentAsync(Guid raceId, string cardId, Guid teamId, string reason, CancellationToken cancellationToken = default);
     Task<CardUseResponse> UseAsync(Guid raceId, Guid teamId, string cardId, IReadOnlyDictionary<string, string> inputs, CancellationToken cancellationToken = default);
-    Task<TrapState?> TriggerTrapAsync(Guid raceId, Guid boothId, Guid teamId, CancellationToken cancellationToken = default);
+    Task<CardEffectDocument?> TriggerTrapAsync(Guid raceId, Guid boothId, Guid teamId, CancellationToken cancellationToken = default);
 }

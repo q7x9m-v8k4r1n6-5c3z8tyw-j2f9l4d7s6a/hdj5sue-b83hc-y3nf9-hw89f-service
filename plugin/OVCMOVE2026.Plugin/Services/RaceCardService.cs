@@ -1,4 +1,5 @@
 using System.Globalization;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using OVCMOVE.Application.Common;
 using OVCMOVE2026.Plugin.Models;
@@ -114,7 +115,6 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         var inventory = FindInventory(document, definition.CardId);
-        var normalized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in definition.DefaultConfig.Keys)
         {
             if (!config.TryGetValue(key, out var value)) continue;
@@ -123,10 +123,9 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
             {
                 throw new ApplicationValidationException("Số điểm bị trừ phải là số nguyên dương.");
             }
-            normalized[key] = value.Trim();
+            inventory.CardConfig[key] = value.Trim();
         }
 
-        inventory.CardConfig = normalized;
         await repository.ReplaceAsync(document, cancellationToken);
     }
 
@@ -143,8 +142,6 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
 
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
-        if (!document.StoreOpen)
-            throw new ApplicationConflictException("Cửa hàng đang đóng.");
 
         var inventory = FindInventory(document, definition.CardId);
         if (inventory.RemainingStock <= 0)
@@ -217,8 +214,6 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     {
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
-        if (!document.StoreOpen)
-            throw new ApplicationConflictException("Cửa hàng đang đóng.");
 
         var team = FindTeam(document, teamId);
         var card = team?.Cards.LastOrDefault(item =>
@@ -228,29 +223,39 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         if (card is null)
             throw new ApplicationConflictException("Card không còn sẵn sàng để sử dụng.");
 
+        CardEffectDocument? effect = null;
+        var now = DateTime.UtcNow;
+        var cardUseId = Guid.NewGuid().ToString();
         if (definition.CardId == CardIds.Trap)
         {
             if (!inputs.TryGetValue("boothId", out var boothId) || !Guid.TryParse(boothId, out _))
                 throw new ApplicationValidationException("Trap cần input boothId hợp lệ.");
-            if (document.Traps.Any(trap => trap.BoothId == boothId && trap.TriggeredAt is null))
+            if (await repository.HasActiveTrapAsync(raceId, Guid.Parse(boothId), cancellationToken))
                 throw new ApplicationConflictException("Trạm này đã có bẫy đang hoạt động.");
 
-            document.Traps.Add(new TrapState
+            effect = new CardEffectDocument
             {
-                BoothId = boothId,
-                PlacedByTeamId = teamId.ToString(),
-                PlacedAt = DateTime.UtcNow,
-                PenaltyPoints = GetPenalty(document, definition)
-            });
+                RaceId = raceId.ToString(),
+                CardId = definition.CardId,
+                CardInstanceId = card.CardInfo.CardInstanceId,
+                CardUseId = cardUseId,
+                OwnerTeamId = teamId.ToString(),
+                TargetBoothId = boothId,
+                EventCode = CardEffectEventCodes.TrapWaiting,
+                StartAt = now,
+                CreatedAt = now,
+                CreatedBy = teamId.ToString(),
+                Data = new BsonDocument("penaltyPoints", GetPenalty(document, definition))
+            };
         }
 
-        var now = DateTime.UtcNow;
         var countBefore = card.CardInfo.CardUseCountRemain;
         card.CardInfo.CardUseCountRemain--;
         card.CardUses.Add(new CardUseState
         {
-            Id = Guid.NewGuid().ToString(),
-            Status = CardStatus.Used,
+            Id = cardUseId,
+            EffectId = effect?.Id,
+            Status = CardUseStatus.Succeeded,
             Target = inputs.ToDictionary(item => item.Key, item => item.Value),
             UseAt = now,
             EndAt = now,
@@ -260,7 +265,10 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         if (card.CardInfo.CardUseCountRemain == 0)
             card.Status = CardStatus.Used;
 
-        await repository.ReplaceAsync(document, cancellationToken);
+        if (effect is null)
+            await repository.ReplaceAsync(document, cancellationToken);
+        else
+            await repository.ReplaceWithEffectAsync(document, effect, cancellationToken);
         var cardUse = card.CardUses[^1];
         return new CardUseResponse(
             cardUse.Id,
@@ -272,7 +280,7 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
             "Đã sử dụng card.");
     }
 
-    public Task<TrapState?> TriggerTrapAsync(
+    public Task<CardEffectDocument?> TriggerTrapAsync(
         Guid raceId,
         Guid boothId,
         Guid teamId,
@@ -301,7 +309,8 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     {
         var inventory = FindInventory(document, definition.CardId);
         var config = definition.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
-        foreach (var (key, value) in inventory.CardConfig) config[key] = value;
+        foreach (var element in inventory.CardConfig)
+            config[element.Name] = ToConfigString(element.Value);
         return new CardInventoryResponse(
             definition.CardId,
             definition.CardName,
@@ -336,7 +345,8 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         var definition = CardCatalog.Get(card.CardInfo.CardId);
         var inventory = FindInventory(document, definition.CardId);
         var config = definition.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
-        foreach (var (key, value) in inventory.CardConfig) config[key] = value;
+        foreach (var element in inventory.CardConfig)
+            config[element.Name] = ToConfigString(element.Value);
         return new TeamCardResponse(
             card.CardInfo.CardInstanceId,
             definition.CardId,
@@ -363,7 +373,7 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
 
     private static int GetUseCount(CardInventoryState inventory) =>
         inventory.CardConfig.TryGetValue("card_use_count_max", out var value) &&
-        int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) && count > 0
+        int.TryParse(ToConfigString(value), NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) && count > 0
             ? count
             : 1;
 
@@ -387,8 +397,12 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     private static int GetPenalty(RaceCardDocument document, CardDefinition definition)
     {
         var inventory = FindInventory(document, definition.CardId);
-        var value = inventory.CardConfig.GetValueOrDefault("penaltyPoints") ??
-                    definition.DefaultConfig.GetValueOrDefault("penaltyPoints");
+        var value = inventory.CardConfig.TryGetValue("penaltyPoints", out var configured)
+            ? ToConfigString(configured)
+            : definition.DefaultConfig.GetValueOrDefault("penaltyPoints");
         return int.TryParse(value, out var points) && points > 0 ? points : 10;
     }
+
+    private static string ToConfigString(BsonValue value) =>
+        value.IsString ? value.AsString : value.ToJson();
 }

@@ -7,4 +7,5 @@ public sealed class MongoDbOptions
     public string ConnectionString { get; init; } = string.Empty;
     public string DatabaseName { get; init; } = "move-db";
     public string CollectionName { get; init; } = "race_cards";
+    public string EffectCollectionName { get; init; } = "effect";
 }

@@ -41,6 +41,11 @@ public static class DependencyInjection
             var options = provider.GetRequiredService<IOptions<MongoDbOptions>>().Value;
             return provider.GetRequiredService<IMongoDatabase>().GetCollection<RaceCardDocument>(options.CollectionName);
         });
+        services.AddSingleton(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<MongoDbOptions>>().Value;
+            return provider.GetRequiredService<IMongoDatabase>().GetCollection<CardEffectDocument>(options.EffectCollectionName);
+        });
         services.AddScoped<IRaceCardRepository, MongoRaceCardRepository>();
         services.AddScoped<IRaceCardService, RaceCardService>();
         services.AddScoped<IPluginEventHandler, TrapBoothEntryRequestedHandler>();

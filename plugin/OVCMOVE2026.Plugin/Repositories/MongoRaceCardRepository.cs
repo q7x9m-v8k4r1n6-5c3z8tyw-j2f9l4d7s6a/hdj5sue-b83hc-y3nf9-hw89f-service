@@ -1,11 +1,14 @@
 using MongoDB.Driver;
+using MongoDB.Bson;
+using OVCMOVE.Application.Common;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Services;
 
 namespace OVCMOVE2026.Plugin.Repositories;
 
 public sealed class MongoRaceCardRepository(
-    IMongoCollection<RaceCardDocument> collection) : IRaceCardRepository
+    IMongoCollection<RaceCardDocument> collection,
+    IMongoCollection<CardEffectDocument> effectCollection) : IRaceCardRepository
 {
     public async Task<RaceCardDocument> GetOrCreateAsync(
         Guid raceId,
@@ -27,7 +30,7 @@ public sealed class MongoRaceCardRepository(
                     .Select(card => new CardInventoryState
                     {
                         CardId = card.CardId,
-                        CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value)
+                        CardConfig = ToBsonDocument(card.DefaultConfig)
                     })
                     .ToList()
             };
@@ -45,42 +48,6 @@ public sealed class MongoRaceCardRepository(
             }
         }
 
-        var changed = false;
-        foreach (var card in CardCatalog.All)
-        {
-            var inventory = document.Inventory.FirstOrDefault(item =>
-                item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase));
-            if (inventory is not null)
-            {
-                if (inventory.CardConfig.Count == 0)
-                {
-                    inventory.CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
-                    changed = true;
-                }
-                continue;
-            }
-
-            document.Inventory.Add(new CardInventoryState
-            {
-                CardId = card.CardId,
-                CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value)
-            });
-            changed = true;
-        }
-
-        foreach (var teamCard in document.Teams.SelectMany(team => team.Cards))
-        {
-            if (!string.IsNullOrWhiteSpace(teamCard.CardInfo.CardInstanceId)) continue;
-            teamCard.CardInfo.CardInstanceId = Guid.NewGuid().ToString();
-            changed = true;
-        }
-
-        if (changed)
-        {
-            document.ModifiedAt = DateTime.UtcNow;
-            await ReplaceAsync(document, cancellationToken);
-        }
-
         return document;
     }
 
@@ -88,44 +55,120 @@ public sealed class MongoRaceCardRepository(
         RaceCardDocument document,
         CancellationToken cancellationToken = default)
     {
+        var expectedVersion = document.Version;
         document.ModifiedAt = DateTime.UtcNow;
+        document.Version = expectedVersion + 1;
+        var versionFilter = expectedVersion == 0
+            ? Builders<RaceCardDocument>.Filter.Or(
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
+                Builders<RaceCardDocument>.Filter.Exists("version", false))
+            : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion);
+        var filter = Builders<RaceCardDocument>.Filter.And(
+            Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
+            versionFilter);
         var result = await collection.ReplaceOneAsync(
-            item => item.Id == document.Id,
+            filter,
             document,
-            new ReplaceOptions { IsUpsert = true },
+            new ReplaceOptions { IsUpsert = false },
             cancellationToken);
 
-        if (!result.IsAcknowledged)
-            throw new InvalidOperationException("Không thể lưu dữ liệu card vào MongoDB.");
+        if (result.IsAcknowledged && result.MatchedCount == 1) return;
+
+        document.Version = expectedVersion;
+        throw new ApplicationConflictException(
+            "Dữ liệu card vừa được cập nhật bởi yêu cầu khác. Vui lòng tải lại và thử lại.");
     }
 
-    public async Task<TrapState?> TryClaimTrapAsync(
+    public async Task ReplaceWithEffectAsync(
+        RaceCardDocument document,
+        CardEffectDocument effect,
+        CancellationToken cancellationToken = default)
+    {
+        var expectedVersion = document.Version;
+        document.ModifiedAt = DateTime.UtcNow;
+        document.Version = expectedVersion + 1;
+        effect.ModifiedAt = effect.CreatedAt;
+
+        using var session = await collection.Database.Client.StartSessionAsync(
+            cancellationToken: cancellationToken);
+        session.StartTransaction();
+        try
+        {
+            var versionFilter = expectedVersion == 0
+                ? Builders<RaceCardDocument>.Filter.Or(
+                    Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
+                    Builders<RaceCardDocument>.Filter.Exists("version", false))
+                : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion);
+            var filter = Builders<RaceCardDocument>.Filter.And(
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
+                versionFilter);
+            var result = await collection.ReplaceOneAsync(
+                session,
+                filter,
+                document,
+                new ReplaceOptions { IsUpsert = false },
+                cancellationToken);
+            if (!result.IsAcknowledged || result.MatchedCount != 1)
+                throw new ApplicationConflictException(
+                    "Dữ liệu card vừa được cập nhật bởi yêu cầu khác. Vui lòng tải lại và thử lại.");
+
+            await effectCollection.InsertOneAsync(session, effect, cancellationToken: cancellationToken);
+            await session.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            document.Version = expectedVersion;
+            if (session.IsInTransaction)
+                await session.AbortTransactionAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public Task<bool> HasActiveTrapAsync(
+        Guid raceId,
+        Guid boothId,
+        CancellationToken cancellationToken = default) =>
+        effectCollection.Find(effect =>
+                effect.RaceId == raceId.ToString() &&
+                effect.CardId == CardIds.Trap &&
+                effect.TargetBoothId == boothId.ToString() &&
+                effect.Status == CardEffectStatus.Active)
+            .AnyAsync(cancellationToken);
+
+    public async Task<CardEffectDocument?> TryClaimTrapAsync(
         Guid raceId,
         Guid boothId,
         Guid triggeringTeamId,
         DateTime triggeredAt,
         CancellationToken cancellationToken = default)
     {
-        var filter = Builders<RaceCardDocument>.Filter.And(
-            Builders<RaceCardDocument>.Filter.Eq(item => item.Id, raceId.ToString()),
-            Builders<RaceCardDocument>.Filter.ElemMatch(
-                item => item.Traps,
-                trap => trap.BoothId == boothId.ToString() && trap.TriggeredAt == null));
-        var update = Builders<RaceCardDocument>.Update
-            .Set("traps.$.triggeredAt", triggeredAt)
-            .Set("traps.$.triggeredByTeamId", triggeringTeamId.ToString());
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.CardId, CardIds.Trap),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.TargetBoothId, boothId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Ne(item => item.OwnerTeamId, triggeringTeamId.ToString()),
+            Builders<CardEffectDocument>.Filter.Or(
+                Builders<CardEffectDocument>.Filter.Eq(item => item.LimitEndAt, null),
+                Builders<CardEffectDocument>.Filter.Gt(item => item.LimitEndAt, triggeredAt)));
+        var update = Builders<CardEffectDocument>.Update
+            .Set(item => item.Status, CardEffectStatus.Resolved)
+            .Set(item => item.Resolution, "triggered")
+            .Set(item => item.TriggerAt, triggeredAt)
+            .Set(item => item.TriggeredByTeamId, triggeringTeamId.ToString())
+            .Set(item => item.ResolvedAt, triggeredAt)
+            .Set(item => item.ModifiedAt, triggeredAt)
+            .Inc(item => item.Version, 1)
+            .Set(item => item.RemainingTriggers, 0);
 
-        var document = await collection.FindOneAndUpdateAsync(
+        return await effectCollection.FindOneAndUpdateAsync(
             filter,
             update,
-            new FindOneAndUpdateOptions<RaceCardDocument>
+            new FindOneAndUpdateOptions<CardEffectDocument>
             {
-                ReturnDocument = ReturnDocument.Before
+                ReturnDocument = ReturnDocument.After
             },
             cancellationToken);
-
-        return document?.Traps.LastOrDefault(trap =>
-            trap.BoothId == boothId.ToString() && trap.TriggeredAt is null);
     }
 
     public async Task<int> ApplyDueRestocksAsync(
@@ -159,4 +202,7 @@ public sealed class MongoRaceCardRepository(
 
         return applied;
     }
+
+    private static BsonDocument ToBsonDocument(IReadOnlyDictionary<string, string> values) =>
+        new(values.Select(item => new BsonElement(item.Key, item.Value)));
 }

@@ -64,11 +64,16 @@ public sealed class TrapBoothEntryRequestedHandler(
             cancellationToken);
         if (trap is null) return;
 
+        var penaltyPoints = trap.Data.TryGetValue("penaltyPoints", out var configuredPenalty) &&
+                            configuredPenalty.IsNumeric
+            ? configuredPenalty.ToInt32()
+            : 10;
+
         var score = await sender.Send(new OVCMOVE.Application.Features.Races.Command.UpdateTeamScore.UpdateTeamScoreCommand
         {
             RaceId = context.RaceId,
             TeamId = context.TeamId,
-            Delta = -trap.PenaltyPoints,
+            Delta = -penaltyPoints,
             Reason = $"Trap tại trạm {context.BoothId.Value:N}",
             PublishRealtimeNotification = true
         }, cancellationToken);

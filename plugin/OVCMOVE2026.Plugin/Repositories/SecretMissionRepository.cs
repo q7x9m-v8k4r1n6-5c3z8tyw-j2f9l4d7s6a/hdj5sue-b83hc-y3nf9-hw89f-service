@@ -139,4 +139,38 @@ public class SecretMissionRepository : ISecretMissionRepository
 
         return mission;
     }
+    public async Task<int?> GetTeamScoreAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default) =>
+    await _db.QueryFirstOrDefaultAsync<int?>(
+        SecretMissionQueries.GetTeamScoreQuery(),
+        new { RaceId = raceId, TeamId = teamId },
+        cancellationToken);
+
+    public async Task UpdateTeamScoreAsync(Guid raceId, Guid teamId, int newScore, string modifiedBy, CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(
+            SecretMissionQueries.UpdateTeamScoreQuery(),
+            new { RaceId = raceId, TeamId = teamId, TotalScore = newScore, ModifiedBy = modifiedBy, ModifiedAt = DateTime.UtcNow },
+            cancellationToken);
+
+    public async Task InsertTechCacheScoringLogAsync(
+        Guid raceId, Guid teamId, string missionName, int delta, int scoreBefore, int scoreAfter, string reasonCode,
+        CancellationToken cancellationToken = default) =>
+        await _db.ExecuteAsync(
+            SecretMissionQueries.InsertTechCacheScoringLogQuery(),
+            new
+            {
+                Id = Guid.NewGuid(),
+                EventCode = "TECH_CACHE",
+                EventName = missionName,
+                RaceId = raceId,
+                TeamId = teamId,
+                ActorId = teamId,
+                Delta = delta,
+                ScoreBefore = scoreBefore,
+                ScoreAfter = scoreAfter,
+                ReasonCode = reasonCode,
+                Reason = $"Tech Cache: {missionName}",
+                CreatedBy = teamId.ToString(),
+                CreatedAt = DateTime.UtcNow,
+            },
+            cancellationToken);
 }

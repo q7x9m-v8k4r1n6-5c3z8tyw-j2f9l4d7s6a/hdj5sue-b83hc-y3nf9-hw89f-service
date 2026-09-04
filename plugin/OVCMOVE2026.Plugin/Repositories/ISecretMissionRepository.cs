@@ -24,5 +24,8 @@ public interface ISecretMissionRepository
     Task CreateAssignedMissionAsync(SecretMission mission, CancellationToken cancellationToken = default);
     Task UpdateMissionAsync(Guid missionId, Guid teamId, string name, string description, CancellationToken cancellationToken = default);
     Task SoftDeleteAsync(Guid missionId, CancellationToken cancellationToken = default);
+    Task<int?> GetTeamScoreAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default);
+    Task UpdateTeamScoreAsync(Guid raceId, Guid teamId, int newScore, string modifiedBy, CancellationToken cancellationToken = default);
+    Task InsertTechCacheScoringLogAsync(Guid raceId, Guid teamId, string missionName, int delta, int scoreBefore, int scoreAfter, string reasonCode, CancellationToken cancellationToken = default);
     Task<SecretMissionAdminDetailDto?> GetAdminDetailAsync(Guid id, CancellationToken cancellationToken = default);
 }

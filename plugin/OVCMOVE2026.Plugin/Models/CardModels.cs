@@ -15,6 +15,7 @@ public static class CardIds
     public const string Trap = "TRAP";
 }
 
+[BsonIgnoreExtraElements]
 public sealed class RaceCardDocument
 {
     [BsonId]
@@ -30,13 +31,8 @@ public sealed class RaceCardDocument
     [BsonElement("inventory")]
     public List<CardInventoryState> Inventory { get; set; } = [];
 
-    // One Mongo document represents one race. Card ownership is intentionally
-    // embedded here so the plugin does not add FunctionCards tables to SQL.
     [BsonElement("teams")]
     public List<RaceCardTeamState> Teams { get; set; } = [];
-
-    [BsonElement("cardConfigs")]
-    public Dictionary<string, Dictionary<string, string>> CardConfigs { get; set; } = [];
 
     [BsonElement("traps")]
     public List<TrapState> Traps { get; set; } = [];
@@ -48,6 +44,7 @@ public sealed class RaceCardDocument
     public DateTime ModifiedAt { get; set; }
 }
 
+[BsonIgnoreExtraElements]
 public sealed class CardInventoryState
 {
     [BsonElement("cardId")]
@@ -55,8 +52,12 @@ public sealed class CardInventoryState
 
     [BsonElement("remainingStock")]
     public int RemainingStock { get; set; }
+
+    [BsonElement("cardConfig")]
+    public Dictionary<string, string> CardConfig { get; set; } = [];
 }
 
+[BsonIgnoreExtraElements]
 public sealed class RaceCardTeamState
 {
     [BsonElement("teamId")]
@@ -65,11 +66,18 @@ public sealed class RaceCardTeamState
     [BsonElement("teamName")]
     public string TeamName { get; set; } = string.Empty;
 
-    [BsonElement("cardId")]
-    public string CardId { get; set; } = string.Empty;
+    [BsonElement("card")]
+    public List<TeamCardState> Cards { get; set; } = [];
+}
 
-    [BsonElement("cardName")]
-    public string CardName { get; set; } = string.Empty;
+[BsonIgnoreExtraElements]
+public sealed class TeamCardState
+{
+    [BsonElement("cardInfo")]
+    public TeamCardInfo CardInfo { get; set; } = new();
+
+    [BsonElement("cardUse")]
+    public List<CardUseState> CardUses { get; set; } = [];
 
     [BsonElement("receivedAt")]
     public DateTime ReceivedAt { get; set; }
@@ -77,22 +85,61 @@ public sealed class RaceCardTeamState
     [BsonElement("receiveReason")]
     public string ReceiveReason { get; set; } = string.Empty;
 
-    [BsonElement("usedAt")]
-    public DateTime? UsedAt { get; set; }
-
     [BsonElement("status")]
     public string Status { get; set; } = CardStatus.Received;
 
-    [BsonElement("deletedAt")]
-    public DateTime? DeletedAt { get; set; }
+    [BsonElement("disabledAt")]
+    public DateTime? DisabledAt { get; set; }
 
-    [BsonElement("deletedReason")]
-    public string? DeletedReason { get; set; }
-
-    [BsonElement("usageInputs")]
-    public Dictionary<string, string> UsageInputs { get; set; } = [];
+    [BsonElement("disabledReason")]
+    public string? DisabledReason { get; set; }
 }
 
+[BsonIgnoreExtraElements]
+public sealed class TeamCardInfo
+{
+    [BsonElement("cardInstanceId")]
+    public string CardInstanceId { get; set; } = string.Empty;
+
+    [BsonElement("cardId")]
+    public string CardId { get; set; } = string.Empty;
+
+    [BsonElement("card_use_count_remain")]
+    public int CardUseCountRemain { get; set; } = 1;
+}
+
+[BsonIgnoreExtraElements]
+public sealed class CardUseState
+{
+    [BsonElement("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [BsonElement("effectId")]
+    public string? EffectId { get; set; }
+
+    [BsonElement("status")]
+    public string Status { get; set; } = CardStatus.Used;
+
+    [BsonElement("target")]
+    public Dictionary<string, string> Target { get; set; } = [];
+
+    [BsonElement("useAt")]
+    public DateTime UseAt { get; set; }
+
+    [BsonElement("endAt")]
+    public DateTime? EndAt { get; set; }
+
+    [BsonElement("failureReason")]
+    public string? FailureReason { get; set; }
+
+    [BsonElement("card_use_count_before")]
+    public int CardUseCountBefore { get; set; }
+
+    [BsonElement("card_use_count_after")]
+    public int CardUseCountAfter { get; set; }
+}
+
+[BsonIgnoreExtraElements]
 public sealed class TrapState
 {
     [BsonElement("cardId")]
@@ -117,6 +164,7 @@ public sealed class TrapState
     public string? TriggeredByTeamId { get; set; }
 }
 
+[BsonIgnoreExtraElements]
 public sealed class RestockScheduleState
 {
     [BsonElement("id")]
@@ -138,12 +186,7 @@ public sealed class RestockScheduleState
     public DateTime? ExecutedAt { get; set; }
 }
 
-public sealed record CardInputDefinition(
-    string Key,
-    string Label,
-    string Type,
-    bool Required,
-    string Description);
+public sealed record CardInputDefinition(string Key, string Label, string Type, bool Required, string Description);
 
 public sealed record CardDefinition(
     string CardId,
@@ -164,37 +207,40 @@ public sealed record CardInventoryResponse(
     IReadOnlyCollection<CardInputDefinition> Inputs,
     IReadOnlyDictionary<string, string> Config);
 
-public sealed record CardStoreOverviewResponse(
-    bool StoreOpen,
-    IReadOnlyCollection<CardInventoryResponse> Cards);
+public sealed record CardStoreOverviewResponse(bool StoreOpen, IReadOnlyCollection<CardInventoryResponse> Cards);
 
 public sealed record CardTeamResponse(
     string TeamId,
     string TeamName,
+    string CardInstanceId,
     string CardId,
     string CardName,
+    int CardUseCountRemain,
     DateTime ReceivedAt,
     string ReceiveReason,
-    DateTime? UsedAt,
     string Status,
     bool CanDelete,
-    DateTime? DeletedAt,
-    string? DeletedReason,
-    IReadOnlyDictionary<string, string> UsageInputs);
+    DateTime? DisabledAt,
+    string? DisabledReason,
+    IReadOnlyCollection<CardUseState> CardUses);
 
 public sealed record TeamCardResponse(
+    string CardInstanceId,
     string CardId,
     string CardName,
     string Description,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs,
     IReadOnlyDictionary<string, string> Config,
+    int CardUseCountRemain,
     DateTime ReceivedAt,
     string ReceiveReason,
-    DateTime? UsedAt,
-    string Status);
+    string Status,
+    IReadOnlyCollection<CardUseState> CardUses);
 
 public sealed record CardUseResponse(
+    string CardUseId,
+    string CardInstanceId,
     string CardId,
     string CardName,
     string Status,

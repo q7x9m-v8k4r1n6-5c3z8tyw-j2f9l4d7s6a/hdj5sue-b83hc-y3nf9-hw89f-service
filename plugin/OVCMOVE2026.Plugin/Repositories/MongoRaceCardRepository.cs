@@ -24,7 +24,11 @@ public sealed class MongoRaceCardRepository(
                 RaceId = raceKey,
                 ModifiedAt = DateTime.UtcNow,
                 Inventory = CardCatalog.All
-                    .Select(card => new CardInventoryState { CardId = card.CardId })
+                    .Select(card => new CardInventoryState
+                    {
+                        CardId = card.CardId,
+                        CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value)
+                    })
                     .ToList()
             };
 
@@ -41,17 +45,37 @@ public sealed class MongoRaceCardRepository(
             }
         }
 
-        var addedCard = false;
+        var changed = false;
         foreach (var card in CardCatalog.All)
         {
-            if (document.Inventory.Any(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase)))
+            var inventory = document.Inventory.FirstOrDefault(item =>
+                item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase));
+            if (inventory is not null)
+            {
+                if (inventory.CardConfig.Count == 0)
+                {
+                    inventory.CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
+                    changed = true;
+                }
                 continue;
+            }
 
-            document.Inventory.Add(new CardInventoryState { CardId = card.CardId });
-            addedCard = true;
+            document.Inventory.Add(new CardInventoryState
+            {
+                CardId = card.CardId,
+                CardConfig = card.DefaultConfig.ToDictionary(item => item.Key, item => item.Value)
+            });
+            changed = true;
         }
 
-        if (addedCard)
+        foreach (var teamCard in document.Teams.SelectMany(team => team.Cards))
+        {
+            if (!string.IsNullOrWhiteSpace(teamCard.CardInfo.CardInstanceId)) continue;
+            teamCard.CardInfo.CardInstanceId = Guid.NewGuid().ToString();
+            changed = true;
+        }
+
+        if (changed)
         {
             document.ModifiedAt = DateTime.UtcNow;
             await ReplaceAsync(document, cancellationToken);

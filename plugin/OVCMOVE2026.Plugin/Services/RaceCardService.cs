@@ -1,14 +1,12 @@
 using System.Globalization;
 using MongoDB.Driver;
 using OVCMOVE.Application.Common;
-using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Repositories;
 
 namespace OVCMOVE2026.Plugin.Services;
 
-public sealed class RaceCardService(
-    IRaceCardRepository repository) : IRaceCardService
+public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardService
 {
     public async Task<CardStoreOverviewResponse> GetAdminOverviewAsync(
         Guid raceId,
@@ -25,12 +23,13 @@ public sealed class RaceCardService(
         string cardId,
         CancellationToken cancellationToken = default)
     {
-        var card = CardCatalog.Get(cardId);
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         return document.Teams
-            .Where(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(team => team.Cards
+                .Where(card => SameCard(card, definition.CardId))
+                .Select(card => ToTeamResponse(team, card, definition)))
             .OrderByDescending(item => item.ReceivedAt)
-            .Select(ToTeamResponse)
             .ToArray();
     }
 
@@ -40,10 +39,13 @@ public sealed class RaceCardService(
         CancellationToken cancellationToken = default)
     {
         var document = await GetDocumentAsync(raceId, cancellationToken);
-        return document.Teams
-            .Where(item => item.TeamId == teamId.ToString() && item.Status != CardStatus.Deleted)
-            .OrderByDescending(item => item.ReceivedAt)
-            .Select(item => ToTeamCardResponse(item, document))
+        var team = FindTeam(document, teamId);
+        if (team is null) return [];
+
+        return team.Cards
+            .Where(card => card.Status != CardStatus.Deleted)
+            .OrderByDescending(card => card.ReceivedAt)
+            .Select(card => ToTeamCardResponse(card, document))
             .ToArray();
     }
 
@@ -53,18 +55,20 @@ public sealed class RaceCardService(
         string cardId,
         CancellationToken cancellationToken = default)
     {
-        var card = CardCatalog.Get(cardId);
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
-        var assignment = document.Teams.LastOrDefault(item =>
-            item.TeamId == teamId.ToString() &&
-            item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase) &&
-            item.Status != CardStatus.Deleted);
-        return assignment is null
+        var team = FindTeam(document, teamId);
+        var card = team?.Cards.LastOrDefault(item =>
+            SameCard(item, definition.CardId) && item.Status != CardStatus.Deleted);
+        return card is null
             ? throw new ApplicationNotFoundException("Không tìm thấy card trong kho của đội.")
-            : ToTeamCardResponse(assignment, document);
+            : ToTeamCardResponse(card, document);
     }
 
-    public async Task SetStoreOpenAsync(Guid raceId, bool isOpen, CancellationToken cancellationToken = default)
+    public async Task SetStoreOpenAsync(
+        Guid raceId,
+        bool isOpen,
+        CancellationToken cancellationToken = default)
     {
         var document = await GetDocumentAsync(raceId, cancellationToken);
         document.StoreOpen = isOpen;
@@ -90,8 +94,8 @@ public sealed class RaceCardService(
         if (scheduledAt.ToUniversalTime() <= DateTime.UtcNow)
             throw new ApplicationValidationException("Thời gian hẹn nhập phải ở tương lai.");
 
-        var document = await GetDocumentAsync(raceId, cancellationToken);
         ValidateQuantities(quantities);
+        var document = await GetDocumentAsync(raceId, cancellationToken);
         document.RestockSchedules.Add(new RestockScheduleState
         {
             ScheduledAt = scheduledAt.ToUniversalTime(),
@@ -107,20 +111,22 @@ public sealed class RaceCardService(
         IReadOnlyDictionary<string, string> config,
         CancellationToken cancellationToken = default)
     {
-        var card = CardCatalog.Get(cardId);
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
+        var inventory = FindInventory(document, definition.CardId);
         var normalized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var key in card.DefaultConfig.Keys)
+        foreach (var key in definition.DefaultConfig.Keys)
         {
-            if (!config.TryGetValue(key, out var value))
-                continue;
+            if (!config.TryGetValue(key, out var value)) continue;
             if (key == "penaltyPoints" &&
                 (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var points) || points <= 0))
+            {
                 throw new ApplicationValidationException("Số điểm bị trừ phải là số nguyên dương.");
+            }
             normalized[key] = value.Trim();
         }
 
-        document.CardConfigs[card.CardId] = normalized;
+        inventory.CardConfig = normalized;
         await repository.ReplaceAsync(document, cancellationToken);
     }
 
@@ -134,33 +140,47 @@ public sealed class RaceCardService(
     {
         if (teamId == Guid.Empty || string.IsNullOrWhiteSpace(teamName))
             throw new ApplicationValidationException("TeamId và tên team là bắt buộc.");
-        var card = CardCatalog.Get(cardId);
+
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         if (!document.StoreOpen)
             throw new ApplicationConflictException("Cửa hàng đang đóng.");
-        if (document.Teams.Any(item =>
-                item.TeamId == teamId.ToString() &&
-                item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase) &&
-                item.Status != CardStatus.Deleted))
-            throw new ApplicationConflictException("Team đã có card này.");
 
-        var inventory = document.Inventory.Single(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase));
+        var inventory = FindInventory(document, definition.CardId);
         if (inventory.RemainingStock <= 0)
             throw new ApplicationConflictException("Card đã hết trong kho.");
 
-        inventory.RemainingStock--;
-        var assignment = new RaceCardTeamState
+        var team = FindTeam(document, teamId);
+        if (team is null)
         {
-            TeamId = teamId.ToString(),
-            TeamName = teamName.Trim(),
-            CardId = card.CardId,
-            CardName = card.CardName,
+            team = new RaceCardTeamState
+            {
+                TeamId = teamId.ToString(),
+                TeamName = teamName.Trim()
+            };
+            document.Teams.Add(team);
+        }
+        else
+        {
+            team.TeamName = teamName.Trim();
+        }
+
+        var card = new TeamCardState
+        {
+            CardInfo = new TeamCardInfo
+            {
+                CardInstanceId = Guid.NewGuid().ToString(),
+                CardId = definition.CardId,
+                CardUseCountRemain = GetUseCount(inventory)
+            },
             ReceivedAt = DateTime.UtcNow,
             ReceiveReason = reason?.Trim() ?? string.Empty
         };
-        document.Teams.Add(assignment);
+        team.Cards.Add(card);
+        inventory.RemainingStock--;
+
         await repository.ReplaceAsync(document, cancellationToken);
-        return ToTeamResponse(assignment);
+        return ToTeamResponse(team, card, definition);
     }
 
     public async Task DeleteAssignmentAsync(
@@ -172,19 +192,19 @@ public sealed class RaceCardService(
     {
         if (string.IsNullOrWhiteSpace(reason))
             throw new ApplicationValidationException("Lý do xóa là bắt buộc.");
-        var card = CardCatalog.Get(cardId);
+
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
-        var assignment = document.Teams.LastOrDefault(item =>
-            item.TeamId == teamId.ToString() &&
-            item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase) &&
-            item.Status == CardStatus.Received);
-        if (assignment is null)
+        var team = FindTeam(document, teamId);
+        var card = team?.Cards.LastOrDefault(item =>
+            SameCard(item, definition.CardId) && item.Status == CardStatus.Received);
+        if (card is null)
             throw new ApplicationConflictException("Chỉ được xóa card chưa sử dụng.");
 
-        assignment.Status = CardStatus.Deleted;
-        assignment.DeletedAt = DateTime.UtcNow;
-        assignment.DeletedReason = reason.Trim();
-        document.Inventory.Single(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase)).RemainingStock++;
+        card.Status = CardStatus.Deleted;
+        card.DisabledAt = DateTime.UtcNow;
+        card.DisabledReason = reason.Trim();
+        FindInventory(document, definition.CardId).RemainingStock++;
         await repository.ReplaceAsync(document, cancellationToken);
     }
 
@@ -195,39 +215,61 @@ public sealed class RaceCardService(
         IReadOnlyDictionary<string, string> inputs,
         CancellationToken cancellationToken = default)
     {
-        var card = CardCatalog.Get(cardId);
+        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         if (!document.StoreOpen)
             throw new ApplicationConflictException("Cửa hàng đang đóng.");
-        var assignment = document.Teams.LastOrDefault(item =>
-            item.TeamId == teamId.ToString() &&
-            item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase) &&
-            item.Status == CardStatus.Received);
-        if (assignment is null)
+
+        var team = FindTeam(document, teamId);
+        var card = team?.Cards.LastOrDefault(item =>
+            SameCard(item, definition.CardId) &&
+            item.Status == CardStatus.Received &&
+            item.CardInfo.CardUseCountRemain > 0);
+        if (card is null)
             throw new ApplicationConflictException("Card không còn sẵn sàng để sử dụng.");
 
-        if (card.CardId == CardIds.Trap)
+        if (definition.CardId == CardIds.Trap)
         {
             if (!inputs.TryGetValue("boothId", out var boothId) || !Guid.TryParse(boothId, out _))
                 throw new ApplicationValidationException("Trap cần input boothId hợp lệ.");
             if (document.Traps.Any(trap => trap.BoothId == boothId && trap.TriggeredAt is null))
                 throw new ApplicationConflictException("Trạm này đã có bẫy đang hoạt động.");
 
-            var penalty = GetPenalty(document, card);
             document.Traps.Add(new TrapState
             {
                 BoothId = boothId,
                 PlacedByTeamId = teamId.ToString(),
                 PlacedAt = DateTime.UtcNow,
-                PenaltyPoints = penalty
+                PenaltyPoints = GetPenalty(document, definition)
             });
         }
 
-        assignment.Status = CardStatus.Used;
-        assignment.UsedAt = DateTime.UtcNow;
-        assignment.UsageInputs = inputs.ToDictionary(item => item.Key, item => item.Value);
+        var now = DateTime.UtcNow;
+        var countBefore = card.CardInfo.CardUseCountRemain;
+        card.CardInfo.CardUseCountRemain--;
+        card.CardUses.Add(new CardUseState
+        {
+            Id = Guid.NewGuid().ToString(),
+            Status = CardStatus.Used,
+            Target = inputs.ToDictionary(item => item.Key, item => item.Value),
+            UseAt = now,
+            EndAt = now,
+            CardUseCountBefore = countBefore,
+            CardUseCountAfter = card.CardInfo.CardUseCountRemain
+        });
+        if (card.CardInfo.CardUseCountRemain == 0)
+            card.Status = CardStatus.Used;
+
         await repository.ReplaceAsync(document, cancellationToken);
-        return new CardUseResponse(card.CardId, card.CardName, assignment.Status, assignment.UsedAt.Value, "Đã sử dụng card.");
+        var cardUse = card.CardUses[^1];
+        return new CardUseResponse(
+            cardUse.Id,
+            card.CardInfo.CardInstanceId,
+            definition.CardId,
+            definition.CardName,
+            cardUse.Status,
+            cardUse.UseAt,
+            "Đã sử dụng card.");
     }
 
     public Task<TrapState?> TriggerTrapAsync(
@@ -241,78 +283,95 @@ public sealed class RaceCardService(
     {
         if (raceId == Guid.Empty)
             throw new ApplicationNotFoundException("Không tìm thấy race.");
-
         try
         {
             return await repository.GetOrCreateAsync(raceId, cancellationToken);
         }
         catch (MongoAuthenticationException exception)
         {
-            throw new ApplicationServiceUnavailableException(
-                "Không thể xác thực với MongoDB. Vui lòng kiểm tra username/password, authSource và connection string.",
-                exception);
+            throw new ApplicationServiceUnavailableException("Không thể xác thực với MongoDB.", exception);
         }
         catch (MongoConnectionException exception)
         {
-            throw new ApplicationServiceUnavailableException(
-                "Không thể kết nối MongoDB để tải dữ liệu card.",
-                exception);
+            throw new ApplicationServiceUnavailableException("Không thể kết nối MongoDB để tải dữ liệu card.", exception);
         }
     }
 
-    private static CardInventoryResponse ToInventoryResponse(CardDefinition card, RaceCardDocument document)
+    private static CardInventoryResponse ToInventoryResponse(CardDefinition definition, RaceCardDocument document)
     {
-        var config = MergeConfig(card, document);
-        var stock = document.Inventory.First(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase)).RemainingStock;
-        return new CardInventoryResponse(card.CardId, card.CardName, card.Description, card.Price, stock, card.Usage, card.Inputs, config);
+        var inventory = FindInventory(document, definition.CardId);
+        var config = definition.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
+        foreach (var (key, value) in inventory.CardConfig) config[key] = value;
+        return new CardInventoryResponse(
+            definition.CardId,
+            definition.CardName,
+            definition.Description,
+            definition.Price,
+            inventory.RemainingStock,
+            definition.Usage,
+            definition.Inputs,
+            config);
     }
 
-    private static CardTeamResponse ToTeamResponse(RaceCardTeamState item) => new(
-        item.TeamId,
-        item.TeamName,
-        item.CardId,
-        item.CardName,
-        item.ReceivedAt,
-        item.ReceiveReason,
-        item.UsedAt,
-        item.Status,
-        item.Status == CardStatus.Received,
-        item.DeletedAt,
-        item.DeletedReason,
-        item.UsageInputs);
+    private static CardTeamResponse ToTeamResponse(
+        RaceCardTeamState team,
+        TeamCardState card,
+        CardDefinition definition) => new(
+        team.TeamId,
+        team.TeamName,
+        card.CardInfo.CardInstanceId,
+        definition.CardId,
+        definition.CardName,
+        card.CardInfo.CardUseCountRemain,
+        card.ReceivedAt,
+        card.ReceiveReason,
+        card.Status,
+        card.Status == CardStatus.Received,
+        card.DisabledAt,
+        card.DisabledReason,
+        card.CardUses);
 
-    private static TeamCardResponse ToTeamCardResponse(RaceCardTeamState item, RaceCardDocument document)
+    private static TeamCardResponse ToTeamCardResponse(TeamCardState card, RaceCardDocument document)
     {
-        var card = CardCatalog.Get(item.CardId);
-        var config = MergeConfig(card, document);
-        return new TeamCardResponse(card.CardId, card.CardName, card.Description, card.Usage, card.Inputs, config, item.ReceivedAt, item.ReceiveReason, item.UsedAt, item.Status);
+        var definition = CardCatalog.Get(card.CardInfo.CardId);
+        var inventory = FindInventory(document, definition.CardId);
+        var config = definition.DefaultConfig.ToDictionary(item => item.Key, item => item.Value);
+        foreach (var (key, value) in inventory.CardConfig) config[key] = value;
+        return new TeamCardResponse(
+            card.CardInfo.CardInstanceId,
+            definition.CardId,
+            definition.CardName,
+            definition.Description,
+            definition.Usage,
+            definition.Inputs,
+            config,
+            card.CardInfo.CardUseCountRemain,
+            card.ReceivedAt,
+            card.ReceiveReason,
+            card.Status,
+            card.CardUses);
     }
 
-    private static IReadOnlyDictionary<string, string> MergeConfig(
-        CardDefinition card,
-        RaceCardDocument document)
-    {
-        var config = card.DefaultConfig.ToDictionary(
-            item => item.Key,
-            item => item.Value,
-            StringComparer.OrdinalIgnoreCase);
-        if (document.CardConfigs.TryGetValue(card.CardId, out var saved))
-        {
-            foreach (var (key, value) in saved)
-                config[key] = value;
-        }
+    private static RaceCardTeamState? FindTeam(RaceCardDocument document, Guid teamId) =>
+        document.Teams.FirstOrDefault(team => team.TeamId == teamId.ToString());
 
-        return config;
-    }
+    private static CardInventoryState FindInventory(RaceCardDocument document, string cardId) =>
+        document.Inventory.Single(item => item.CardId.Equals(cardId, StringComparison.OrdinalIgnoreCase));
+
+    private static bool SameCard(TeamCardState card, string cardId) =>
+        card.CardInfo.CardId.Equals(cardId, StringComparison.OrdinalIgnoreCase);
+
+    private static int GetUseCount(CardInventoryState inventory) =>
+        inventory.CardConfig.TryGetValue("card_use_count_max", out var value) &&
+        int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) && count > 0
+            ? count
+            : 1;
 
     private static void ApplyQuantities(RaceCardDocument document, IReadOnlyDictionary<string, int> quantities)
     {
         ValidateQuantities(quantities);
         foreach (var (cardId, quantity) in quantities)
-        {
-            var card = CardCatalog.Get(cardId);
-            document.Inventory.Single(item => item.CardId.Equals(card.CardId, StringComparison.OrdinalIgnoreCase)).RemainingStock += quantity;
-        }
+            FindInventory(document, CardCatalog.Get(cardId).CardId).RemainingStock += quantity;
     }
 
     private static void ValidateQuantities(IReadOnlyDictionary<string, int> quantities)
@@ -320,13 +379,16 @@ public sealed class RaceCardService(
         foreach (var (cardId, quantity) in quantities)
         {
             _ = CardCatalog.Get(cardId);
-            if (quantity < 0) throw new ApplicationValidationException("Số lượng nhập không được âm.");
+            if (quantity < 0)
+                throw new ApplicationValidationException("Số lượng nhập không được âm.");
         }
     }
 
-    private static int GetPenalty(RaceCardDocument document, CardDefinition card)
+    private static int GetPenalty(RaceCardDocument document, CardDefinition definition)
     {
-        var config = document.CardConfigs.TryGetValue(card.CardId, out var saved) ? saved : card.DefaultConfig;
-        return int.TryParse(config.GetValueOrDefault("penaltyPoints"), out var points) && points > 0 ? points : 10;
+        var inventory = FindInventory(document, definition.CardId);
+        var value = inventory.CardConfig.GetValueOrDefault("penaltyPoints") ??
+                    definition.DefaultConfig.GetValueOrDefault("penaltyPoints");
+        return int.TryParse(value, out var points) && points > 0 ? points : 10;
     }
 }

@@ -140,12 +140,15 @@ public sealed class MongoRaceCardRepository(
         Guid boothId,
         Guid triggeringTeamId,
         DateTime triggeredAt,
+        string resolvedByEventCode,
+        string resolvedByEventId,
         CancellationToken cancellationToken = default)
     {
         var filter = Builders<CardEffectDocument>.Filter.And(
             Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
             Builders<CardEffectDocument>.Filter.Eq(item => item.CardId, CardIds.Trap),
             Builders<CardEffectDocument>.Filter.Eq(item => item.TargetBoothId, boothId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.TriggerEventCode, resolvedByEventCode),
             Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
             Builders<CardEffectDocument>.Filter.Ne(item => item.OwnerTeamId, triggeringTeamId.ToString()),
             Builders<CardEffectDocument>.Filter.Or(
@@ -155,6 +158,8 @@ public sealed class MongoRaceCardRepository(
             .Set(item => item.Status, CardEffectStatus.Resolved)
             .Set(item => item.Resolution, "triggered")
             .Set(item => item.TriggerAt, triggeredAt)
+            .Set(item => item.ResolvedByEventCode, resolvedByEventCode)
+            .Set(item => item.ResolvedByEventId, resolvedByEventId)
             .Set(item => item.TriggeredByTeamId, triggeringTeamId.ToString())
             .Set(item => item.ResolvedAt, triggeredAt)
             .Set(item => item.ModifiedAt, triggeredAt)

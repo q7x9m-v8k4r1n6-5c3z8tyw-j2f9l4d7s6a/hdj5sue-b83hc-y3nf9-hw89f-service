@@ -133,7 +133,7 @@ public sealed class CardUseState
     public string? EffectId { get; set; }
 
     [BsonElement("status")]
-    public string Status { get; set; } = CardStatus.Used;
+    public string Status { get; set; } = CardUseStatus.Succeeded;
 
     [BsonElement("target")]
     public Dictionary<string, string> Target { get; set; } = [];
@@ -189,11 +189,6 @@ public static class CardEffectStatus
     public const string Blocked = "blocked";
 }
 
-public static class CardEffectEventCodes
-{
-    public const string TrapWaiting = "trap_waiting";
-}
-
 public sealed class CardEffectDocument
 {
     [BsonId]
@@ -221,8 +216,8 @@ public sealed class CardEffectDocument
     [BsonElement("targetTeamId")]
     public string? TargetTeamId { get; set; }
 
-    [BsonElement("eventCode")]
-    public string EventCode { get; set; } = string.Empty;
+    [BsonElement("triggerEventCode")]
+    public string TriggerEventCode { get; set; } = string.Empty;
 
     [BsonElement("status")]
     public string Status { get; set; } = CardEffectStatus.Active;
@@ -242,11 +237,11 @@ public sealed class CardEffectDocument
     [BsonElement("triggerAt")]
     public DateTime? TriggerAt { get; set; }
 
-    [BsonElement("triggerByEventCode")]
-    public string? TriggerByEventCode { get; set; }
+    [BsonElement("resolvedByEventCode")]
+    public string? ResolvedByEventCode { get; set; }
 
-    [BsonElement("triggerByEventId")]
-    public string? TriggerByEventId { get; set; }
+    [BsonElement("resolvedByEventId")]
+    public string? ResolvedByEventId { get; set; }
 
     [BsonElement("triggeredByTeamId")]
     public string? TriggeredByTeamId { get; set; }

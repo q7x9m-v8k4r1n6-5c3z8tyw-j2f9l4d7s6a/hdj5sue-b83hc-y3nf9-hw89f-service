@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OVCMOVE2026.Plugin.Common;
@@ -84,16 +85,16 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         Ok(PluginResponse.Success(await cardService.AssignAsync(
             raceId, cardId, request.TeamId, request.TeamName, request.Reason ?? string.Empty, cancellationToken)));
 
-    [HttpDelete("races/{raceId:guid}/cards/{cardId}/teams/{teamId:guid}")]
+    [HttpDelete("races/{raceId:guid}/teams/{teamId:guid}/cards/{cardInstanceId:guid}")]
     [Authorize(Roles = "admin,organizer")]
     public async Task<IActionResult> DeleteAssignment(
         Guid raceId,
-        string cardId,
         Guid teamId,
+        Guid cardInstanceId,
         [FromBody] DeleteCardRequest request,
         CancellationToken cancellationToken)
     {
-        await cardService.DeleteAssignmentAsync(raceId, cardId, teamId, request.Reason, cancellationToken);
+        await cardService.DeleteAssignmentAsync(raceId, cardInstanceId, teamId, request.Reason, cancellationToken);
         return Ok(PluginResponse.Success(true, "Đã ghi nhận xóa card."));
     }
 
@@ -102,22 +103,22 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         Ok(PluginResponse.Success(await cardService.GetTeamCardsAsync(
             raceId, GetRequiredCurrentUserId(), cancellationToken)));
 
-    [HttpGet("team/races/{raceId:guid}/cards/{cardId}")]
+    [HttpGet("team/races/{raceId:guid}/cards/{cardInstanceId:guid}")]
     public async Task<IActionResult> GetTeamCard(
         Guid raceId,
-        string cardId,
+        Guid cardInstanceId,
         CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.GetTeamCardAsync(
-            raceId, GetRequiredCurrentUserId(), cardId, cancellationToken)));
+            raceId, GetRequiredCurrentUserId(), cardInstanceId, cancellationToken)));
 
-    [HttpPost("team/races/{raceId:guid}/cards/{cardId}/use")]
+    [HttpPost("team/races/{raceId:guid}/cards/{cardInstanceId:guid}/use")]
     public async Task<IActionResult> UseCard(
         Guid raceId,
-        string cardId,
+        Guid cardInstanceId,
         [FromBody] UseCardRequest request,
         CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.UseAsync(
-            raceId, GetRequiredCurrentUserId(), cardId, request.Inputs, cancellationToken)));
+            raceId, GetRequiredCurrentUserId(), cardInstanceId, request.Inputs, cancellationToken)));
 
     private Guid GetRequiredCurrentUserId()
     {
@@ -143,7 +144,7 @@ public sealed class ScheduleRestockRequest : RestockRequest
 public sealed class CardConfigRequest
 {
     [Required]
-    public Dictionary<string, string> Config { get; init; } = [];
+    public Dictionary<string, JsonElement> Config { get; init; } = [];
 }
 
 public sealed class AssignCardRequest

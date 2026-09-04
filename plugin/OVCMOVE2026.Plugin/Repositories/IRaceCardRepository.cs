@@ -19,6 +19,8 @@ public interface IRaceCardRepository
         Guid boothId,
         Guid triggeringTeamId,
         DateTime triggeredAt,
+        string resolvedByEventCode,
+        string resolvedByEventId,
         CancellationToken cancellationToken = default);
     Task<int> ApplyDueRestocksAsync(DateTime now, CancellationToken cancellationToken = default);
 }

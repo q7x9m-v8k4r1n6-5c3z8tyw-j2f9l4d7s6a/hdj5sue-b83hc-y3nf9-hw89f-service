@@ -61,6 +61,9 @@ public sealed class TrapBoothEntryRequestedHandler(
             context.RaceId,
             context.BoothId.Value,
             context.TeamId,
+            context.OccurredAt,
+            context.Name,
+            context.EventId,
             cancellationToken);
         if (trap is null) return;
 

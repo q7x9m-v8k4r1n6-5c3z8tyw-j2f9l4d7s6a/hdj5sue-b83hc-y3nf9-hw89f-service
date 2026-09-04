@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Repositories;
 
@@ -53,14 +55,13 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     public async Task<TeamCardResponse> GetTeamCardAsync(
         Guid raceId,
         Guid teamId,
-        string cardId,
+        Guid cardInstanceId,
         CancellationToken cancellationToken = default)
     {
-        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         var team = FindTeam(document, teamId);
         var card = team?.Cards.LastOrDefault(item =>
-            SameCard(item, definition.CardId) && item.Status != CardStatus.Deleted);
+            SameCardInstance(item, cardInstanceId) && item.Status != CardStatus.Deleted);
         return card is null
             ? throw new ApplicationNotFoundException("Không tìm thấy card trong kho của đội.")
             : ToTeamCardResponse(card, document);
@@ -109,21 +110,28 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     public async Task UpdateConfigAsync(
         Guid raceId,
         string cardId,
-        IReadOnlyDictionary<string, string> config,
+        IReadOnlyDictionary<string, JsonElement> config,
         CancellationToken cancellationToken = default)
     {
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         var inventory = FindInventory(document, definition.CardId);
+        var supportedKeys = definition.DefaultConfig.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unsupportedKey = config.Keys.FirstOrDefault(key => !supportedKeys.Contains(key));
+        if (unsupportedKey is not null)
+            throw new ApplicationValidationException($"Không hỗ trợ cấu hình '{unsupportedKey}' cho card này.");
+
         foreach (var key in definition.DefaultConfig.Keys)
         {
             if (!config.TryGetValue(key, out var value)) continue;
             if (key == "penaltyPoints" &&
-                (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var points) || points <= 0))
+                (value.ValueKind != JsonValueKind.Number ||
+                 !value.TryGetInt32(out var points) ||
+                 points <= 0))
             {
                 throw new ApplicationValidationException("Số điểm bị trừ phải là số nguyên dương.");
             }
-            inventory.CardConfig[key] = value.Trim();
+            inventory.CardConfig[key] = ToBsonValue(value);
         }
 
         await repository.ReplaceAsync(document, cancellationToken);
@@ -182,7 +190,7 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
 
     public async Task DeleteAssignmentAsync(
         Guid raceId,
-        string cardId,
+        Guid cardInstanceId,
         Guid teamId,
         string reason,
         CancellationToken cancellationToken = default)
@@ -190,13 +198,16 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         if (string.IsNullOrWhiteSpace(reason))
             throw new ApplicationValidationException("Lý do xóa là bắt buộc.");
 
-        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
         var team = FindTeam(document, teamId);
         var card = team?.Cards.LastOrDefault(item =>
-            SameCard(item, definition.CardId) && item.Status == CardStatus.Received);
+            SameCardInstance(item, cardInstanceId) &&
+            item.Status == CardStatus.Received &&
+            item.CardUses.Count == 0);
         if (card is null)
             throw new ApplicationConflictException("Chỉ được xóa card chưa sử dụng.");
+
+        var definition = CardCatalog.Get(card.CardInfo.CardId);
 
         card.Status = CardStatus.Deleted;
         card.DisabledAt = DateTime.UtcNow;
@@ -208,20 +219,21 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     public async Task<CardUseResponse> UseAsync(
         Guid raceId,
         Guid teamId,
-        string cardId,
+        Guid cardInstanceId,
         IReadOnlyDictionary<string, string> inputs,
         CancellationToken cancellationToken = default)
     {
-        var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
 
         var team = FindTeam(document, teamId);
         var card = team?.Cards.LastOrDefault(item =>
-            SameCard(item, definition.CardId) &&
+            SameCardInstance(item, cardInstanceId) &&
             item.Status == CardStatus.Received &&
             item.CardInfo.CardUseCountRemain > 0);
         if (card is null)
             throw new ApplicationConflictException("Card không còn sẵn sàng để sử dụng.");
+
+        var definition = CardCatalog.Get(card.CardInfo.CardId);
 
         CardEffectDocument? effect = null;
         var now = DateTime.UtcNow;
@@ -241,7 +253,7 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
                 CardUseId = cardUseId,
                 OwnerTeamId = teamId.ToString(),
                 TargetBoothId = boothId,
-                EventCode = CardEffectEventCodes.TrapWaiting,
+                TriggerEventCode = PluginEventNames.BoothEntryRequested,
                 StartAt = now,
                 CreatedAt = now,
                 CreatedBy = teamId.ToString(),
@@ -284,8 +296,18 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
         Guid raceId,
         Guid boothId,
         Guid teamId,
+        DateTime occurredAt,
+        string eventCode,
+        string eventId,
         CancellationToken cancellationToken = default) =>
-        repository.TryClaimTrapAsync(raceId, boothId, teamId, DateTime.UtcNow, cancellationToken);
+        repository.TryClaimTrapAsync(
+            raceId,
+            boothId,
+            teamId,
+            occurredAt,
+            eventCode,
+            eventId,
+            cancellationToken);
 
     private async Task<RaceCardDocument> GetDocumentAsync(Guid raceId, CancellationToken cancellationToken)
     {
@@ -371,6 +393,9 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
     private static bool SameCard(TeamCardState card, string cardId) =>
         card.CardInfo.CardId.Equals(cardId, StringComparison.OrdinalIgnoreCase);
 
+    private static bool SameCardInstance(TeamCardState card, Guid cardInstanceId) =>
+        Guid.TryParse(card.CardInfo.CardInstanceId, out var currentId) && currentId == cardInstanceId;
+
     private static int GetUseCount(CardInventoryState inventory) =>
         inventory.CardConfig.TryGetValue("card_use_count_max", out var value) &&
         int.TryParse(ToConfigString(value), NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) && count > 0
@@ -405,4 +430,20 @@ public sealed class RaceCardService(IRaceCardRepository repository) : IRaceCardS
 
     private static string ToConfigString(BsonValue value) =>
         value.IsString ? value.AsString : value.ToJson();
+
+    private static BsonValue ToBsonValue(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Object => new BsonDocument(value.EnumerateObject()
+            .Select(property => new BsonElement(property.Name, ToBsonValue(property.Value)))),
+        JsonValueKind.Array => new BsonArray(value.EnumerateArray().Select(ToBsonValue)),
+        JsonValueKind.String => new BsonString(value.GetString() ?? string.Empty),
+        JsonValueKind.Number when value.TryGetInt32(out var integer) => new BsonInt32(integer),
+        JsonValueKind.Number when value.TryGetInt64(out var longInteger) => new BsonInt64(longInteger),
+        JsonValueKind.Number when value.TryGetDecimal(out var decimalNumber) => new BsonDecimal128(decimalNumber),
+        JsonValueKind.Number => new BsonDouble(value.GetDouble()),
+        JsonValueKind.True => BsonBoolean.True,
+        JsonValueKind.False => BsonBoolean.False,
+        JsonValueKind.Null => BsonNull.Value,
+        _ => throw new ApplicationValidationException("Giá trị cấu hình card không hợp lệ.")
+    };
 }

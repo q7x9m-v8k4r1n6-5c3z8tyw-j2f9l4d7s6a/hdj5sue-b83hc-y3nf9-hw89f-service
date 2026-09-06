@@ -107,6 +107,8 @@ public class RaceRepository : IRaceRepository
             Place = booth.Place,
             Description = booth.Description,
             IsHidden = booth.IsHidden,
+            Type = booth.Type,
+            MaximumScore = booth.MaximumScore,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
                 booth.Id,
                 Array.Empty<Guid>())

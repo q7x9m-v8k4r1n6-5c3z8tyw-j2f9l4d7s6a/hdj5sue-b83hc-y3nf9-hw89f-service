@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/OVCMOVE.Api/OVCMOVE.Api.csproj" />
     <ProjectReference Include="../../src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj" />
+    <ProjectReference Include="../../plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" />
   </ItemGroup>
 
 </Project>

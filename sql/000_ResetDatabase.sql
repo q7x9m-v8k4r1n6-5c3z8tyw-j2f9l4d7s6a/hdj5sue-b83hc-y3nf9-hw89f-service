@@ -186,6 +186,9 @@ BEGIN TRY
         [TeamId] UNIQUEIDENTIFIER NULL,
         [IsHidden] BIT NOT NULL
             CONSTRAINT [DF_Booth_IsHidden] DEFAULT (0),
+        [Type] NVARCHAR(30) NOT NULL
+            CONSTRAINT [DF_Booth_Type] DEFAULT (N'other'),
+        [MaximumScore] INT NULL,
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Booth_Status] DEFAULT (N'free'),
         [CreatedBy] NVARCHAR(100) NULL,

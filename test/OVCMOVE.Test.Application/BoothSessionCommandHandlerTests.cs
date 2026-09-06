@@ -99,6 +99,32 @@ public sealed class BoothSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task SubmitScore_DispatchesFinalizedSnapshotBeforeCommit()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        booth.Type = BoothConstants.BoothType.Physical;
+        booth.MaximumScore = 20;
+        var repository = new InMemoryBoothRepository(booth);
+        var pluginHub = new CapturingPluginHub();
+        var handler = CreateSubmitHandler(
+            repository,
+            new BoothNotificationSpy(),
+            new UnitOfWorkSpy(),
+            pluginHub);
+
+        await handler.Handle(CreateSubmitCommand(booth, teamId, 20), CancellationToken.None);
+
+        var context = Assert.IsType<PluginEventContext>(pluginHub.LastContext);
+        Assert.Equal(PluginEventNames.BoothResultFinalized, context.Name);
+        Assert.Equal(booth.Id, context.BoothId);
+        Assert.Equal(BoothConstants.BoothType.Physical, context.BoothResult?.BoothType);
+        Assert.Equal(20, context.BoothResult?.BoothMaximumScore);
+        Assert.Equal(20, context.BoothResult?.SubmittedPoints);
+        Assert.Equal(BoothResultValues.Succeeded, context.BoothResult?.Result);
+    }
+
+    [Fact]
     public async Task SubmitAndCancelConcurrently_OnlyOneTerminalActionSucceeds()
     {
         var teamId = Guid.NewGuid();
@@ -142,13 +168,28 @@ public sealed class BoothSessionCommandHandlerTests
     private static SubmitBoothScoreCommandHandler CreateSubmitHandler(
         InMemoryBoothRepository repository,
         BoothNotificationSpy notifications,
-        UnitOfWorkSpy unitOfWork) =>
+        UnitOfWorkSpy unitOfWork,
+        IPluginHub? pluginHub = null) =>
         new(
             repository,
             notifications,
             unitOfWork,
             new ValidBoothRaceRepository(),
-            new AssignedBoothOrganizerRepository());
+            new AssignedBoothOrganizerRepository(),
+            pluginHub ?? new NoopPluginHub());
+
+    private sealed class CapturingPluginHub : IPluginHub
+    {
+        public PluginEventContext? LastContext { get; private set; }
+
+        public Task DispatchAsync(
+            PluginEventContext context,
+            CancellationToken cancellationToken = default)
+        {
+            LastContext = context;
+            return Task.CompletedTask;
+        }
+    }
 
     private static SubmitBoothScoreCommand CreateSubmitCommand(
         Booth booth,

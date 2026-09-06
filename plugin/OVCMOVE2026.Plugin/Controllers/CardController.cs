@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
+using MongoDB.Bson;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OVCMOVE.Application.Common;
 using OVCMOVE2026.Plugin.Common;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Services;
@@ -25,22 +27,6 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
     public async Task<IActionResult> GetCardTeams(Guid raceId, string cardId, CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.GetCardTeamsAsync(raceId, cardId, cancellationToken)));
 
-    [HttpPost("races/{raceId:guid}/store/open")]
-    [Authorize(Roles = "admin,organizer")]
-    public async Task<IActionResult> OpenStore(Guid raceId, CancellationToken cancellationToken)
-    {
-        await cardService.SetStoreOpenAsync(raceId, true, cancellationToken);
-        return Ok(PluginResponse.Success(true, "Đã mở cửa hàng card."));
-    }
-
-    [HttpPost("races/{raceId:guid}/store/close")]
-    [Authorize(Roles = "admin,organizer")]
-    public async Task<IActionResult> CloseStore(Guid raceId, CancellationToken cancellationToken)
-    {
-        await cardService.SetStoreOpenAsync(raceId, false, cancellationToken);
-        return Ok(PluginResponse.Success(true, "Đã đóng cửa hàng card."));
-    }
-
     [HttpPost("races/{raceId:guid}/inventory/restock")]
     [Authorize(Roles = "admin,organizer")]
     public async Task<IActionResult> Restock(
@@ -50,17 +36,6 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
     {
         await cardService.RestockAsync(raceId, request.Quantities, cancellationToken);
         return Ok(PluginResponse.Success(true, "Đã nhập kho card."));
-    }
-
-    [HttpPost("races/{raceId:guid}/inventory/schedule")]
-    [Authorize(Roles = "admin,organizer")]
-    public async Task<IActionResult> ScheduleRestock(
-        Guid raceId,
-        [FromBody] ScheduleRestockRequest request,
-        CancellationToken cancellationToken)
-    {
-        await cardService.ScheduleRestockAsync(raceId, request.ScheduledAt, request.Quantities, cancellationToken);
-        return Ok(PluginResponse.Success(true, "Đã hẹn giờ nhập kho card."));
     }
 
     [HttpPut("races/{raceId:guid}/cards/{cardId}/config")]
@@ -98,6 +73,22 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         return Ok(PluginResponse.Success(true, "Đã ghi nhận xóa card."));
     }
 
+    [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/confirm")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> ConfirmRevive(
+        Guid raceId,
+        string effectId,
+        CancellationToken cancellationToken)
+    {
+        await cardService.ConfirmReviveAsync(
+            raceId,
+            effectId,
+            GetRequiredCurrentUserId(),
+            User.IsInRole("admin"),
+            cancellationToken);
+        return Ok(PluginResponse.Success(true, "Đã xác nhận Revive."));
+    }
+
     [HttpGet("team/races/{raceId:guid}/cards")]
     public async Task<IActionResult> GetTeamCards(Guid raceId, CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.GetTeamCardsAsync(
@@ -118,7 +109,21 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         [FromBody] UseCardRequest request,
         CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.UseAsync(
-            raceId, GetRequiredCurrentUserId(), cardInstanceId, request.Inputs, cancellationToken)));
+            raceId,
+            GetRequiredCurrentUserId(),
+            cardInstanceId,
+            request.CardUseId,
+            ToBsonDocument(request.Inputs),
+            cancellationToken)));
+
+    private static BsonDocument ToBsonDocument(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            return new BsonDocument();
+        if (element.ValueKind != JsonValueKind.Object)
+            throw new ApplicationValidationException("Inputs của card phải là JSON object.");
+        return BsonDocument.Parse(element.GetRawText());
+    }
 
     private Guid GetRequiredCurrentUserId()
     {
@@ -133,12 +138,6 @@ public class RestockRequest
 {
     [Required]
     public Dictionary<string, int> Quantities { get; init; } = [];
-}
-
-public sealed class ScheduleRestockRequest : RestockRequest
-{
-    [Required]
-    public DateTime ScheduledAt { get; init; }
 }
 
 public sealed class CardConfigRequest
@@ -168,5 +167,7 @@ public sealed class DeleteCardRequest
 public sealed class UseCardRequest
 {
     [Required]
-    public Dictionary<string, string> Inputs { get; init; } = [];
+    public Guid CardUseId { get; init; }
+
+    public JsonElement Inputs { get; init; }
 }

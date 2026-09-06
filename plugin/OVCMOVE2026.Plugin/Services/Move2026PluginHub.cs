@@ -10,9 +10,9 @@ public interface IPluginEventHandler
 }
 
 /// <summary>
-/// Dispatches core events to handlers owned by this optional plugin. A handler
-/// failure is logged and swallowed so plugin behavior is never allowed to take
-/// down the core request pipeline.
+/// Dispatches core events to handlers owned by this optional plugin. Gameplay
+/// finalization is fail-fast so its SQL transaction can roll back; optional
+/// entry hooks remain isolated from the core request.
 /// </summary>
 public sealed class Move2026PluginHub(
     IEnumerable<IPluginEventHandler> handlers,
@@ -35,6 +35,16 @@ public sealed class Move2026PluginHub(
             }
             catch (Exception exception)
             {
+                if (context.Name == PluginEventNames.BoothResultFinalized)
+                {
+                    logger.LogError(
+                        exception,
+                        "Gameplay plugin handler {Handler} failed for event {EventName}; finalization will roll back.",
+                        handler.GetType().FullName,
+                        context.Name);
+                    throw;
+                }
+
                 logger.LogError(
                     exception,
                     "Optional plugin handler {Handler} failed for event {EventName}; core request continues.",

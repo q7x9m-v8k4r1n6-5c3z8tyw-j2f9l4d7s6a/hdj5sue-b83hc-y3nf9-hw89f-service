@@ -12,7 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Local"))
 {
-    var envFiles = Env.TraversePath().Load();
+    var apiEnvPath = Path.Combine(
+        Directory.GetCurrentDirectory(), "src", "OVCMOVE.Api", ".env");
+    var envFiles = File.Exists(apiEnvPath)
+        ? Env.Load(apiEnvPath)
+        : Env.TraversePath().Load();
 
     if (envFiles.Any())
     {

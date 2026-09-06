@@ -144,7 +144,7 @@ public static class RaceQueries
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden]
+            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 
@@ -160,7 +160,7 @@ public static class RaceQueries
 
     public static string GetBoothsByRaceIdQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden],
+            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore],
             [RaceID] AS [RaceId]
         FROM [dbo].[Booth]
         WHERE [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -227,11 +227,11 @@ public static class RaceQueries
 
     public static string CreateBoothQuery() => @"
         INSERT INTO [dbo].[Booth]
-            ([Id], [Name], [Place], [RaceID], [Description], [IsHidden],
+            ([Id], [Name], [Place], [RaceID], [Description], [IsHidden], [Type], [MaximumScore],
              [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt],
              [IsDeleted])
         VALUES
-            (@Id, @Name, @Place, @RaceId, @Description, @IsHidden,
+            (@Id, @Name, @Place, @RaceId, @Description, @IsHidden, @Type, @MaximumScore,
              @CreatedBy, @CreatedAt, @ModifiedBy,
              @ModifiedAt, @IsDeleted);";
 
@@ -241,6 +241,8 @@ public static class RaceQueries
             [Name] = @Name,
             [Place] = @Place,
             [Description] = @Description,
+            [Type] = @Type,
+            [MaximumScore] = @MaximumScore,
             [Status] = @Status,
             [TeamId] = @TeamId,
             [ModifiedBy] = @ModifiedBy,
@@ -292,6 +294,8 @@ public static class RaceQueries
             b.Description,
             b.Status,
             b.IsHidden,
+            b.[Type],
+            b.[MaximumScore],
             tu.DisplayName AS CurrentTeamName,
             ou.DisplayName AS CurrentOrganizerName
         FROM [dbo].[Booth] b

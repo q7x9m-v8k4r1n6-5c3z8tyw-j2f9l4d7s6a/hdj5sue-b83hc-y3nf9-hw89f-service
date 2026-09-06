@@ -2,6 +2,7 @@
 
 public class SubmitBoothScoreModel
 {
+    public Guid CompletionId { get; set; }
     public Guid BoothId { get; set; }
     public Guid TeamId { get; set; }
     public Guid OrganizerId { get; set; }

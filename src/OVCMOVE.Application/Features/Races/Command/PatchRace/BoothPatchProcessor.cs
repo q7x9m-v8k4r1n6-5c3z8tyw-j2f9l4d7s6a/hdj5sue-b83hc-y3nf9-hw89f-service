@@ -38,7 +38,9 @@ public sealed class BoothPatchProcessor
             RaceInputRules.ValidateBooth(
                 booth.Name,
                 booth.Place,
-                booth.Description);
+                booth.Description,
+                booth.Type,
+                booth.MaximumScore);
         }
 
         await ValidateOrganizerIdsAsync(
@@ -92,7 +94,9 @@ public sealed class BoothPatchProcessor
             RaceInputRules.ValidateBooth(
                 booth.Name,
                 booth.Place,
-                booth.Description);
+                booth.Description,
+                booth.Type,
+                booth.MaximumScore);
             await _boothRepository.UpdateAsync(booth, cancellationToken);
             if (patch.OrganizerIds is not null)
             {
@@ -165,6 +169,11 @@ public sealed class BoothPatchProcessor
             booth.Description = patch.Description.Trim();
         }
         if (patch.IsHidden is bool isHidden) booth.IsHidden = isHidden;
+        if (patch.Type is not null)
+        {
+            booth.Type = patch.Type.Trim().ToLowerInvariant();
+        }
+        if (patch.MaximumScore.HasValue) booth.MaximumScore = patch.MaximumScore;
 
         booth.ModifiedAt = now;
         booth.ModifiedBy = actor;
@@ -182,6 +191,8 @@ public sealed class BoothPatchProcessor
             Place = patch.Place.Trim(),
             Description = patch.Description?.Trim() ?? string.Empty,
             IsHidden = patch.IsHidden,
+            Type = patch.Type.Trim().ToLowerInvariant(),
+            MaximumScore = patch.MaximumScore,
             CreatedAt = now,
             CreatedBy = actor,
             ModifiedAt = now,

@@ -6,6 +6,7 @@ using OVCMOVE.Domain.Constants;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Booths.Common;
 using OVCMOVE.Domain.Entities;
+using OVCMOVE.Application.Abstractions.Plugins;
 
 namespace OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 
@@ -16,25 +17,30 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothOrganizerRepository _boothOrganizerRepository;
+    private readonly IPluginHub _pluginHub;
 
     public SubmitBoothScoreCommandHandler(
         IBoothRepository boothRepository,
         IBoothNotificationService notificationService,
         IUnitOfWork unitOfWork,
         IRaceRepository raceRepository,
-        IBoothOrganizerRepository boothOrganizerRepository)
+        IBoothOrganizerRepository boothOrganizerRepository,
+        IPluginHub pluginHub)
     {
         _boothRepository = boothRepository;
         _notificationService = notificationService;
         _unitOfWork = unitOfWork;
         _raceRepository = raceRepository;
         _boothOrganizerRepository = boothOrganizerRepository;
+        _pluginHub = pluginHub;
     }
 
     public async Task<bool> Handle(SubmitBoothScoreCommand request, CancellationToken cancellationToken)
     {
+        var completionId = Guid.NewGuid();
         var model = new SubmitBoothScoreModel
         {
+            CompletionId = completionId,
             BoothId = request.BoothID,
             TeamId = request.TeamID,
             OrganizerId = request.OrganizerId,
@@ -43,6 +49,7 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
 
         Booth? booth;
         bool result;
+        BoothResultFinalizedData? finalizedData = null;
 
         await _unitOfWork.BeginAsync(cancellationToken);
         try
@@ -82,6 +89,31 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
             }
 
             result = await _boothRepository.SubmitScoreAndReleaseAsync(model, cancellationToken);
+            if (!result)
+                throw new ApplicationConflictException(
+                    "Kết quả booth đã được xử lý bởi yêu cầu khác.");
+
+            finalizedData = new BoothResultFinalizedData
+            {
+                BoothCompletionId = completionId,
+                BoothType = booth.Type,
+                BoothMaximumScore = booth.MaximumScore,
+                SubmittedPoints = request.Score,
+                FinalAwardedPoints = request.Score,
+                Result = request.Score == 0
+                    ? BoothResultValues.Failed
+                    : BoothResultValues.Succeeded
+            };
+            await _pluginHub.DispatchAsync(
+                new PluginEventContext(
+                    PluginEventNames.BoothResultFinalized,
+                    booth.RaceId,
+                    request.TeamID,
+                    request.BoothID,
+                    DateTime.UtcNow,
+                    $"booth-result:{completionId:D}",
+                    finalizedData),
+                cancellationToken);
             await _unitOfWork.CommitAsync(CancellationToken.None);
         }
         catch
@@ -92,11 +124,23 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
 
         if (result)
         {
-            await _notificationService.NotifyRaceScoreChangedAsync(
-                booth.RaceId,
-                request.TeamID,
-                request.Score,
-                cancellationToken);
+            var scoreChanges = new Dictionary<Guid, int>
+            {
+                [request.TeamID] = request.Score
+            };
+            foreach (var adjustment in finalizedData!.ScoreAdjustments)
+            {
+                scoreChanges[adjustment.TeamId] =
+                    scoreChanges.GetValueOrDefault(adjustment.TeamId) + adjustment.Delta;
+            }
+            foreach (var (teamId, delta) in scoreChanges)
+            {
+                await _notificationService.NotifyRaceScoreChangedAsync(
+                    booth.RaceId,
+                    teamId,
+                    delta,
+                    cancellationToken);
+            }
 
             await _notificationService.NotifyBoothStatusChangedAsync(
                 booth.RaceId,

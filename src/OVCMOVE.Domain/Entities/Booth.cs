@@ -14,5 +14,7 @@ public class Booth : BaseEntity
     public Guid RaceId { get; set; }
     public Guid? TeamId { get; set; } // Team đang chiếm/giữ trạm
     public bool IsHidden { get; set; } = false;
+    public string Type { get; set; } = BoothType.Other;
+    public int? MaximumScore { get; set; }
     public string Status { get; set; } = BoothStatus.Free;
 }

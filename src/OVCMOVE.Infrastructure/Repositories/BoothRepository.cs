@@ -222,7 +222,7 @@ public class BoothRepository : IBoothRepository
                 BoothQueries.InsertScoringLogQuery(),
                 new
                 {
-                    Id = Guid.NewGuid(),
+                    Id = model.CompletionId,
                     EventCode = model.EventCode,
                     EventName = model.EventName,
                     RaceId = booth.RaceId,

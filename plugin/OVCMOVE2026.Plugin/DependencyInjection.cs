@@ -48,10 +48,18 @@ public static class DependencyInjection
         });
         services.AddScoped<IRaceCardRepository, MongoRaceCardRepository>();
         services.AddScoped<IRaceCardService, RaceCardService>();
+        services.AddScoped<CardUseHandlerResolver>();
+        services.AddScoped<ICardUseHandler, OverclockCardUseHandler>();
+        services.AddScoped<ICardUseHandler, CupidCardUseHandler>();
+        services.AddScoped<ICardUseHandler, EngineerCardUseHandler>();
+        services.AddScoped<ICardUseHandler, AthleteCardUseHandler>();
+        services.AddScoped<ICardUseHandler, ReviveCardUseHandler>();
+        services.AddScoped<ICardUseHandler, SwapCardUseHandler>();
+        services.AddScoped<ICardUseHandler, TrapCardUseHandler>();
         services.AddScoped<IPluginEventHandler, TrapBoothEntryRequestedHandler>();
+        services.AddScoped<IPluginEventHandler, BoothResultFinalizedCardHandler>();
         services.AddScoped<IPluginHub, Move2026PluginHub>();
-        services.AddHostedService<ScheduledRestockWorker>();
-
+        services.AddHostedService<CardMongoIndexInitializer>();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
         return services;

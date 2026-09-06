@@ -39,6 +39,8 @@ public class GetMyBoothQueryHandler : IRequestHandler<GetMyBoothQuery, MyBoothRe
             Name = booth.Name,
             Place = booth.Place,
             Description = booth.Description,
+            Type = booth.Type,
+            MaximumScore = booth.MaximumScore,
             Status = booth.Status,
             TeamId = booth.TeamId,
             TeamName = team?.DisplayName

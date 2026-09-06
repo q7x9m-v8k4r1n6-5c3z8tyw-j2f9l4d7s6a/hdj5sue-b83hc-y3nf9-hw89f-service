@@ -1,4 +1,5 @@
 using OVCMOVE.Application.Common;
+using OVCMOVE.Domain.Constants;
 
 namespace OVCMOVE.Application.Features.Races;
 
@@ -34,7 +35,9 @@ internal static class RaceInputRules
     internal static void ValidateBooth(
         string? name,
         string? place,
-        string? description)
+        string? description,
+        string? type,
+        int? maximumScore)
     {
         ValidateRequiredText(name, "Tên booth", ShortTextMaxLength);
         ValidateRequiredText(place, "Địa điểm booth", ShortTextMaxLength);
@@ -42,6 +45,26 @@ internal static class RaceInputRules
             description,
             "Mô tả booth",
             DescriptionMaxLength);
+
+        var normalizedType = type?.Trim().ToLowerInvariant();
+        if (!BoothConstants.BoothType.IsSupported(normalizedType))
+        {
+            throw new ApplicationValidationException(
+                "Loại booth phải là other, intellectual hoặc physical.");
+        }
+
+        if (maximumScore is < 0 or > 100)
+        {
+            throw new ApplicationValidationException(
+                "Điểm tối đa của booth phải nằm trong khoảng 0 đến 100.");
+        }
+
+        if (normalizedType == BoothConstants.BoothType.Physical &&
+            maximumScore is null or <= 0)
+        {
+            throw new ApplicationValidationException(
+                "Booth thể chất phải có điểm tối đa lớn hơn 0.");
+        }
     }
 
     private static void ValidateRequiredText(

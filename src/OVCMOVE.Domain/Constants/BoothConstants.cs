@@ -2,6 +2,16 @@
 
 public static class BoothConstants
 {
+    public static class BoothType
+    {
+        public const string Other = "other";
+        public const string Intellectual = "intellectual";
+        public const string Physical = "physical";
+
+        public static bool IsSupported(string? value) =>
+            value is Other or Intellectual or Physical;
+    }
+
     public static class BoothStatus
     {
         public const string Free = "free";

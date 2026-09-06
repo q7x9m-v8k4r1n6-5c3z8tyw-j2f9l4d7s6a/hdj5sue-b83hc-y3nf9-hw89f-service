@@ -35,7 +35,7 @@
           Condition="Exists('$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj')">
     <MSBuild
       Projects="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj"
-      Targets="Restore;Build"
+      Targets="Build"
       Properties="Configuration=$(Configuration)" />
     <ItemGroup>
       <OptionalMovePluginFiles Include="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\bin\$(Configuration)\net10.0\*.dll" />

@@ -10,6 +10,43 @@ public sealed class MongoRaceCardRepository(
     IMongoCollection<RaceCardDocument> collection,
     IMongoCollection<CardEffectDocument> effectCollection) : IRaceCardRepository
 {
+    public async Task EnsureIndexesAsync(CancellationToken cancellationToken = default)
+    {
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<RaceCardDocument>(
+                Builders<RaceCardDocument>.IndexKeys.Ascending(item => item.RaceId),
+                new CreateIndexOptions { Unique = true, Name = "ux_race_cards_race_id" }),
+            cancellationToken: cancellationToken);
+
+        await effectCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<CardEffectDocument>(
+                Builders<CardEffectDocument>.IndexKeys
+                    .Ascending(item => item.RaceId)
+                    .Ascending(item => item.TargetBoothId),
+                new CreateIndexOptions<CardEffectDocument>
+                {
+                    Unique = true,
+                    Name = "ux_active_trap_per_booth",
+                    PartialFilterExpression = new BsonDocument
+                    {
+                        ["cardId"] = CardIds.Trap,
+                        ["status"] = CardEffectStatus.Active
+                    }
+                }),
+            cancellationToken: cancellationToken);
+
+        await effectCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<CardEffectDocument>(
+                Builders<CardEffectDocument>.IndexKeys
+                    .Ascending(item => item.RaceId)
+                    .Ascending(item => item.TriggerEventCode)
+                    .Ascending(item => item.TargetTeamId)
+                    .Ascending(item => item.Status)
+                    .Ascending(item => item.StartAt),
+                new CreateIndexOptions { Name = "ix_effect_trigger_target" }),
+            cancellationToken: cancellationToken);
+    }
+
     public async Task<RaceCardDocument> GetOrCreateAsync(
         Guid raceId,
         CancellationToken cancellationToken = default)
@@ -30,7 +67,7 @@ public sealed class MongoRaceCardRepository(
                     .Select(card => new CardInventoryState
                     {
                         CardId = card.CardId,
-                        CardConfig = ToBsonDocument(card.DefaultConfig)
+                        CardConfig = card.DefaultConfig.DeepClone().AsBsonDocument
                     })
                     .ToList()
             };
@@ -46,6 +83,22 @@ public sealed class MongoRaceCardRepository(
                     .Find(item => item.Id == raceKey)
                     .FirstAsync(cancellationToken);
             }
+        }
+
+        var missingDefinitions = CardCatalog.All
+            .Where(definition => document.Inventory.All(item =>
+                !item.CardId.Equals(definition.CardId, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        if (missingDefinitions.Length > 0)
+        {
+            document.Inventory.AddRange(missingDefinitions.Select(definition =>
+                new CardInventoryState
+                {
+                    CardId = definition.CardId,
+                    RemainingStock = 0,
+                    CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
+                }));
+            await ReplaceAsync(document, cancellationToken);
         }
 
         return document;
@@ -176,38 +229,227 @@ public sealed class MongoRaceCardRepository(
             cancellationToken);
     }
 
-    public async Task<int> ApplyDueRestocksAsync(
-        DateTime now,
+    public async Task<CardEffectDocument?> ConfirmReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        DateTime confirmedAt,
         CancellationToken cancellationToken = default)
     {
-        var documents = await collection.Find(_ => true).ToListAsync(cancellationToken);
-        var applied = 0;
-        foreach (var document in documents)
+        if (!ObjectId.TryParse(effectId, out var objectId)) return null;
+
+        using var session = await collection.Database.Client.StartSessionAsync(
+            cancellationToken: cancellationToken);
+        session.StartTransaction();
+        try
         {
-            var due = document.RestockSchedules
-                .Where(item => item.Status == "pending" && item.ScheduledAt <= now)
-                .ToArray();
-            if (due.Length == 0) continue;
-
-            foreach (var schedule in due)
+            var effect = await effectCollection.Find(session, item =>
+                    item.Id == objectId.ToString() &&
+                    item.RaceId == raceId.ToString() &&
+                    item.CardId == CardIds.Revive &&
+                    item.Status == CardEffectStatus.Active)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (effect is null)
             {
-                foreach (var (cardId, quantity) in schedule.Quantities)
-                {
-                    var inventory = document.Inventory.FirstOrDefault(item => item.CardId == cardId);
-                    if (inventory is not null) inventory.RemainingStock += quantity;
-                }
-
-                schedule.Status = "executed";
-                schedule.ExecutedAt = now;
-                applied++;
+                await session.AbortTransactionAsync(cancellationToken);
+                return null;
             }
 
-            await ReplaceAsync(document, cancellationToken);
-        }
+            var document = await collection.Find(session, item => item.Id == raceId.ToString())
+                .FirstOrDefaultAsync(cancellationToken);
+            var card = document?.Teams
+                .SelectMany(team => team.Cards)
+                .FirstOrDefault(item => item.CardInfo.CardInstanceId == effect.CardInstanceId);
+            var use = card?.CardUses.FirstOrDefault(item => item.Id == effect.CardUseId);
+            if (document is null || card is null || use is null ||
+                use.Status != CardUseStatus.Pending || card.CardInfo.CardUseCountRemain <= 0)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return null;
+            }
 
-        return applied;
+            var expectedDocumentVersion = document.Version;
+            card.CardInfo.CardUseCountRemain--;
+            card.Status = card.CardInfo.CardUseCountRemain == 0 ? CardStatus.Used : CardStatus.Received;
+            use.Status = CardUseStatus.Resolved;
+            use.EndAt = confirmedAt;
+            use.CardUseCountAfter = card.CardInfo.CardUseCountRemain;
+            use.Result = new BsonDocument
+            {
+                ["confirmedBy"] = organizerId.ToString(),
+                ["confirmedAt"] = confirmedAt
+            };
+            document.ModifiedAt = confirmedAt;
+            document.Version++;
+
+            var raceVersionFilter = expectedDocumentVersion == 0
+                ? Builders<RaceCardDocument>.Filter.Or(
+                    Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
+                    Builders<RaceCardDocument>.Filter.Exists("version", false))
+                : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedDocumentVersion);
+            var raceFilter = Builders<RaceCardDocument>.Filter.And(
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
+                raceVersionFilter);
+            var raceResult = await collection.ReplaceOneAsync(
+                session, raceFilter, document, cancellationToken: cancellationToken);
+            if (raceResult.MatchedCount != 1)
+                throw new ApplicationConflictException(
+                    "Dữ liệu card vừa thay đổi. Vui lòng tải lại và xác nhận lại Revive.");
+
+            var effectFilter = Builders<CardEffectDocument>.Filter.And(
+                Builders<CardEffectDocument>.Filter.Eq(item => item.Id, effect.Id),
+                Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+                Builders<CardEffectDocument>.Filter.Eq(item => item.Version, effect.Version));
+            var effectUpdate = Builders<CardEffectDocument>.Update
+                .Set(item => item.Status, CardEffectStatus.Resolved)
+                .Set(item => item.Resolution, "operator_confirmed")
+                .Set(item => item.ResolvedAt, confirmedAt)
+                .Set(item => item.ResolvedByEventCode, CardEffectEventCodes.ReviveOperatorConfirmation)
+                .Set(item => item.ResolvedByEventId, $"revive-confirm:{effect.Id}")
+                .Set(item => item.ModifiedAt, confirmedAt)
+                .Set(item => item.ModifiedBy, organizerId.ToString())
+                .Set(item => item.RemainingTriggers, 0)
+                .Inc(item => item.Version, 1);
+            var effectResult = await effectCollection.UpdateOneAsync(
+                session, effectFilter, effectUpdate, cancellationToken: cancellationToken);
+            if (effectResult.MatchedCount != 1)
+                throw new ApplicationConflictException("Yêu cầu Revive đã được xử lý trước đó.");
+
+            await session.CommitTransactionAsync(cancellationToken);
+            effect.Status = CardEffectStatus.Resolved;
+            effect.Resolution = "operator_confirmed";
+            effect.ResolvedAt = confirmedAt;
+            return effect;
+        }
+        catch
+        {
+            if (session.IsInTransaction)
+                await session.AbortTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
-    private static BsonDocument ToBsonDocument(IReadOnlyDictionary<string, string> values) =>
-        new(values.Select(item => new BsonElement(item.Key, item.Value)));
+    public async Task<CardEffectDocument?> GetEffectAsync(
+        Guid raceId,
+        string effectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ObjectId.TryParse(effectId, out var objectId)) return null;
+        return await effectCollection.Find(item =>
+                item.Id == objectId.ToString() && item.RaceId == raceId.ToString())
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<CardEffectDocument>> GetActiveBoothResultEffectsAsync(
+        Guid raceId,
+        Guid teamId,
+        DateTime occurredAt,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(
+                item => item.TriggerEventCode,
+                CardEffectEventCodes.BoothResultFinalized),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.TargetTeamId, teamId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Or(
+                Builders<CardEffectDocument>.Filter.Eq(item => item.LimitEndAt, null),
+                Builders<CardEffectDocument>.Filter.Gt(item => item.LimitEndAt, occurredAt)));
+
+        return await effectCollection.Find(filter)
+            .SortBy(item => item.StartAt)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task ResolveEffectsAsync(
+        Guid raceId,
+        string eventCode,
+        string eventId,
+        Guid triggeredByTeamId,
+        DateTime resolvedAt,
+        IReadOnlyCollection<CardEffectResolution> resolutions,
+        CancellationToken cancellationToken = default)
+    {
+        if (resolutions.Count == 0) return;
+
+        using var session = await collection.Database.Client.StartSessionAsync(
+            cancellationToken: cancellationToken);
+        session.StartTransaction();
+        try
+        {
+            var raceKey = raceId.ToString();
+            var document = await collection.Find(session, item => item.Id == raceKey)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new ApplicationNotFoundException("Không tìm thấy dữ liệu card của race.");
+            var expectedVersion = document.Version;
+
+            foreach (var resolution in resolutions)
+            {
+                var card = document.Teams
+                    .SelectMany(team => team.Cards)
+                    .FirstOrDefault(item => item.CardUses.Any(use =>
+                        use.EffectId == resolution.EffectId));
+                var use = card?.CardUses.FirstOrDefault(item =>
+                    item.EffectId == resolution.EffectId);
+                if (card is null || use is null || use.Status != CardUseStatus.Active)
+                    throw new ApplicationConflictException(
+                        "Lượt dùng card đã được xử lý bởi yêu cầu khác.");
+
+                use.Status = CardUseStatus.Resolved;
+                use.EndAt = resolvedAt;
+                use.Result = resolution.Result.DeepClone().AsBsonDocument;
+                if (resolution.NextTimeAvailable.HasValue)
+                    card.NextTimeAvailable = resolution.NextTimeAvailable;
+
+                var effectFilter = Builders<CardEffectDocument>.Filter.And(
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.Id, resolution.EffectId),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceKey),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active));
+                var effectUpdate = Builders<CardEffectDocument>.Update
+                    .Set(item => item.Status, CardEffectStatus.Resolved)
+                    .Set(item => item.Resolution, resolution.Resolution)
+                    .Set(item => item.TriggerAt, resolvedAt)
+                    .Set(item => item.ResolvedByEventCode, eventCode)
+                    .Set(item => item.ResolvedByEventId, eventId)
+                    .Set(item => item.TriggeredByTeamId, triggeredByTeamId.ToString())
+                    .Set(item => item.ResolvedAt, resolvedAt)
+                    .Set(item => item.ModifiedAt, resolvedAt)
+                    .Set(item => item.RemainingTriggers, 0)
+                    .Inc(item => item.Version, 1);
+                var effectResult = await effectCollection.UpdateOneAsync(
+                    session,
+                    effectFilter,
+                    effectUpdate,
+                    cancellationToken: cancellationToken);
+                if (effectResult.MatchedCount != 1)
+                    throw new ApplicationConflictException(
+                        "Effect đã được xử lý bởi yêu cầu khác.");
+            }
+
+            document.ModifiedAt = resolvedAt;
+            document.Version++;
+            var raceFilter = Builders<RaceCardDocument>.Filter.And(
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion));
+            var raceResult = await collection.ReplaceOneAsync(
+                session,
+                raceFilter,
+                document,
+                cancellationToken: cancellationToken);
+            if (raceResult.MatchedCount != 1)
+                throw new ApplicationConflictException(
+                    "Dữ liệu card vừa được cập nhật. Vui lòng thử lại.");
+
+            await session.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            if (session.IsInTransaction)
+                await session.AbortTransactionAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
 }

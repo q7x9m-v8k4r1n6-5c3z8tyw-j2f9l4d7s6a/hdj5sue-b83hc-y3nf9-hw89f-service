@@ -97,4 +97,28 @@ public class QueryContractTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void BoothQueries_IncludeCoordinatesInReadAndWriteContracts()
+    {
+        var raceBoothsSql = RaceQueries.GetRaceBoothsQuery();
+        var boothListSql = RaceQueries.GetBoothListQuery();
+        var updateBoothCoordinatesSql = BoothQueries.UpdateBoothCoordinatesQuery();
+        var getBoothByIdSql = BoothQueries.GetBoothByIdQuery();
+        var getActiveBoothSql = BoothQueries.GetActiveBoothByTeamAndRaceQuery();
+
+        Assert.Contains("[MapX]", raceBoothsSql);
+        Assert.Contains("[MapY]", raceBoothsSql);
+
+        Assert.Contains("MapX", boothListSql);
+        Assert.Contains("MapY", boothListSql);
+
+        Assert.Contains("[MapX] = @MapX", updateBoothCoordinatesSql);
+        Assert.Contains("[MapY] = @MapY", updateBoothCoordinatesSql);
+
+        Assert.Contains("MapX", getBoothByIdSql);
+        Assert.Contains("MapY", getBoothByIdSql);
+
+        Assert.Contains("[MapX]", getActiveBoothSql);
+        Assert.Contains("[MapY]", getActiveBoothSql);
+    }
 }

@@ -12,6 +12,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
 using OVCMOVE.Application.Features.Races.Command.UploadRaceMap;
+using OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
@@ -196,6 +197,20 @@ public class RaceController : BaseController
 
         var mapUrl = await _mediator.Send(command, cancellationToken);
         return Ok(ApiResponse.Success(new UploadRaceMapResponse { MapImageUrl = mapUrl }));
+    }
+
+    [HttpPut("{raceId:guid}/booths/coordinates")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> UpdateBoothCoordinates(
+        [FromRoute] Guid raceId,
+        [FromBody] UpdateBoothCoordinatesRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var command = request.ToCommand(raceId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(ApiResponse.Success(result));
     }
 
     [HttpGet("leaderboard")]

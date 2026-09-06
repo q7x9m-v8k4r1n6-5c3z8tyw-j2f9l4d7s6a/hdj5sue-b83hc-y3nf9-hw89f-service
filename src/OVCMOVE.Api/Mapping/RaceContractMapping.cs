@@ -11,6 +11,7 @@ using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -221,6 +222,8 @@ public static class RaceContractMapping
             Place = result.Place,
             Description = result.Description,
             IsHidden = result.IsHidden,
+            MapX = result.MapX,
+            MapY = result.MapY,
             OrganizerID = string.Join(',', result.OrganizerIds)
         };
 
@@ -304,6 +307,8 @@ public static class RaceContractMapping
             Description = result.Description,
             Status = result.Status,
             isHidden = result.isHidden,
+            MapX = result.MapX,
+            MapY = result.MapY,
             CurrentTeamName = result.CurrentTeamName,
             CurrentOrganizerName = result.CurrentOrganizerName
         };
@@ -336,4 +341,19 @@ public static class RaceContractMapping
     public static CommonContract.PagedResponse<RaceContract.ScoringLogResponse> ToResponse(
         this PagedResult<ScoringLogResultModel> result) =>
         result.ToResponse(item => item.ToResponse());
+
+    public static UpdateBoothCoordinatesCommand ToCommand(
+        this RaceContract.UpdateBoothCoordinatesRequest request,
+        Guid raceId) => new()
+        {
+            RaceId = raceId,
+            Coordinates = request.Coordinates
+                .Select(item => new BoothCoordinateItemModel
+                {
+                    BoothId = item.BoothId,
+                    MapX = item.MapX,
+                    MapY = item.MapY
+                })
+                .ToArray()
+        };
 }

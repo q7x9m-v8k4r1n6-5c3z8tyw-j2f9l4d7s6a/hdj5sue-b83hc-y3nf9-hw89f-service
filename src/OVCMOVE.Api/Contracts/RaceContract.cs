@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using static OVCMOVE.Api.Contracts.CommonContract;
 
@@ -182,6 +184,8 @@ public static class RaceContract
         public string Place { get; init; } = string.Empty;
         public string Description { get; init; } = string.Empty;
         public bool IsHidden { get; init; }
+        public double? MapX { get; init; }
+        public double? MapY { get; init; }
         public string OrganizerID { get; init; } = string.Empty;
     }
 
@@ -229,6 +233,8 @@ public static class RaceContract
         public string Description {get; init; } = string.Empty;
         public string Status { get; init; } = string.Empty;
         public bool isHidden { get; init; } = false;
+        public double? MapX { get; init; }
+        public double? MapY { get; init; }
         public string? CurrentTeamName { get; init; }
         public string? CurrentOrganizerName { get; init; }
     }
@@ -285,5 +291,64 @@ public static class RaceContract
         public IReadOnlyCollection<string> RecipientLabels { get; init; } = [];
         public string Body { get; init; } = string.Empty;
         public DateTime CreatedAt { get; init; }
+    }
+
+    public sealed class BoothCoordinateItemRequest
+    {
+        [Required(ErrorMessage = "Thiếu BoothId.")]
+        public Guid BoothId { get; init; }
+
+        [Range(0.0, 100.0, ErrorMessage = "Tọa độ MapX phải nằm trong khoảng từ 0.0 đến 100.0.")]
+        public double MapX { get; init; }
+
+        [Range(0.0, 100.0, ErrorMessage = "Tọa độ MapY phải nằm trong khoảng từ 0.0 đến 100.0.")]
+        public double MapY { get; init; }
+    }
+
+    [JsonConverter(typeof(UpdateBoothCoordinatesRequestConverter))]
+    public sealed class UpdateBoothCoordinatesRequest
+    {
+        public IReadOnlyCollection<BoothCoordinateItemRequest> Coordinates { get; init; } = [];
+    }
+
+    public sealed class UpdateBoothCoordinatesRequestConverter : JsonConverter<UpdateBoothCoordinatesRequest>
+    {
+        public override UpdateBoothCoordinatesRequest Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.StartArray)
+            {
+                var items = JsonSerializer.Deserialize<List<BoothCoordinateItemRequest>>(ref reader, options)
+                    ?? [];
+                return new UpdateBoothCoordinatesRequest { Coordinates = items };
+            }
+
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                using var doc = JsonDocument.ParseValue(ref reader);
+                if (doc.RootElement.TryGetProperty("coordinates", out var coordsElement) ||
+                    doc.RootElement.TryGetProperty("Coordinates", out coordsElement))
+                {
+                    var items = JsonSerializer.Deserialize<List<BoothCoordinateItemRequest>>(
+                        coordsElement.GetRawText(),
+                        options) ?? [];
+                    return new UpdateBoothCoordinatesRequest { Coordinates = items };
+                }
+
+                return new UpdateBoothCoordinatesRequest();
+            }
+
+            throw new JsonException("Invalid JSON structure for UpdateBoothCoordinatesRequest.");
+        }
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            UpdateBoothCoordinatesRequest value,
+            JsonSerializerOptions options)
+        {
+            JsonSerializer.Serialize(writer, value.Coordinates, options);
+        }
     }
 }

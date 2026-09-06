@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Domain.Common;
+using OVCMOVE.Domain.Common;
 using static OVCMOVE.Domain.Constants.BoothConstants;
 
 namespace OVCMOVE.Domain.Entities;
@@ -15,4 +15,6 @@ public class Booth : BaseEntity
     public Guid? TeamId { get; set; } // Team đang chiếm/giữ trạm
     public bool IsHidden { get; set; } = false;
     public string Status { get; set; } = BoothStatus.Free;
+    public double? MapX { get; set; }
+    public double? MapY { get; set; }
 }

@@ -152,6 +152,29 @@ internal sealed class InMemoryBoothRepository(Booth booth)
     public Task<IReadOnlyCollection<Booth>> GetByRaceIdAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<bool> UpdateAsync(Booth value, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task DeleteAsync(Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task UpdateCoordinatesBatchAsync(
+        Guid raceId,
+        IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates,
+        DateTime modifiedAt,
+        string? modifiedBy,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            foreach (var coord in coordinates)
+            {
+                if (Booth.Id == coord.BoothId)
+                {
+                    Booth.MapX = coord.MapX;
+                    Booth.MapY = coord.MapY;
+                    Booth.ModifiedAt = modifiedAt;
+                    Booth.ModifiedBy = modifiedBy;
+                }
+            }
+            return Task.CompletedTask;
+        }
+    }
 }
 
 internal sealed class AssignedBoothOrganizerRepository(bool isAssigned = true)
@@ -367,6 +390,14 @@ internal sealed class RecordingBoothRepository : IBoothRepository
 
     public Task<bool> SubmitScoreAndReleaseAsync(
         SubmitBoothScoreModel model,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task UpdateCoordinatesBatchAsync(
+        Guid raceId,
+        IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates,
+        DateTime modifiedAt,
+        string? modifiedBy,
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 }

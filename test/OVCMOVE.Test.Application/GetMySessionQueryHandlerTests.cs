@@ -119,5 +119,13 @@ public sealed class GetMySessionQueryHandlerTests
             SubmitBoothScoreModel model,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task UpdateCoordinatesBatchAsync(
+            Guid raceId,
+            IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates,
+            DateTime modifiedAt,
+            string? modifiedBy,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

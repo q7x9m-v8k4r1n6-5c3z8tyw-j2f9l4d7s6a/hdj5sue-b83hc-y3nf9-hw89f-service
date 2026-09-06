@@ -178,6 +178,47 @@ public class DatabaseScriptContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AddBoothCoordinatesMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "008_AddBoothCoordinates.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Booth', N'MapX') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Booth', N'MapY') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapX] FLOAT NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapY] FLOAT NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapX] FLOAT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapY] FLOAT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

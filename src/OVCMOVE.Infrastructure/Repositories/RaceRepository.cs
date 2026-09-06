@@ -107,6 +107,8 @@ public class RaceRepository : IRaceRepository
             Place = booth.Place,
             Description = booth.Description,
             IsHidden = booth.IsHidden,
+            MapX = booth.MapX,
+            MapY = booth.MapY,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
                 booth.Id,
                 Array.Empty<Guid>())

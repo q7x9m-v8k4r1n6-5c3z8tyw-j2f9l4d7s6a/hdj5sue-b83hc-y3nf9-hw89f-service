@@ -155,7 +155,7 @@ public static class RaceQueries
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden]
+            [Id], [Name], [Place], [Description], [IsHidden], [MapX], [MapY]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 
@@ -171,7 +171,7 @@ public static class RaceQueries
 
     public static string GetBoothsByRaceIdQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden],
+            [Id], [Name], [Place], [Description], [IsHidden], [MapX], [MapY],
             [RaceID] AS [RaceId]
         FROM [dbo].[Booth]
         WHERE [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -303,6 +303,8 @@ public static class RaceQueries
             b.Description,
             b.Status,
             b.IsHidden,
+            b.MapX,
+            b.MapY,
             tu.DisplayName AS CurrentTeamName,
             ou.DisplayName AS CurrentOrganizerName
         FROM [dbo].[Booth] b

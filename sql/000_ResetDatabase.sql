@@ -189,6 +189,8 @@ BEGIN TRY
             CONSTRAINT [DF_Booth_IsHidden] DEFAULT (0),
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Booth_Status] DEFAULT (N'free'),
+        [MapX] FLOAT NULL,
+        [MapY] FLOAT NULL,
         [CreatedBy] NVARCHAR(100) NULL,
         [CreatedAt] DATETIME2(7) NOT NULL
             CONSTRAINT [DF_Booth_CreatedAt] DEFAULT (SYSUTCDATETIME()),

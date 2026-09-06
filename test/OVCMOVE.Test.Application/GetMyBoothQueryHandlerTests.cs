@@ -77,6 +77,7 @@ public sealed class GetMyBoothQueryHandlerTests
         public Task<bool> TryReleaseAsync(Guid boothId, Guid teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteAsync(Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> SubmitScoreAndReleaseAsync(SubmitBoothScoreModel model, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateCoordinatesBatchAsync(Guid raceId, IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates, DateTime modifiedAt, string? modifiedBy, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class StubBoothOrganizerRepository(

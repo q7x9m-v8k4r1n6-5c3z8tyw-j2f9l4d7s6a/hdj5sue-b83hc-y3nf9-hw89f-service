@@ -165,6 +165,7 @@ public static class RaceContractMapping
             Place = result.Place,
             Status = result.Status,
             CoverUrl = result.CoverUrl,
+            MapImageUrl = result.MapImageUrl,
             ModifiedAt = result.ModifiedAt,
             IsToggledLeaderboard = result.IsToggledLeaderboard,
             IsHiddenPoint = result.IsHiddenPoint,
@@ -191,6 +192,7 @@ public static class RaceContractMapping
             Place = result.Place,
             Status = result.Status,
             CoverUrl = result.CoverUrl,
+            MapImageUrl = result.MapImageUrl,
             ModifiedAt = result.ModifiedAt
         };
 

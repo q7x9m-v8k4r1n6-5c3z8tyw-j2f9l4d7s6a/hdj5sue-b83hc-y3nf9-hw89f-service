@@ -1,4 +1,4 @@
-﻿namespace OVCMOVE.Infrastructure.Persistence.Queries;
+namespace OVCMOVE.Infrastructure.Persistence.Queries;
 
 public static class RaceQueries
 {
@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
+            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [MapImageUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @Rules,
+            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @MapImageUrl, @Rules,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -27,6 +27,7 @@ public static class RaceQueries
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
             [CoverUrl] = @CoverUrl,
+            [MapImageUrl] = @MapImageUrl,
             [Rules] = @Rules,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
@@ -34,12 +35,20 @@ public static class RaceQueries
           AND [IsDeleted] = 0
           AND [ModifiedAt] = @ExpectedModifiedAt;";
 
+    public static string UpdateRaceMapImageUrlQuery() => @"
+        UPDATE [dbo].[Race]
+        SET
+            [MapImageUrl] = @MapImageUrl,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        WHERE [Id] = @RaceId
+          AND [IsDeleted] = 0;";
 
     public static string GetRaceByIdQuery() => @"
     SELECT
         [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
         [Status], [Rules],
-        [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+        [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [MapImageUrl],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
@@ -54,6 +63,7 @@ public static class RaceQueries
         R.[Place],
         R.[Status],
         R.[CoverUrl],
+        R.[MapImageUrl],
         R.[ModifiedAt]
     FROM [dbo].[Race] R
     WHERE R.[IsDeleted] = 0
@@ -136,6 +146,7 @@ public static class RaceQueries
             [Place],
             [Status],
             [CoverUrl],
+            [MapImageUrl],
             [IsToggledLeaderboard],
             [IsHiddenPoint],
             [ModifiedAt]

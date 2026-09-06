@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Application.DTOs.Race;
+using OVCMOVE.Application.DTOs.Race;
 
 namespace OVCMOVE.Application.DTOs.ResultModels;
 
@@ -12,6 +12,7 @@ public class RaceItemResultModel
     public string Place { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public string? CoverUrl { get; init; }
+    public string? MapImageUrl { get; init; }
     public DateTime ModifiedAt { get; init; }
 }
 

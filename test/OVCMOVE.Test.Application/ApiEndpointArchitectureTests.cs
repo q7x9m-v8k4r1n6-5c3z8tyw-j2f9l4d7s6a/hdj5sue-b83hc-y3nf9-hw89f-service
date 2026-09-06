@@ -30,7 +30,7 @@ public class ApiEndpointArchitectureTests
         {
             typeof(RaceController),
             "api/v1/[controller]",
-            12
+            13
         },
         {
             typeof(TeamController),
@@ -67,6 +67,20 @@ public class ApiEndpointArchitectureTests
             4
         }
     };
+
+    [Fact]
+    public void RaceUploadMapEndpoint_IsPresentAndProtected()
+    {
+        var action = typeof(RaceController).GetMethod(
+            nameof(RaceController.UploadRaceMap));
+
+        Assert.NotNull(action);
+        var post = Assert.Single(
+            action.GetCustomAttributes<HttpPostAttribute>());
+        Assert.Equal("{raceId:guid}/map", post.Template);
+        Assert.NotEmpty(
+            action.GetCustomAttributes().OfType<IAuthorizeData>());
+    }
 
     [Fact]
     public void ImageUploadEndpoint_IsPresent()

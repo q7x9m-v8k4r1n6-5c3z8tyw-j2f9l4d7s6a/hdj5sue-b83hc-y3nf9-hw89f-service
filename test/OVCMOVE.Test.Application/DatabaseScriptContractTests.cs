@@ -149,6 +149,35 @@ public class DatabaseScriptContractTests
         Assert.Contains("DROP TABLE [dbo].[FunctionCards]", cleanupScript);
     }
 
+    [Fact]
+    public void AddRaceMapImageUrlMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "007_AddRaceMapImageUrl.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Race', N'MapImageUrl') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapImageUrl] NVARCHAR(2048) NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapImageUrl] NVARCHAR(2048) NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

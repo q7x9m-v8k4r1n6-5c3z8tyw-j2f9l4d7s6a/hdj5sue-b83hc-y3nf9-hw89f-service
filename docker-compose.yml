@@ -15,6 +15,7 @@ services:
       - OVCMOVE_ExternalServicesConfig__EmailService__Password=${OVCMOVE_ExternalServicesConfig__EmailService__Password}
       - OVCMOVE_AzureBlobStorage__ConnectionString=${OVCMOVE_AzureBlobStorage__ConnectionString}
       - OVCMOVE_AzureBlobStorage__ContainerName=${OVCMOVE_AzureBlobStorage__ContainerName}
+      - OVCMOVE_AzureBlobStorage__MapContainerName=${OVCMOVE_AzureBlobStorage__MapContainerName}
       - OVCMOVE_JwtConfig__SecretKey=${OVCMOVE_JwtConfig__SecretKey}
       - OVCMOVE_JwtConfig__Issuer=${OVCMOVE_JwtConfig__Issuer}
       - OVCMOVE_JwtConfig__Audience=${OVCMOVE_JwtConfig__Audience}

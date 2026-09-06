@@ -1,4 +1,4 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +11,10 @@ public class AzureBlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly string _defaultContainerName;
+    private readonly string _mapContainerName;
     private readonly ILogger<AzureBlobStorageService> _logger;
+
+    public string MapContainerName => _mapContainerName;
 
     public AzureBlobStorageService(
         IOptions<AzureBlobStorageOptions> options,
@@ -23,6 +26,7 @@ public class AzureBlobStorageService : IBlobStorageService
         _blobServiceClient = new BlobServiceClient(configuration.ConnectionString);
         
         _defaultContainerName = configuration.ContainerName;
+        _mapContainerName = configuration.MapContainerName;
     }
 
     public async Task<string> UploadAsync(

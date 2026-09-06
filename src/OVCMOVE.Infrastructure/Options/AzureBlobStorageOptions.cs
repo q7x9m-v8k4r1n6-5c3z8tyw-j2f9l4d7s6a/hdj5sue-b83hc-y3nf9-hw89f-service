@@ -6,4 +6,5 @@ public sealed class AzureBlobStorageOptions
 
     public string ConnectionString { get; init; } = string.Empty;
     public string ContainerName { get; init; } = string.Empty;
+    public string MapContainerName { get; init; } = string.Empty;
 }

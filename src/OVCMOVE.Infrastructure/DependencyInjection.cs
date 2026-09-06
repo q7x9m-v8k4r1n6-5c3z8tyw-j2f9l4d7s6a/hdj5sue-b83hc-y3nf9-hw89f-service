@@ -56,8 +56,9 @@ public static class DependencyInjection
             .Validate(
                 options =>
                     !string.IsNullOrWhiteSpace(options.ConnectionString) &&
-                    !string.IsNullOrWhiteSpace(options.ContainerName),
-                "Azure blob connection string and container name are required.")
+                    !string.IsNullOrWhiteSpace(options.ContainerName) &&
+                    !string.IsNullOrWhiteSpace(options.MapContainerName),
+                "Azure blob connection string, container name, and map container name are required.")
             .ValidateOnStart();
 
         services.AddOptions<LoginRateLimitConfigOptions>()

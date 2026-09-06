@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 using static OVCMOVE.Api.Contracts.CommonContract;
@@ -141,7 +141,13 @@ public static class RaceContract
         public string Place { get; init; } = string.Empty;
         public string Status { get; init; } = string.Empty;
         public string? CoverUrl { get; init; }
+        public string? MapImageUrl { get; init; }
         public DateTime ModifiedAt { get; init; }
+    }
+
+    public sealed class UploadRaceMapResponse
+    {
+        public string MapImageUrl { get; init; } = string.Empty;
     }
 
     public sealed class RaceDetailResponse : RaceItemResponse

@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text.Json;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -137,6 +137,7 @@ public class RaceRepository : IRaceRepository
             Place = race.Place,
             Status = race.Status,
             CoverUrl = race.CoverUrl,
+            MapImageUrl = race.MapImageUrl,
             ModifiedAt = race.ModifiedAt,
             IsToggledLeaderboard = race.IsToggledLeaderboard,
             IsHiddenPoint = race.IsHiddenPoint,
@@ -176,6 +177,7 @@ public class RaceRepository : IRaceRepository
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
             race.CoverUrl,
+            race.MapImageUrl,
             race.ModifiedBy,
             race.ModifiedAt
         });
@@ -188,6 +190,29 @@ public class RaceRepository : IRaceRepository
             RaceQueries.UpdateRaceQuery(),
             parameters,
             cancellationToken: cancellationToken);
+        return affectedRows >= 1;
+    }
+
+    public async Task<bool> UpdateMapImageUrlAsync(
+        Guid raceId,
+        string mapImageUrl,
+        string? modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateRaceMapImageUrlQuery(),
+            new
+            {
+                RaceId = raceId,
+                MapImageUrl = mapImageUrl,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken: cancellationToken);
+
         return affectedRows >= 1;
     }
 

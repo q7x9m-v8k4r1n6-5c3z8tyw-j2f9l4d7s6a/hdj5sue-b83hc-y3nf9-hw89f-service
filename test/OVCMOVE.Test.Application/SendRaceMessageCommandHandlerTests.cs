@@ -227,6 +227,9 @@ public sealed class SendRaceMessageCommandHandlerTests
         public Task<bool> UpdateAsync(Race race, DateTime expectedModifiedAt, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<bool> UpdateMapImageUrlAsync(Guid raceId, string mapImageUrl, string? modifiedBy, DateTime modifiedAt, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(Guid? raceId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

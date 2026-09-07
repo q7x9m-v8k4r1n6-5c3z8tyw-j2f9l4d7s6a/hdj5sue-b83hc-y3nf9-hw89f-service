@@ -6,7 +6,7 @@ using OVCMOVE2026.Plugin.Common;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Services;
 
-namespace OVCMOVE2026.Plugin.Controllers;
+namespace OVCMOVE.Api.Controllers.Plugin;
 
 [ApiController]
 [Authorize]

@@ -37,6 +37,14 @@ public class SubmitTechCacheResultCommandHandler
         {
             return new SubmitTechCacheResultResult { IsForbidden = true, Message = "Đây không phải Tech Cache." };
         }
+        if (mission.Evidences.Any())
+        {
+            return new SubmitTechCacheResultResult
+            {
+                IsForbidden = true,
+                Message = "Tech Cache này đã được nộp kết quả, không thể nộp lại.",
+            };
+        }
 
         if (mission.TeamId != request.TeamId)
         {

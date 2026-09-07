@@ -47,7 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IPluginHub, Move2026PluginHub>();
         services.AddHostedService<ScheduledRestockWorker>();
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
         return services;
     }

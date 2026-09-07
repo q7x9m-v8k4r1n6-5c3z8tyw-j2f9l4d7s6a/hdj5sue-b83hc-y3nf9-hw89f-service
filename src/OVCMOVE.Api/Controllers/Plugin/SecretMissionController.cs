@@ -17,7 +17,7 @@ using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
 using OVCMOVE2026.Plugin.CQRS.Queries.VerifyMissionCode;
 using OVCMOVE2026.Plugin.Models.Contracts;
 
-namespace OVCMOVE2026.Plugin.Controllers;
+namespace OVCMOVE2026.Api.Controllers.Plugin;
 
 [Route("api/v1/plugin/secret-mission")]
 public class SecretMissionController(IMediator mediator) : PluginBaseController(mediator)

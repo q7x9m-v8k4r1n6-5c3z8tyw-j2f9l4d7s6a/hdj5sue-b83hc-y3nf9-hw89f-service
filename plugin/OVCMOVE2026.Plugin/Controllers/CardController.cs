@@ -89,6 +89,22 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         return Ok(PluginResponse.Success(true, "Đã xác nhận Revive."));
     }
 
+    [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/reject")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> RejectRevive(
+        Guid raceId,
+        string effectId,
+        CancellationToken cancellationToken)
+    {
+        await cardService.RejectReviveAsync(
+            raceId,
+            effectId,
+            GetRequiredCurrentUserId(),
+            User.IsInRole("admin"),
+            cancellationToken);
+        return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được sử dụng."));
+    }
+
     [HttpGet("team/races/{raceId:guid}/cards")]
     public async Task<IActionResult> GetTeamCards(Guid raceId, CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.GetTeamCardsAsync(

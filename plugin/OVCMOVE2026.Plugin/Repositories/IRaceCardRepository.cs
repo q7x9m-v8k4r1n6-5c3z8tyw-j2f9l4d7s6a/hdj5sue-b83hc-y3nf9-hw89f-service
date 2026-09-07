@@ -23,10 +23,16 @@ public interface IRaceCardRepository
         string resolvedByEventCode,
         string resolvedByEventId,
         CancellationToken cancellationToken = default);
-    Task<CardEffectDocument?> ConfirmReviveAsync(
+    Task<bool> HasPendingReviveAsync(
+        Guid raceId,
+        Guid teamId,
+        Guid boothId,
+        CancellationToken cancellationToken = default);
+    Task<CardEffectDocument?> ResolveReviveAsync(
         Guid raceId,
         string effectId,
         Guid organizerId,
+        string resolution,
         DateTime confirmedAt,
         CancellationToken cancellationToken = default);
     Task<CardEffectDocument?> GetEffectAsync(

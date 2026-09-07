@@ -30,6 +30,14 @@ public sealed class BoothResultFinalizedCardHandler(
             throw new ApplicationValidationException(
                 "Sự kiện booth finalized thiếu boothId.");
 
+        if (await repository.HasPendingReviveAsync(
+                context.RaceId,
+                context.TeamId,
+                context.BoothId.Value,
+                cancellationToken))
+            throw new ApplicationConflictException(
+                "Đội đang chờ quản trạm xử lý Revive. Hãy xác nhận hoặc từ chối Revive trước khi kết thúc booth.");
+
         var effects = await repository.GetActiveBoothResultEffectsAsync(
             context.RaceId,
             context.TeamId,

@@ -188,6 +188,12 @@ public static class CardEffectStatus
     public const string Blocked = "blocked";
 }
 
+public static class CardEffectResolutionCodes
+{
+    public const string OperatorConfirmed = "operator_confirmed";
+    public const string OperatorRejected = "operator_rejected";
+}
+
 public sealed class CardEffectDocument
 {
     [BsonId]

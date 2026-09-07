@@ -9,6 +9,120 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
 {
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task RejectRevive_ConsumesCardAndResolvesPendingUseOnce()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("OVCMOVE_TEST_MONGODB");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var client = new MongoClient(connectionString);
+        var databaseName = $"ovcmove_test_{Guid.NewGuid():N}";
+        var database = client.GetDatabase(databaseName);
+        var raceCollection = database.GetCollection<RaceCardDocument>("race_cards");
+        var effectCollection = database.GetCollection<CardEffectDocument>("effect");
+        var raceId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var boothId = Guid.NewGuid();
+        var organizerId = Guid.NewGuid();
+        var cardInstanceId = Guid.NewGuid().ToString();
+        var cardUseId = Guid.NewGuid().ToString();
+        var now = DateTime.UtcNow;
+        var effect = new CardEffectDocument
+        {
+            RaceId = raceId.ToString(),
+            CardId = CardIds.Revive,
+            CardInstanceId = cardInstanceId,
+            CardUseId = cardUseId,
+            OwnerTeamId = teamId.ToString(),
+            TargetTeamId = teamId.ToString(),
+            TargetBoothId = boothId.ToString(),
+            TriggerEventCode = CardEffectEventCodes.ReviveOperatorConfirmation,
+            Status = CardEffectStatus.Active,
+            StartAt = now,
+            CreatedAt = now,
+            CreatedBy = teamId.ToString(),
+            ModifiedAt = now,
+            ModifiedBy = teamId.ToString()
+        };
+        var raceDocument = new RaceCardDocument
+        {
+            Id = raceId.ToString(),
+            RaceId = raceId.ToString(),
+            ModifiedAt = now,
+            Teams =
+            [
+                new RaceCardTeamState
+                {
+                    TeamId = teamId.ToString(),
+                    TeamName = "Revive Team",
+                    Cards =
+                    [
+                        new TeamCardState
+                        {
+                            CardInfo = new TeamCardInfo
+                            {
+                                CardInstanceId = cardInstanceId,
+                                CardId = CardIds.Revive,
+                                CardUseCountRemain = 1
+                            },
+                            Status = CardStatus.Received,
+                            ReceivedAt = now,
+                            CardUses =
+                            [
+                                new CardUseState
+                                {
+                                    Id = cardUseId,
+                                    EffectId = effect.Id,
+                                    Status = CardUseStatus.Pending,
+                                    UseAt = now,
+                                    CardUseCountBefore = 1,
+                                    CardUseCountAfter = 1
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        try
+        {
+            await raceCollection.InsertOneAsync(raceDocument);
+            await effectCollection.InsertOneAsync(effect);
+            var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
+
+            var resolved = await repository.ResolveReviveAsync(
+                raceId,
+                effect.Id,
+                organizerId,
+                CardEffectResolutionCodes.OperatorRejected,
+                now.AddMinutes(1));
+            var duplicate = await repository.ResolveReviveAsync(
+                raceId,
+                effect.Id,
+                organizerId,
+                CardEffectResolutionCodes.OperatorRejected,
+                now.AddMinutes(2));
+
+            Assert.NotNull(resolved);
+            Assert.Null(duplicate);
+            var storedRace = await raceCollection.Find(item => item.Id == raceId.ToString()).SingleAsync();
+            var storedCard = Assert.Single(Assert.Single(storedRace.Teams).Cards);
+            var storedUse = Assert.Single(storedCard.CardUses);
+            var storedEffect = await effectCollection.Find(item => item.Id == effect.Id).SingleAsync();
+            Assert.Equal(0, storedCard.CardInfo.CardUseCountRemain);
+            Assert.Equal(CardStatus.Used, storedCard.Status);
+            Assert.Equal(CardUseStatus.Resolved, storedUse.Status);
+            Assert.Equal(CardEffectResolutionCodes.OperatorRejected, storedUse.Result?["decision"].AsString);
+            Assert.Equal(CardEffectResolutionCodes.OperatorRejected, storedEffect.Resolution);
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(databaseName);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task ResolveEffects_UpgradesLegacyRaceDocumentWithoutVersion()
     {
         var connectionString = Environment.GetEnvironmentVariable("OVCMOVE_TEST_MONGODB");

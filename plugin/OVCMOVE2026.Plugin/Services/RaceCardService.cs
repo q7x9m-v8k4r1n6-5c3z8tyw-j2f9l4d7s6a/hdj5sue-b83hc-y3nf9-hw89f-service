@@ -356,32 +356,68 @@ public sealed class RaceCardService(
             eventId,
             cancellationToken);
 
-    public async Task ConfirmReviveAsync(
+    public Task ConfirmReviveAsync(
         Guid raceId,
         string effectId,
         Guid organizerId,
         bool isAdmin,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ResolveReviveAsync(
+            raceId,
+            effectId,
+            organizerId,
+            isAdmin,
+            CardEffectResolutionCodes.OperatorConfirmed,
+            cancellationToken);
+
+    public Task RejectReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        bool isAdmin,
+        CancellationToken cancellationToken = default) =>
+        ResolveReviveAsync(
+            raceId,
+            effectId,
+            organizerId,
+            isAdmin,
+            CardEffectResolutionCodes.OperatorRejected,
+            cancellationToken);
+
+    private async Task ResolveReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        bool isAdmin,
+        string resolution,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(effectId))
             throw new ApplicationValidationException("effectId là bắt buộc.");
         var pendingEffect = await repository.GetEffectAsync(raceId, effectId, cancellationToken);
         if (pendingEffect is null || pendingEffect.CardId != CardIds.Revive ||
-            pendingEffect.Status != CardEffectStatus.Active ||
             !Guid.TryParse(pendingEffect.TargetBoothId, out var boothId) ||
             !Guid.TryParse(pendingEffect.OwnerTeamId, out var ownerTeamId))
             throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
 
+        if (pendingEffect.Status == CardEffectStatus.Resolved &&
+            pendingEffect.Resolution == resolution)
+            return;
+        if (pendingEffect.Status != CardEffectStatus.Active)
+            throw new ApplicationConflictException("Yêu cầu Revive đã được xử lý với kết quả khác.");
+
         var booth = await boothRepository.GetByIdAsync(boothId, cancellationToken);
-        if (booth is null || booth.RaceId != raceId || booth.TeamId != ownerTeamId ||
-            booth.Status != BoothConstants.BoothStatus.Occupied)
-            throw new ApplicationConflictException("Booth đã kết thúc nên không thể xác nhận Revive.");
+        if (booth is null || booth.RaceId != raceId)
+            throw new ApplicationConflictException("Không tìm thấy booth của yêu cầu Revive.");
         if (!isAdmin && !await boothOrganizerRepository.IsAssignedAsync(
                 organizerId, boothId, cancellationToken))
             throw new ApplicationForbiddenException("Bạn không quản lý booth này.");
+        if (resolution == CardEffectResolutionCodes.OperatorConfirmed &&
+            (booth.TeamId != ownerTeamId || booth.Status != BoothConstants.BoothStatus.Occupied))
+            throw new ApplicationConflictException("Booth đã kết thúc nên không thể xác nhận Revive.");
 
-        var effect = await repository.ConfirmReviveAsync(
-            raceId, effectId, organizerId, DateTime.UtcNow, cancellationToken);
+        var effect = await repository.ResolveReviveAsync(
+            raceId, effectId, organizerId, resolution, DateTime.UtcNow, cancellationToken);
         if (effect is null)
             throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
 
@@ -390,7 +426,9 @@ public sealed class RaceCardService(
                 raceId,
                 organizerId,
                 [new(RaceMessageRecipientConstants.Team, teamId,
-                    "Quản trạm đã xác nhận Revive. Bạn được chơi lại booth hiện tại.")],
+                    resolution == CardEffectResolutionCodes.OperatorConfirmed
+                        ? "Quản trạm đã xác nhận Revive. Bạn được chơi lại booth hiện tại."
+                        : "Quản trạm đã từ chối Revive. Card Revive đã được sử dụng.")],
                 cancellationToken);
     }
 

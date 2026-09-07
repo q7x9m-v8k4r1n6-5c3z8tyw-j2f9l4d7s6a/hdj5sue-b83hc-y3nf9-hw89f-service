@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using MediatR;
 using MongoDB.Bson;
 using OVCMOVE.Application.Abstractions.Plugins;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE2026.Plugin.Models;
@@ -12,6 +13,34 @@ namespace OVCMOVE.Test.Application;
 
 public sealed class BoothResultFinalizedCardHandlerTests
 {
+    [Fact]
+    public async Task PendingRevive_BlocksBoothFinalization()
+    {
+        var repository = new FinalizedEffectRepository { HasPendingRevive = true };
+        var handler = new BoothResultFinalizedCardHandler(repository, new ScoreCommandSender());
+        var context = new PluginEventContext(
+            PluginEventNames.BoothResultFinalized,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            DateTime.UtcNow,
+            $"booth-result:{Guid.NewGuid():D}",
+            new BoothResultFinalizedData
+            {
+                BoothCompletionId = Guid.NewGuid(),
+                BoothType = BoothConstants.BoothType.Physical,
+                SubmittedPoints = 0,
+                FinalAwardedPoints = 0,
+                Result = BoothResultValues.Failed
+            });
+
+        var exception = await Assert.ThrowsAsync<ApplicationConflictException>(() =>
+            handler.HandleAsync(context, CancellationToken.None));
+
+        Assert.Contains("Revive", exception.Message);
+        Assert.Empty(repository.Resolutions);
+    }
+
     [Fact]
     public async Task Engineer_bonus_is_included_in_Cupid_reward()
     {
@@ -102,6 +131,14 @@ public sealed class BoothResultFinalizedCardHandlerTests
     {
         public IReadOnlyCollection<CardEffectDocument> Effects { get; init; } = [];
         public IReadOnlyCollection<CardEffectResolution> Resolutions { get; private set; } = [];
+        public bool HasPendingRevive { get; init; }
+
+        public Task<bool> HasPendingReviveAsync(
+            Guid raceId,
+            Guid teamId,
+            Guid boothId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(HasPendingRevive);
 
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveBoothResultEffectsAsync(
             Guid raceId,
@@ -128,7 +165,7 @@ public sealed class BoothResultFinalizedCardHandlerTests
         public Task ReplaceWithEffectAsync(RaceCardDocument document, CardEffectDocument effect, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> HasActiveTrapAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> TryClaimTrapAsync(Guid raceId, Guid boothId, Guid triggeringTeamId, DateTime triggeredAt, string resolvedByEventCode, string resolvedByEventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<CardEffectDocument?> ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> ResolveReviveAsync(Guid raceId, string effectId, Guid organizerId, string resolution, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> GetEffectAsync(Guid raceId, string effectId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 

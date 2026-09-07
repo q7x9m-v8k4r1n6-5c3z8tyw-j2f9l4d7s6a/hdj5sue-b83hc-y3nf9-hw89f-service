@@ -42,6 +42,31 @@ public sealed class UpdateTeamScoreCommandHandler :
             if (ownsTransaction)
                 await _unitOfWork.BeginAsync(cancellationToken);
 
+            if (request.EventId is not null)
+            {
+                var existingLogs = await _raceRepository.GetScoringLogsByEventIdAsync(
+                    request.RaceId,
+                    request.EventId,
+                    cancellationToken);
+                var existing = existingLogs.FirstOrDefault(log =>
+                    log.TeamId == request.TeamId &&
+                    log.EventCode == ScoringLogConstants.EventCode.ManualScoreAdjustment);
+                if (existing is not null)
+                {
+                    if (existing.Delta != request.Delta)
+                        throw new ApplicationConflictException(
+                            "EventId đã được dùng cho một thay đổi điểm khác.");
+                    if (ownsTransaction)
+                        await _unitOfWork.RollbackAsync(CancellationToken.None);
+                    return new UpdateTeamScoreResult(
+                        request.RaceId,
+                        request.TeamId,
+                        existing.ScoreBefore,
+                        existing.ScoreAfter,
+                        existing.Delta);
+                }
+            }
+
             var scoreBefore = await _raceRepository.GetRaceTeamScoreAsync(
                 request.RaceId,
                 request.TeamId,
@@ -72,6 +97,7 @@ public sealed class UpdateTeamScoreCommandHandler :
                 new ScoringLog
                 {
                     Id = Guid.NewGuid(),
+                    EventId = request.EventId,
                     EventCode = ScoringLogConstants.EventCode.ManualScoreAdjustment,
                     EventName = ScoringLogConstants.EventName.ManualScoreAdjustment,
                     RaceId = request.RaceId,
@@ -137,6 +163,13 @@ public sealed class UpdateTeamScoreCommandHandler :
         if (string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new ApplicationValidationException("Reason is required.");
+        }
+
+        if (request.EventId is not null &&
+            (string.IsNullOrWhiteSpace(request.EventId) || request.EventId.Length > 200))
+        {
+            throw new ApplicationValidationException(
+                "EventId must contain between 1 and 200 characters when provided.");
         }
     }
 }

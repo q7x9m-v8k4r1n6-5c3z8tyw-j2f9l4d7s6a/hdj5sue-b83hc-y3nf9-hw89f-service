@@ -53,6 +53,10 @@ public interface IRaceRepository
     Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default);
     Task CreateRaceMessageAsync(
         RaceMessage message,
         CancellationToken cancellationToken = default);

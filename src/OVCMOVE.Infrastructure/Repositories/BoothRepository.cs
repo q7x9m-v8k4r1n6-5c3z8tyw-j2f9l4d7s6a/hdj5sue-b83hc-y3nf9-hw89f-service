@@ -223,6 +223,7 @@ public class BoothRepository : IBoothRepository
                 new
                 {
                     Id = model.CompletionId,
+                    EventId = model.EventId,
                     EventCode = model.EventCode,
                     EventName = model.EventName,
                     RaceId = booth.RaceId,

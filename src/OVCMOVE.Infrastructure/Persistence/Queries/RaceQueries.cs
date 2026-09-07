@@ -309,6 +309,7 @@ public static class RaceQueries
     public static string GetScoringLogByRaceIdQuery() => @"
         SELECT
             log.Id AS LogId,
+            log.EventId,
             log.BoothId,
             log.ActorId,
             b.Name AS BoothName,
@@ -386,18 +387,30 @@ public static class RaceQueries
     public static string CreateScoringLogQuery() => @"
         INSERT INTO [dbo].[ScoringLog]
         (
-            [Id], [EventCode], [EventName], [RaceId], [TeamId],
+            [Id], [EventId], [EventCode], [EventName], [RaceId], [TeamId],
             [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
             [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
             [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
-            @Id, @EventCode, @EventName, @RaceId, @TeamId,
+            @Id, @EventId, @EventCode, @EventName, @RaceId, @TeamId,
             @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter,
             @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
             @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
+
+    public static string GetScoringLogsByEventIdQuery() => @"
+        SELECT
+            [Id], [EventId], [EventCode], [EventName], [RaceId], [TeamId],
+            [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
+            [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
+            [ModifiedBy], [ModifiedAt], [IsDeleted]
+        FROM [dbo].[ScoringLog]
+        WHERE [RaceId] = @RaceId
+          AND [EventId] = @EventId
+          AND [IsDeleted] = 0
+        ORDER BY [CreatedAt], [Id];";
 
     public static string CreateRaceMessageQuery() => @"
         INSERT INTO [dbo].[RaceMessage]

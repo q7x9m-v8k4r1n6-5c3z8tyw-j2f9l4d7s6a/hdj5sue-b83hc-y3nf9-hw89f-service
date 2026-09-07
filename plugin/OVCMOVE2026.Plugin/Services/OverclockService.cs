@@ -121,12 +121,8 @@ public sealed class OverclockService(
                     string outcome;
                     var ownerDelta = 0;
                     var targetDelta = 0;
-                    if (!outcomeLookup.TryGetValue((targetTeamId, boothId), out var finalized))
-                    {
-                        outcome = "not_evaluated";
-                        notEvaluatedCount++;
-                    }
-                    else if (finalized.SubmittedPoints == 0)
+                    if (outcomeLookup.TryGetValue((targetTeamId, boothId), out var finalized) &&
+                        finalized.SubmittedPoints == 0)
                     {
                         outcome = "correct";
                         correctCount++;
@@ -169,6 +165,7 @@ public sealed class OverclockService(
                 {
                     RaceId = raceId,
                     TeamId = teamId,
+                    EventId = eventId,
                     Delta = delta,
                     Reason = "Chốt dự đoán Overclock",
                     PublishRealtimeNotification = false

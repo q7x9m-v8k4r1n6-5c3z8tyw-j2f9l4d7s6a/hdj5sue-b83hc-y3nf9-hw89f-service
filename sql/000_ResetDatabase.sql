@@ -273,6 +273,7 @@ BEGIN TRY
         [Id] UNIQUEIDENTIFIER NOT NULL
             CONSTRAINT [PK_ScoringLog] PRIMARY KEY
             CONSTRAINT [DF_ScoringLog_Id] DEFAULT (NEWID()),
+        [EventId] NVARCHAR(200) NULL,
         [EventCode] NVARCHAR(100) NOT NULL
             CONSTRAINT [DF_ScoringLog_EventCode] DEFAULT (N''),
         [EventName] NVARCHAR(255) NOT NULL
@@ -301,6 +302,10 @@ BEGIN TRY
     EXEC sys.sp_executesql N'
         CREATE INDEX [IX_ScoringLog_RaceId_CreatedAt]
             ON [dbo].[ScoringLog] ([RaceId], [CreatedAt] DESC);
+
+        CREATE UNIQUE INDEX [UX_ScoringLog_Race_Event_Team_Code]
+            ON [dbo].[ScoringLog] ([RaceId], [EventId], [TeamId], [EventCode])
+            WHERE [EventId] IS NOT NULL AND [IsDeleted] = 0;
 
         CREATE UNIQUE INDEX [UX_ScoringLog_CompletedBooth]
             ON [dbo].[ScoringLog] ([RaceId], [TeamId], [BoothId])

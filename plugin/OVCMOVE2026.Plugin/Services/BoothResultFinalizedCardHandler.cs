@@ -221,6 +221,7 @@ public sealed class BoothResultFinalizedCardHandler(
         {
             RaceId = context.RaceId,
             TeamId = teamId,
+            EventId = context.EventId,
             Delta = delta,
             Reason = reason,
             PublishRealtimeNotification = false

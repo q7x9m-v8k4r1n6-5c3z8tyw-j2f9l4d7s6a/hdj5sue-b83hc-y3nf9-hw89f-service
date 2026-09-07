@@ -48,9 +48,11 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         }
 
         var completionId = Guid.NewGuid();
+        var eventId = $"booth-result:{completionId:D}";
         var model = new SubmitBoothScoreModel
         {
             CompletionId = completionId,
+            EventId = eventId,
             BoothId = request.BoothID,
             TeamId = request.TeamID,
             OrganizerId = request.OrganizerId,
@@ -62,7 +64,6 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         BoothResultFinalizedData? finalizedData = null;
         IPluginEventExecution pluginExecution = NoopPluginEventExecution.Instance;
         var commitStarted = false;
-        string? eventId = null;
 
         await _unitOfWork.BeginAsync(cancellationToken);
         try
@@ -123,7 +124,6 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
                     ? BoothResultValues.Failed
                     : BoothResultValues.Succeeded
             };
-            eventId = $"booth-result:{completionId:D}";
             pluginExecution = await _pluginHub.DispatchAsync(
                 new PluginEventContext(
                     PluginEventNames.BoothResultFinalized,
@@ -142,7 +142,7 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
             await _unitOfWork.RollbackAsync(CancellationToken.None);
             if (!commitStarted)
                 await pluginExecution.AbortAsync(CancellationToken.None);
-            else if (eventId is not null)
+            else
                 _logger.LogCritical(
                     "SQL commit outcome is unknown for plugin event {EventId}; Mongo claim was retained to prevent replay.",
                     eventId);

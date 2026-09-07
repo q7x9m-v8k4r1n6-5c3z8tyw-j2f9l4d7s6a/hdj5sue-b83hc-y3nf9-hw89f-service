@@ -325,6 +325,19 @@ public class RaceRepository : IRaceRepository
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
 
+    public async Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var logs = await _db.QueryAsync<ScoringLog>(
+            RaceQueries.GetScoringLogsByEventIdQuery(),
+            new { RaceId = raceId, EventId = eventId },
+            cancellationToken: cancellationToken);
+        return logs.ToArray();
+    }
+
     public async Task CreateRaceMessageAsync(
         RaceMessage message,
         CancellationToken cancellationToken = default)

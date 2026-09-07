@@ -15,7 +15,7 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
         if (string.IsNullOrWhiteSpace(connectionString)) return;
 
         var client = new MongoClient(connectionString);
-        var databaseName = $"ovcmove_test_{Guid.NewGuid():N}";
+        var databaseName = $"ovc_test_{Guid.NewGuid():N}"[..33];
         var database = client.GetDatabase(databaseName);
         var raceCollection = database.GetCollection<RaceCardDocument>("race_cards");
         var effectCollection = database.GetCollection<CardEffectDocument>("effect");
@@ -129,7 +129,7 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
         if (string.IsNullOrWhiteSpace(connectionString)) return;
 
         var client = new MongoClient(connectionString);
-        var databaseName = $"ovcmove_test_{Guid.NewGuid():N}";
+        var databaseName = $"ovc_test_{Guid.NewGuid():N}"[..33];
         var database = client.GetDatabase(databaseName);
         var raceCollection = database.GetCollection<RaceCardDocument>("race_cards");
         var effectCollection = database.GetCollection<CardEffectDocument>("effect");

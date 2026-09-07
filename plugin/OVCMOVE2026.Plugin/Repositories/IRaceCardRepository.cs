@@ -54,6 +54,10 @@ public interface IRaceCardRepository
         string eventId,
         DateTime claimedAt,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<CardEffectDocument>> GetClaimedEffectsAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default);
     Task CompleteClaimedEffectsAsync(
         Guid raceId,
         string eventCode,

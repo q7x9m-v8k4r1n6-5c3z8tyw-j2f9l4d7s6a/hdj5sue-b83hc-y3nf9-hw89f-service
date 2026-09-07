@@ -179,6 +179,7 @@ public sealed class TrapBoothEntryRequestedHandler(
             {
                 RaceId = context.RaceId,
                 TeamId = context.TeamId,
+                EventId = context.EventId,
                 Delta = -penaltyPoints,
                 Reason = $"Trap tại trạm {context.BoothId.Value:N}",
                 PublishRealtimeNotification = false

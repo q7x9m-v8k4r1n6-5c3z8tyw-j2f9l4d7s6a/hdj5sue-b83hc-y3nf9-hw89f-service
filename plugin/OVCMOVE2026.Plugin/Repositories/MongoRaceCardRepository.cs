@@ -430,6 +430,21 @@ public sealed class MongoRaceCardRepository(
         }
     }
 
+    public async Task<IReadOnlyCollection<CardEffectDocument>> GetClaimedEffectsAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, eventId));
+        return await effectCollection.Find(filter)
+            .SortBy(item => item.ClaimedAt)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task CompleteClaimedEffectsAsync(
         Guid raceId,
         string eventCode,

@@ -6,6 +6,7 @@ public class SubmitBoothScoreModel
     public Guid BoothId { get; set; }
     public Guid TeamId { get; set; }
     public Guid OrganizerId { get; set; }
+    public string EventId { get; set; } = string.Empty;
     public int Score { get; set; }
     public string EventCode { get; set; } =
         OVCMOVE.Domain.Constants.ScoringLogConstants.EventCode.Booth;

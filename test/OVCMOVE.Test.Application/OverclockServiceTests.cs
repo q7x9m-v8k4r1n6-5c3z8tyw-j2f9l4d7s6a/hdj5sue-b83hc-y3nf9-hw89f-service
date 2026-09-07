@@ -22,7 +22,7 @@ namespace OVCMOVE.Test.Application;
 public sealed class OverclockServiceTests
 {
     [Fact]
-    public async Task Resolve_AppliesCorrectIncorrectAndNotEvaluatedPredictionsOnce()
+    public async Task Resolve_TreatsMissingFailedOutcomeAsIncorrectPrediction()
     {
         var raceId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
@@ -74,9 +74,9 @@ public sealed class OverclockServiceTests
         Assert.Equal(OverclockWindowStatus.Resolved, response.Status);
         Assert.Equal(3, response.PredictionCount);
         Assert.Equal(1, response.CorrectCount);
-        Assert.Equal(1, response.IncorrectCount);
-        Assert.Equal(1, response.NotEvaluatedCount);
-        Assert.Contains(sender.Commands, item => item.TeamId == ownerId && item.Delta == 10);
+        Assert.Equal(2, response.IncorrectCount);
+        Assert.Equal(0, response.NotEvaluatedCount);
+        Assert.Contains(sender.Commands, item => item.TeamId == ownerId && item.Delta == 5);
         Assert.Contains(sender.Commands, item => item.TeamId == failedTeamId && item.Delta == -15);
         Assert.DoesNotContain(sender.Commands, item => item.TeamId == unknownTeamId);
         Assert.Equal(CardEffectStatus.Resolved, effect.Status);
@@ -118,6 +118,9 @@ public sealed class OverclockServiceTests
             _effect.ClaimedByEventId = eventId;
             return Task.CompletedTask;
         }
+        public Task<IReadOnlyCollection<CardEffectDocument>> GetClaimedEffectsAsync(Guid raceId, string eventId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<CardEffectDocument>>(
+                _effect.ClaimedByEventId == eventId ? [_effect] : []);
         public Task CompleteClaimedEffectsAsync(Guid raceId, string eventCode, string eventId, Guid triggeredByTeamId, DateTime resolvedAt, IReadOnlyCollection<CardEffectResolution> resolutions, CancellationToken cancellationToken = default)
         {
             _effect.Status = CardEffectStatus.Resolved;
@@ -156,6 +159,8 @@ public sealed class OverclockServiceTests
         public Task<int?> GetRaceTeamScoreAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> UpdateRaceTeamScoreAsync(Guid raceId, Guid teamId, int totalScore, string modifiedBy, DateTime modifiedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task CreateScoringLogAsync(ScoringLog log, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(Guid raceId, string eventId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<ScoringLog>>([]);
         public Task CreateRaceMessageAsync(RaceMessage message, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(Guid raceId, int limit, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> IsTeamInRaceAsync(Guid raceId, Guid teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

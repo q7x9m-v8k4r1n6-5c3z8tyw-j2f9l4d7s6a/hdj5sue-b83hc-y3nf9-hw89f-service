@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IRaceCardRepository, MongoRaceCardRepository>();
         services.AddScoped<IRaceCardService, RaceCardService>();
         services.AddScoped<IOverclockService, OverclockService>();
+        services.AddScoped<ICardEventReconciliationService, CardEventReconciliationService>();
         services.AddScoped<CardUseHandlerResolver>();
         services.AddScoped<ICardUseHandler, OverclockCardUseHandler>();
         services.AddScoped<ICardUseHandler, CupidCardUseHandler>();

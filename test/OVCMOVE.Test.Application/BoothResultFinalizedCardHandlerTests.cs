@@ -168,6 +168,10 @@ public sealed class BoothResultFinalizedCardHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyCollection<CardEffectDocument>> GetClaimedEffectsAsync(Guid raceId, string eventId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<CardEffectDocument>>(
+                Effects.Where(item => item.ClaimedByEventId == eventId).ToArray());
+
         public Task ReleaseClaimedEffectsAsync(
             Guid raceId,
             string eventId,

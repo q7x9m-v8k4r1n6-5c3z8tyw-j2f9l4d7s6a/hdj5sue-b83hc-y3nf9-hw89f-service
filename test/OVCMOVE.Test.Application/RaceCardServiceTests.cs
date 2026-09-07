@@ -81,6 +81,7 @@ public sealed class RaceCardServiceTests
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveBoothResultEffectsAsync(Guid raceId, Guid teamId, DateTime occurredAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveEffectsByCardAsync(Guid raceId, string cardId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ClaimEffectsAsync(Guid raceId, IReadOnlyCollection<string> effectIds, string eventId, DateTime claimedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyCollection<CardEffectDocument>> GetClaimedEffectsAsync(Guid raceId, string eventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task CompleteClaimedEffectsAsync(Guid raceId, string eventCode, string eventId, Guid triggeredByTeamId, DateTime resolvedAt, IReadOnlyCollection<CardEffectResolution> resolutions, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ReleaseClaimedEffectsAsync(Guid raceId, string eventId, DateTime releasedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }

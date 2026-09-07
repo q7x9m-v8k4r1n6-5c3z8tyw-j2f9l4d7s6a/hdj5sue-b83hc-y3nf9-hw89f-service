@@ -17,7 +17,8 @@ namespace OVCMOVE2026.Plugin.Controllers;
 [Route("api/v1/plugin/cards")]
 public sealed class CardController(
     IRaceCardService cardService,
-    IOverclockService overclockService) : ControllerBase
+    IOverclockService overclockService,
+    ICardEventReconciliationService reconciliationService) : ControllerBase
 {
     [HttpGet("races/{raceId:guid}")]
     [Authorize(Roles = "admin,organizer")]
@@ -133,6 +134,20 @@ public sealed class CardController(
             await overclockService.ResolveAsync(
                 raceId, GetRequiredCurrentUserId(), cancellationToken),
             "Đã xử lý yêu cầu chốt Overclock."));
+
+    [HttpPost("races/{raceId:guid}/events/{eventId}/reconcile")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ReconcileEvent(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(
+            await reconciliationService.ReconcileAsync(
+                raceId,
+                eventId,
+                GetRequiredCurrentUserId(),
+                cancellationToken),
+            "Đã đối soát trạng thái card sau khi SQL commit."));
 
     [HttpGet("team/races/{raceId:guid}/cards")]
     public async Task<IActionResult> GetTeamCards(Guid raceId, CancellationToken cancellationToken) =>

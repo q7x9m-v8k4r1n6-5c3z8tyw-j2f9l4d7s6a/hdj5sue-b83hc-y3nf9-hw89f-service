@@ -222,6 +222,7 @@ public static class RaceContractMapping
             Place = result.Place,
             Description = result.Description,
             IsHidden = result.IsHidden,
+            Status = result.Status,
             MapX = result.MapX,
             MapY = result.MapY,
             OrganizerID = string.Join(',', result.OrganizerIds)

@@ -155,7 +155,7 @@ public static class RaceQueries
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden], [MapX], [MapY]
+            [Id], [Name], [Place], [Description], [IsHidden], [Status], [MapX], [MapY]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 

@@ -121,4 +121,11 @@ public class QueryContractTests
         Assert.Contains("[MapX]", getActiveBoothSql);
         Assert.Contains("[MapY]", getActiveBoothSql);
     }
+
+    [Fact]
+    public void BoothQueries_IncludeStatusInReadContracts()
+    {
+        var raceBoothsSql = RaceQueries.GetRaceBoothsQuery();
+        Assert.Contains("[Status]", raceBoothsSql);
+    }
 }

@@ -184,6 +184,7 @@ public static class RaceContract
         public string Place { get; init; } = string.Empty;
         public string Description { get; init; } = string.Empty;
         public bool IsHidden { get; init; }
+        public string Status { get; init; } = string.Empty;
         public double? MapX { get; init; }
         public double? MapY { get; init; }
         public string OrganizerID { get; init; } = string.Empty;

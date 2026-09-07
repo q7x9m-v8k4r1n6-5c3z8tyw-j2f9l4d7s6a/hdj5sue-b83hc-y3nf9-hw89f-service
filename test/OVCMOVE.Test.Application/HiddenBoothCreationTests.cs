@@ -247,14 +247,17 @@ public sealed class HiddenBoothCreationTests
                     Id = Guid.NewGuid(),
                     Name = "Trạm ẩn",
                     Place = "Khu C",
-                    IsHidden = true
+                    IsHidden = true,
+                    Status = "occupied"
                 }
             ]
         };
 
         var response = result.ToResponse();
 
-        Assert.True(Assert.Single(response.Booth).IsHidden);
+        var booth = Assert.Single(response.Booth);
+        Assert.True(booth.IsHidden);
+        Assert.Equal("occupied", booth.Status);
     }
 
     [Fact]

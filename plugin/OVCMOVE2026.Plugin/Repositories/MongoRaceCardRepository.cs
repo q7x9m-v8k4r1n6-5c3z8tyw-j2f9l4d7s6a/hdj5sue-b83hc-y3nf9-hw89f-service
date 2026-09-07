@@ -367,6 +367,22 @@ public sealed class MongoRaceCardRepository(
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<CardEffectDocument>> GetActiveEffectsByCardAsync(
+        Guid raceId,
+        string cardId,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.CardId, cardId),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null));
+        return await effectCollection.Find(filter)
+            .SortBy(item => item.StartAt)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task ClaimEffectsAsync(
         Guid raceId,
         IReadOnlyCollection<string> effectIds,
@@ -389,7 +405,9 @@ public sealed class MongoRaceCardRepository(
                     Builders<CardEffectDocument>.Filter.Eq(item => item.Id, effectId),
                     Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
                     Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
-                    Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null));
+                    Builders<CardEffectDocument>.Filter.Or(
+                        Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null),
+                        Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, eventId)));
                 var update = Builders<CardEffectDocument>.Update
                     .Set(item => item.ClaimedAt, claimedAt)
                     .Set(item => item.ClaimedByEventId, eventId)

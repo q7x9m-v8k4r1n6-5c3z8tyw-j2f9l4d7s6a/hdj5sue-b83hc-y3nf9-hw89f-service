@@ -70,4 +70,7 @@ public interface IRaceRepository
         Guid teamId,
         Guid boothId,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default);
 }

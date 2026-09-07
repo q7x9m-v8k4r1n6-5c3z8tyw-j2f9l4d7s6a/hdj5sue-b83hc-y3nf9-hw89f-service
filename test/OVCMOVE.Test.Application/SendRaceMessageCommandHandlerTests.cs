@@ -263,6 +263,9 @@ public sealed class SendRaceMessageCommandHandlerTests
         public Task<BoothProgressResultModel> GetBoothProgressAsync(Guid raceId, Guid teamId, Guid boothId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(Guid raceId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         private bool SetCurrentScore(int totalScore)
         {
             CurrentScore = totalScore;

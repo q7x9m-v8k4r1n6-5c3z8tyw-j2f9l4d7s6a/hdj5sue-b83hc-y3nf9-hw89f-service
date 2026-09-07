@@ -413,6 +413,22 @@ public class RaceRepository : IRaceRepository
             cancellationToken) ?? new BoothProgressResultModel();
     }
 
+    public async Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var outcomes = await _db.QueryAsync<FinalizedBoothOutcome>(
+            RaceQueries.GetFinalizedBoothOutcomesQuery(),
+            new
+            {
+                RaceId = raceId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken);
+        return outcomes.ToArray();
+    }
+
     private static IReadOnlyCollection<string> ParseJsonArray(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return [];

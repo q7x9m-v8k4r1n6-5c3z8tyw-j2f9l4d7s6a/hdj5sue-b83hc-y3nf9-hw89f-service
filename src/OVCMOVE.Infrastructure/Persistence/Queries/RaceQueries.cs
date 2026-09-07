@@ -498,4 +498,16 @@ public static class RaceQueries
           AND log.[ReasonCode] = @CompletedReasonCode
           AND log.[IsDeleted] = 0;";
 
+    public static string GetFinalizedBoothOutcomesQuery() => @"
+        SELECT
+            log.[TeamId],
+            log.[BoothId],
+            log.[Delta] AS [SubmittedPoints],
+            log.[CreatedAt] AS [FinalizedAt]
+        FROM [dbo].[ScoringLog] log
+        WHERE log.[RaceId] = @RaceId
+          AND log.[ReasonCode] = @CompletedReasonCode
+          AND log.[BoothId] IS NOT NULL
+          AND log.[IsDeleted] = 0;";
+
 }

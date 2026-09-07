@@ -182,6 +182,11 @@ internal sealed class ValidBoothRaceRepository(
             IsTeamInRace = true
         });
 
+    public Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyCollection<FinalizedBoothOutcome>>([]);
+
     public Task CreateAsync(Race race, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<(IReadOnlyCollection<RaceItemResultModel> Items, int TotalItems)> GetPageAsync(
         RacePageRequestModel request,

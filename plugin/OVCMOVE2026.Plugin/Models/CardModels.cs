@@ -44,6 +44,14 @@ public static class CardEffectEventCodes
     public const string OverclockResolution = "race.overclock.resolve";
 }
 
+public static class OverclockWindowStatus
+{
+    public const string NotOpened = "not_opened";
+    public const string Closed = "closed";
+    public const string Open = "open";
+    public const string Resolved = "resolved";
+}
+
 public sealed class RaceCardDocument
 {
     [BsonId]
@@ -59,6 +67,9 @@ public sealed class RaceCardDocument
     [BsonElement("teams")]
     public List<RaceCardTeamState> Teams { get; set; } = [];
 
+    [BsonElement("overclockWindow")]
+    public OverclockWindowState OverclockWindow { get; set; } = new();
+
     [BsonElement("modifiedAt")]
     public DateTime ModifiedAt { get; set; }
 
@@ -67,6 +78,30 @@ public sealed class RaceCardDocument
 
     [BsonExtraElements]
     public BsonDocument ExtraElements { get; set; } = new();
+}
+
+public sealed class OverclockWindowState
+{
+    [BsonElement("status")]
+    public string Status { get; set; } = OverclockWindowStatus.NotOpened;
+
+    [BsonElement("openedAt"), BsonIgnoreIfNull]
+    public DateTime? OpenedAt { get; set; }
+
+    [BsonElement("openedBy"), BsonIgnoreIfNull]
+    public string? OpenedBy { get; set; }
+
+    [BsonElement("closedAt"), BsonIgnoreIfNull]
+    public DateTime? ClosedAt { get; set; }
+
+    [BsonElement("closedBy"), BsonIgnoreIfNull]
+    public string? ClosedBy { get; set; }
+
+    [BsonElement("resolvedAt"), BsonIgnoreIfNull]
+    public DateTime? ResolvedAt { get; set; }
+
+    [BsonElement("resolutionEventId"), BsonIgnoreIfNull]
+    public string? ResolutionEventId { get; set; }
 }
 
 public sealed class CardInventoryState
@@ -314,6 +349,22 @@ public sealed record CardInventoryResponse(
     IReadOnlyDictionary<string, object?> Config);
 
 public sealed record CardStoreOverviewResponse(IReadOnlyCollection<CardInventoryResponse> Cards);
+
+public sealed record OverclockWindowResponse(
+    string Status,
+    DateTime? OpenedAt,
+    string? OpenedBy,
+    DateTime? ClosedAt,
+    string? ClosedBy,
+    DateTime? ResolvedAt,
+    string? ResolutionEventId);
+
+public sealed record OverclockResolutionResponse(
+    string Status,
+    int PredictionCount,
+    int CorrectCount,
+    int IncorrectCount,
+    int NotEvaluatedCount);
 
 public sealed record CardUseHistoryResponse(
     string CardUseId,

@@ -15,7 +15,9 @@ namespace OVCMOVE2026.Plugin.Controllers;
 [Authorize]
 [ApiExplorerSettings(GroupName = "plugin-2026")]
 [Route("api/v1/plugin/cards")]
-public sealed class CardController(IRaceCardService cardService) : ControllerBase
+public sealed class CardController(
+    IRaceCardService cardService,
+    IOverclockService overclockService) : ControllerBase
 {
     [HttpGet("races/{raceId:guid}")]
     [Authorize(Roles = "admin,organizer")]
@@ -104,6 +106,33 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
             cancellationToken);
         return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được sử dụng."));
     }
+
+    [HttpGet("races/{raceId:guid}/overclock")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> GetOverclock(
+        Guid raceId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await overclockService.GetAsync(raceId, cancellationToken)));
+
+    [HttpPost("races/{raceId:guid}/overclock/open")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> OpenOverclock(
+        Guid raceId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(
+            await overclockService.OpenAsync(
+                raceId, GetRequiredCurrentUserId(), cancellationToken),
+            "Đã mở màn dự đoán Overclock."));
+
+    [HttpPost("races/{raceId:guid}/overclock/resolve")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ResolveOverclock(
+        Guid raceId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(
+            await overclockService.ResolveAsync(
+                raceId, GetRequiredCurrentUserId(), cancellationToken),
+            "Đã xử lý yêu cầu chốt Overclock."));
 
     [HttpGet("team/races/{raceId:guid}/cards")]
     public async Task<IActionResult> GetTeamCards(Guid raceId, CancellationToken cancellationToken) =>

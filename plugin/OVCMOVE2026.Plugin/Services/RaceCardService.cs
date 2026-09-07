@@ -260,8 +260,13 @@ public sealed class RaceCardService(
         var definition = CardCatalog.Get(card.CardInfo.CardId);
         var now = DateTime.UtcNow;
         if (definition.CardId == CardIds.Overclock)
-            throw new ApplicationConflictException(
-                "Màn dự đoán Overclock chưa được admin mở.");
+        {
+            if (document.OverclockWindow.Status != OverclockWindowStatus.Open)
+                throw new ApplicationConflictException(
+                    "Màn dự đoán Overclock chưa được admin mở hoặc đã được chốt.");
+            await ValidateOverclockPredictionsAsync(
+                raceId, teamId, inputs, cancellationToken);
+        }
         if (card.NextTimeAvailable.HasValue && card.NextTimeAvailable.Value > now)
             throw new ApplicationConflictException(
                 $"Card đang hồi; có thể dùng lại sau {card.NextTimeAvailable.Value:O}.");
@@ -511,13 +516,14 @@ public sealed class RaceCardService(
             card.ReceivedAt,
             card.ReceiveReason,
             card.Status,
-            GetAvailability(card, definition, activeBooth, now),
+            GetAvailability(card, definition, document, activeBooth, now),
             card.CardUses.Select(ToCardUseHistory).ToArray());
     }
 
     private static CardAvailabilityResponse GetAvailability(
         TeamCardState card,
         CardDefinition definition,
+        RaceCardDocument document,
         OVCMOVE.Domain.Entities.Booth? activeBooth,
         DateTime now)
     {
@@ -529,8 +535,9 @@ public sealed class RaceCardService(
             return new(false, "effect_active", "Effect trước vẫn đang hoạt động.", null);
         if (card.NextTimeAvailable.HasValue && card.NextTimeAvailable.Value > now)
             return new(false, "cooldown", "Card đang trong thời gian hồi.", card.NextTimeAvailable);
-        if (definition.CardId == CardIds.Overclock)
-            return new(false, "backend_not_ready", "Màn dự đoán Overclock chưa được mở.", null);
+        if (definition.CardId == CardIds.Overclock &&
+            document.OverclockWindow.Status != OverclockWindowStatus.Open)
+            return new(false, "overclock_closed", "Màn dự đoán Overclock chưa được mở hoặc đã được chốt.", null);
         if (definition.CardId == CardIds.Revive &&
             (activeBooth is null || activeBooth.Status != BoothConstants.BoothStatus.Occupied))
             return new(false, "not_in_booth", "Revive chỉ dùng khi đội đang chơi booth.", null);
@@ -549,6 +556,40 @@ public sealed class RaceCardService(
         use.EndAt,
         use.FailureReason,
         use.Result is null ? null : ToDictionary(use.Result));
+
+    private async Task ValidateOverclockPredictionsAsync(
+        Guid raceId,
+        Guid ownerTeamId,
+        BsonDocument inputs,
+        CancellationToken cancellationToken)
+    {
+        if (!inputs.TryGetValue("predictions", out var raw) || !raw.IsBsonArray ||
+            raw.AsBsonArray.Count == 0 || raw.AsBsonArray.Any(item => !item.IsBsonDocument))
+            throw new ApplicationValidationException("Overclock cần danh sách predictions hợp lệ.");
+
+        var predictions = raw.AsBsonArray.Select(item => item.AsBsonDocument).ToArray();
+        var targetTeamIds = predictions
+            .Select(item => GetRequiredGuidInput(item, "targetTeamId", "Mỗi dự đoán cần targetTeamId hợp lệ."))
+            .ToArray();
+        var expectedTeamIds = (await raceRepository.GetLeaderboardAsync(raceId, cancellationToken))
+            .Select(item => item.TeamId)
+            .Where(item => item != ownerTeamId)
+            .ToHashSet();
+        if (targetTeamIds.Length != expectedTeamIds.Count ||
+            !targetTeamIds.ToHashSet().SetEquals(expectedTeamIds))
+            throw new ApplicationValidationException(
+                "Overclock phải có đúng một dự đoán cho mỗi đội đối thủ trong race.");
+
+        foreach (var prediction in predictions)
+        {
+            var boothId = GetRequiredGuidInput(
+                prediction, "boothId", "Mỗi dự đoán cần boothId hợp lệ.");
+            var booth = await boothRepository.GetByIdAsync(boothId, cancellationToken);
+            if (booth is null || booth.RaceId != raceId)
+                throw new ApplicationValidationException(
+                    "Booth được dự đoán không thuộc race này.");
+        }
+    }
 
     private static RaceCardTeamState? FindTeam(RaceCardDocument document, Guid teamId) =>
         document.Teams.FirstOrDefault(team => team.TeamId == teamId.ToString());

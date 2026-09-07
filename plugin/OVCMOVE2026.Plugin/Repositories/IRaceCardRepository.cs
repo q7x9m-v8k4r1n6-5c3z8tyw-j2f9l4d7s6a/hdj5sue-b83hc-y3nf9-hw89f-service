@@ -44,6 +44,10 @@ public interface IRaceCardRepository
         Guid teamId,
         DateTime occurredAt,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<CardEffectDocument>> GetActiveEffectsByCardAsync(
+        Guid raceId,
+        string cardId,
+        CancellationToken cancellationToken = default);
     Task ClaimEffectsAsync(
         Guid raceId,
         IReadOnlyCollection<string> effectIds,

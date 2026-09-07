@@ -311,6 +311,11 @@ public class TeamLeaderboardQueryHandlerTests
             Guid boothId,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+            Guid raceId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
 }

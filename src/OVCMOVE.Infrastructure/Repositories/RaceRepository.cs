@@ -107,6 +107,8 @@ public class RaceRepository : IRaceRepository
             Place = booth.Place,
             Description = booth.Description,
             IsHidden = booth.IsHidden,
+            Type = booth.Type,
+            MaximumScore = booth.MaximumScore,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
                 booth.Id,
                 Array.Empty<Guid>())
@@ -323,6 +325,19 @@ public class RaceRepository : IRaceRepository
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
     }
 
+    public async Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var logs = await _db.QueryAsync<ScoringLog>(
+            RaceQueries.GetScoringLogsByEventIdQuery(),
+            new { RaceId = raceId, EventId = eventId },
+            cancellationToken: cancellationToken);
+        return logs.ToArray();
+    }
+
     public async Task CreateRaceMessageAsync(
         RaceMessage message,
         CancellationToken cancellationToken = default)
@@ -409,6 +424,22 @@ public class RaceRepository : IRaceRepository
                 CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
             },
             cancellationToken) ?? new BoothProgressResultModel();
+    }
+
+    public async Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var outcomes = await _db.QueryAsync<FinalizedBoothOutcome>(
+            RaceQueries.GetFinalizedBoothOutcomesQuery(),
+            new
+            {
+                RaceId = raceId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken);
+        return outcomes.ToArray();
     }
 
     private static IReadOnlyCollection<string> ParseJsonArray(string? json)

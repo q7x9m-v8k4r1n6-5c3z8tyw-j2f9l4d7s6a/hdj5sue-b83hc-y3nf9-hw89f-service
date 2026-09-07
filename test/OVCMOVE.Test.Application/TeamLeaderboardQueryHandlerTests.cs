@@ -283,6 +283,12 @@ public class TeamLeaderboardQueryHandlerTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+            Guid raceId,
+            string eventId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<ScoringLog>>([]);
+
         public Task CreateRaceMessageAsync(
             RaceMessage message,
             CancellationToken cancellationToken = default) =>
@@ -309,6 +315,11 @@ public class TeamLeaderboardQueryHandlerTests
             Guid raceId,
             Guid teamId,
             Guid boothId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+            Guid raceId,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

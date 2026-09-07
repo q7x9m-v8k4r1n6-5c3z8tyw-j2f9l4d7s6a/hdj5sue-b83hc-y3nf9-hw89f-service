@@ -144,7 +144,7 @@ public static class RaceQueries
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden]
+            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 
@@ -160,7 +160,7 @@ public static class RaceQueries
 
     public static string GetBoothsByRaceIdQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden],
+            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore],
             [RaceID] AS [RaceId]
         FROM [dbo].[Booth]
         WHERE [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -227,11 +227,11 @@ public static class RaceQueries
 
     public static string CreateBoothQuery() => @"
         INSERT INTO [dbo].[Booth]
-            ([Id], [Name], [Place], [RaceID], [Description], [IsHidden],
+            ([Id], [Name], [Place], [RaceID], [Description], [IsHidden], [Type], [MaximumScore],
              [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt],
              [IsDeleted])
         VALUES
-            (@Id, @Name, @Place, @RaceId, @Description, @IsHidden,
+            (@Id, @Name, @Place, @RaceId, @Description, @IsHidden, @Type, @MaximumScore,
              @CreatedBy, @CreatedAt, @ModifiedBy,
              @ModifiedAt, @IsDeleted);";
 
@@ -241,6 +241,8 @@ public static class RaceQueries
             [Name] = @Name,
             [Place] = @Place,
             [Description] = @Description,
+            [Type] = @Type,
+            [MaximumScore] = @MaximumScore,
             [Status] = @Status,
             [TeamId] = @TeamId,
             [ModifiedBy] = @ModifiedBy,
@@ -292,6 +294,8 @@ public static class RaceQueries
             b.Description,
             b.Status,
             b.IsHidden,
+            b.[Type],
+            b.[MaximumScore],
             tu.DisplayName AS CurrentTeamName,
             ou.DisplayName AS CurrentOrganizerName
         FROM [dbo].[Booth] b
@@ -305,6 +309,7 @@ public static class RaceQueries
     public static string GetScoringLogByRaceIdQuery() => @"
         SELECT
             log.Id AS LogId,
+            log.EventId,
             log.BoothId,
             log.ActorId,
             b.Name AS BoothName,
@@ -382,18 +387,30 @@ public static class RaceQueries
     public static string CreateScoringLogQuery() => @"
         INSERT INTO [dbo].[ScoringLog]
         (
-            [Id], [EventCode], [EventName], [RaceId], [TeamId],
+            [Id], [EventId], [EventCode], [EventName], [RaceId], [TeamId],
             [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
             [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
             [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
-            @Id, @EventCode, @EventName, @RaceId, @TeamId,
+            @Id, @EventId, @EventCode, @EventName, @RaceId, @TeamId,
             @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter,
             @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
             @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
+
+    public static string GetScoringLogsByEventIdQuery() => @"
+        SELECT
+            [Id], [EventId], [EventCode], [EventName], [RaceId], [TeamId],
+            [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
+            [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
+            [ModifiedBy], [ModifiedAt], [IsDeleted]
+        FROM [dbo].[ScoringLog]
+        WHERE [RaceId] = @RaceId
+          AND [EventId] = @EventId
+          AND [IsDeleted] = 0
+        ORDER BY [CreatedAt], [Id];";
 
     public static string CreateRaceMessageQuery() => @"
         INSERT INTO [dbo].[RaceMessage]
@@ -492,6 +509,18 @@ public static class RaceQueries
         WHERE log.[RaceId] = @RaceId
           AND log.[TeamId] = @TeamId
           AND log.[ReasonCode] = @CompletedReasonCode
+          AND log.[IsDeleted] = 0;";
+
+    public static string GetFinalizedBoothOutcomesQuery() => @"
+        SELECT
+            log.[TeamId],
+            log.[BoothId],
+            log.[Delta] AS [SubmittedPoints],
+            log.[CreatedAt] AS [FinalizedAt]
+        FROM [dbo].[ScoringLog] log
+        WHERE log.[RaceId] = @RaceId
+          AND log.[ReasonCode] = @CompletedReasonCode
+          AND log.[BoothId] IS NOT NULL
           AND log.[IsDeleted] = 0;";
 
 }

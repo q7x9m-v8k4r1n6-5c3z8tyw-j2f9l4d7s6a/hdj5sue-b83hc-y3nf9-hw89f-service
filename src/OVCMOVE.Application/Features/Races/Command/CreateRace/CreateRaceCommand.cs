@@ -23,6 +23,8 @@ public class CreateRaceCommand : AuditedRequest, IRequest<Guid>
         public string Place { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsHidden { get; set; }
+        public string Type { get; set; } = "other";
+        public int? MaximumScore { get; set; }
         public List<Guid> OrganizerIds { get; set; } = new();
     }
 }

@@ -3,6 +3,7 @@ namespace OVCMOVE.Application.Features.Races.Query.ScoringLog;
 public record ScoringLogResultModel
 {
     public Guid LogId { get; init;}
+    public string? EventId { get; init; }
     public Guid? BoothId { get; init; }
     public Guid? ActorId { get; init; }
     public string? BoothName {get; init;} // null if actor != organizer

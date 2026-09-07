@@ -25,7 +25,9 @@ internal static class CreateRaceFactory
             RaceInputRules.ValidateBooth(
                 booth.Name,
                 booth.Place,
-                booth.Description);
+                booth.Description,
+                booth.Type,
+                booth.MaximumScore);
         }
     }
 
@@ -66,6 +68,8 @@ internal static class CreateRaceFactory
             Place = input.Place.Trim(),
             Description = input.Description?.Trim() ?? string.Empty,
             IsHidden = input.IsHidden,
+            Type = input.Type.Trim().ToLowerInvariant(),
+            MaximumScore = input.MaximumScore,
             CreatedAt = now,
             CreatedBy = actor,
             ModifiedAt = now,

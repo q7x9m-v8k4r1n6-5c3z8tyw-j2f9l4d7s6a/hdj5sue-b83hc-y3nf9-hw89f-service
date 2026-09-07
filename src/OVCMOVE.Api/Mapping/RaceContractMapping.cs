@@ -54,6 +54,8 @@ public static class RaceContractMapping
                     Place = booth.Place,
                     Description = booth.Description,
                     IsHidden = booth.IsHidden,
+                    Type = booth.Type,
+                    MaximumScore = booth.MaximumScore,
                     OrganizerIds = booth.OrganizerIds ?? []
                 })
                 .ToList()
@@ -134,6 +136,8 @@ public static class RaceContractMapping
                         Place = item.Place,
                         Description = item.Description,
                         IsHidden = item.IsHidden,
+                        Type = item.Type,
+                        MaximumScore = item.MaximumScore,
                         OrganizerIds = item.OrganizerIds ?? []
                     }).ToList(),
                 Update = source.Update?.Select(item =>
@@ -144,6 +148,8 @@ public static class RaceContractMapping
                         Place = item.Place,
                         Description = item.Description,
                         IsHidden = item.IsHidden,
+                        Type = item.Type,
+                        MaximumScore = item.MaximumScore,
                         OrganizerIds = item.OrganizerIds
                     }).ToList(),
                 Remove = source.Remove
@@ -219,6 +225,8 @@ public static class RaceContractMapping
             Place = result.Place,
             Description = result.Description,
             IsHidden = result.IsHidden,
+            Type = result.Type,
+            MaximumScore = result.MaximumScore,
             OrganizerID = string.Join(',', result.OrganizerIds)
         };
 
@@ -302,6 +310,8 @@ public static class RaceContractMapping
             Description = result.Description,
             Status = result.Status,
             isHidden = result.isHidden,
+            Type = result.Type,
+            MaximumScore = result.MaximumScore,
             CurrentTeamName = result.CurrentTeamName,
             CurrentOrganizerName = result.CurrentOrganizerName
         };

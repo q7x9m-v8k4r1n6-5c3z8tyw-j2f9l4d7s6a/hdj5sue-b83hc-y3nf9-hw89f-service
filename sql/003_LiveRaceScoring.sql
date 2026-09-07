@@ -34,6 +34,7 @@ BEGIN
         [Id] UNIQUEIDENTIFIER NOT NULL
             CONSTRAINT [PK_ScoringLog] PRIMARY KEY
             CONSTRAINT [DF_ScoringLog_Id] DEFAULT (NEWID()),
+        [EventId] NVARCHAR(200) NULL,
         [EventCode] NVARCHAR(100) NOT NULL
             CONSTRAINT [DF_ScoringLog_EventCode] DEFAULT (N''),
         [EventName] NVARCHAR(255) NOT NULL

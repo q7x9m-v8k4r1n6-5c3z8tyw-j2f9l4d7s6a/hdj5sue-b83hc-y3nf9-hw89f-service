@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
+using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
 using OVCMOVE.Application.Abstractions.Plugins;
@@ -15,19 +17,25 @@ public class RequestEntryToBoothCommandHandler
     private readonly IBoothNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
     private readonly IPluginHub _pluginHub;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<RequestEntryToBoothCommandHandler> _logger;
 
     public RequestEntryToBoothCommandHandler(
         IBoothRepository boothRepository,
         IRaceRepository raceRepository,
         IBoothNotificationService notificationService,
         IUserRepository userRepository,
-        IPluginHub pluginHub)
+        IPluginHub pluginHub,
+        IUnitOfWork unitOfWork,
+        ILogger<RequestEntryToBoothCommandHandler> logger)
     {
         _boothRepository = boothRepository;
         _raceRepository = raceRepository;
         _notificationService = notificationService;
         _userRepository = userRepository;
         _pluginHub = pluginHub;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<(bool IsSuccess, string Message)> Handle(
@@ -57,13 +65,58 @@ public class RequestEntryToBoothCommandHandler
             return (false, entryError);
         }
 
-        var requested = await _boothRepository.TryRequestEntryAsync(
-            request.BoothId,
-            request.TeamId,
-            cancellationToken);
-        if (!requested)
+        IPluginEventExecution pluginExecution = NoopPluginEventExecution.Instance;
+        var commitStarted = false;
+        var occurredAt = DateTime.UtcNow;
+        var eventId = $"booth-entry:{request.BoothId:N}:{request.TeamId:N}:{Guid.NewGuid():N}";
+        await _unitOfWork.BeginAsync(cancellationToken);
+        try
         {
-            return (false, "Trạm đang có yêu cầu khác hoặc đội đang ở trạm khác.");
+            var requested = await _boothRepository.TryRequestEntryAsync(
+                request.BoothId,
+                request.TeamId,
+                cancellationToken);
+            if (!requested)
+            {
+                await _unitOfWork.RollbackAsync(CancellationToken.None);
+                return (false, "Trạm đang có yêu cầu khác hoặc đội đang ở trạm khác.");
+            }
+
+            pluginExecution = await _pluginHub.DispatchAsync(
+                new PluginEventContext(
+                    PluginEventNames.BoothEntryRequested,
+                    booth.RaceId,
+                    request.TeamId,
+                    request.BoothId,
+                    occurredAt,
+                    eventId),
+                cancellationToken);
+
+            commitStarted = true;
+            await _unitOfWork.CommitAsync(CancellationToken.None);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackAsync(CancellationToken.None);
+            if (!commitStarted)
+                await pluginExecution.AbortAsync(CancellationToken.None);
+            else
+                _logger.LogCritical(
+                    "SQL commit outcome is unknown for plugin event {EventId}; Mongo claim was retained to prevent replay.",
+                    eventId);
+            throw;
+        }
+
+        try
+        {
+            await pluginExecution.CompleteAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogCritical(
+                exception,
+                "SQL committed but plugin event {EventId} could not be completed. The Mongo claim requires reconciliation.",
+                eventId);
         }
 
         var teamUser = await _userRepository.GetByIdAsync(request.TeamId, cancellationToken);
@@ -71,24 +124,21 @@ public class RequestEntryToBoothCommandHandler
             ? teamUser.DisplayName
             : "Đội chưa đặt tên";
 
+        foreach (var adjustment in pluginExecution.ScoreAdjustments)
+        {
+            await _notificationService.NotifyRaceScoreChangedAsync(
+                booth.RaceId,
+                adjustment.TeamId,
+                adjustment.Delta,
+                cancellationToken);
+        }
+
         await _notificationService.NotifyBoothStatusChangedAsync(
             booth.RaceId,
             request.BoothId,
             BoothConstants.BoothStatus.Pending,
             request.TeamId,
             teamName,
-            cancellationToken);
-
-        // Optional plugins observe a successful request. The hub implementation
-        // isolates plugin failures so a missing/broken plugin cannot break core.
-        await _pluginHub.DispatchAsync(
-            new PluginEventContext(
-                PluginEventNames.BoothEntryRequested,
-                booth.RaceId,
-                request.TeamId,
-                request.BoothId,
-                DateTime.UtcNow,
-                $"booth-entry:{request.BoothId:N}:{request.TeamId:N}:{DateTime.UtcNow.Ticks}"),
             cancellationToken);
 
         return (true, "Đã gửi yêu cầu vào trạm. Vui lòng chờ Ban tổ chức xác nhận!");

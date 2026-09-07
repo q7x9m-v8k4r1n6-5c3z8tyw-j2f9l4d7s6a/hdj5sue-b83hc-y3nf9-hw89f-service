@@ -12,13 +12,44 @@ public static class CardStatus
 
 public static class CardUseStatus
 {
-    public const string Succeeded = "succeeded";
+    public const string Pending = "pending";
+    public const string Active = "active";
+    public const string Resolved = "resolved";
+    public const string Succeeded = Resolved;
     public const string Failed = "failed";
 }
 
 public static class CardIds
 {
+    public const string Overclock = "OVERCLOCK";
+    public const string Cupid = "CUPID";
+    public const string Engineer = "ENGINEER";
+    public const string Athlete = "ATHLETE";
+    public const string Revive = "REVIVE";
+    public const string Swap = "SWAP";
     public const string Trap = "TRAP";
+}
+
+public static class CardTypes
+{
+    public const string CoreChip = "core_chip";
+    public const string DataPatch = "data_patch";
+}
+
+public static class CardEffectEventCodes
+{
+    public const string BoothEntryRequested = "booth.entry.requested";
+    public const string BoothResultFinalized = "booth.result.finalized";
+    public const string ReviveOperatorConfirmation = "booth.revive.operator-confirmed";
+    public const string OverclockResolution = "race.overclock.resolve";
+}
+
+public static class OverclockWindowStatus
+{
+    public const string NotOpened = "not_opened";
+    public const string Closed = "closed";
+    public const string Open = "open";
+    public const string Resolved = "resolved";
 }
 
 public sealed class RaceCardDocument
@@ -30,17 +61,14 @@ public sealed class RaceCardDocument
     [BsonElement("raceid")]
     public string RaceId { get; set; } = string.Empty;
 
-    [BsonElement("storeOpen")]
-    public bool StoreOpen { get; set; }
-
     [BsonElement("inventory")]
     public List<CardInventoryState> Inventory { get; set; } = [];
 
     [BsonElement("teams")]
     public List<RaceCardTeamState> Teams { get; set; } = [];
 
-    [BsonElement("restockSchedules")]
-    public List<RestockScheduleState> RestockSchedules { get; set; } = [];
+    [BsonElement("overclockWindow")]
+    public OverclockWindowState OverclockWindow { get; set; } = new();
 
     [BsonElement("modifiedAt")]
     public DateTime ModifiedAt { get; set; }
@@ -50,6 +78,30 @@ public sealed class RaceCardDocument
 
     [BsonExtraElements]
     public BsonDocument ExtraElements { get; set; } = new();
+}
+
+public sealed class OverclockWindowState
+{
+    [BsonElement("status")]
+    public string Status { get; set; } = OverclockWindowStatus.NotOpened;
+
+    [BsonElement("openedAt"), BsonIgnoreIfNull]
+    public DateTime? OpenedAt { get; set; }
+
+    [BsonElement("openedBy"), BsonIgnoreIfNull]
+    public string? OpenedBy { get; set; }
+
+    [BsonElement("closedAt"), BsonIgnoreIfNull]
+    public DateTime? ClosedAt { get; set; }
+
+    [BsonElement("closedBy"), BsonIgnoreIfNull]
+    public string? ClosedBy { get; set; }
+
+    [BsonElement("resolvedAt"), BsonIgnoreIfNull]
+    public DateTime? ResolvedAt { get; set; }
+
+    [BsonElement("resolutionEventId"), BsonIgnoreIfNull]
+    public string? ResolutionEventId { get; set; }
 }
 
 public sealed class CardInventoryState
@@ -99,6 +151,9 @@ public sealed class TeamCardState
     [BsonElement("status")]
     public string Status { get; set; } = CardStatus.Received;
 
+    [BsonElement("nextTimeAvailable")]
+    public DateTime? NextTimeAvailable { get; set; }
+
     [BsonElement("disabledAt")]
     public DateTime? DisabledAt { get; set; }
 
@@ -135,8 +190,8 @@ public sealed class CardUseState
     [BsonElement("status")]
     public string Status { get; set; } = CardUseStatus.Succeeded;
 
-    [BsonElement("target")]
-    public Dictionary<string, string> Target { get; set; } = [];
+    [BsonElement("inputs")]
+    public BsonDocument Inputs { get; set; } = new();
 
     [BsonElement("useAt")]
     public DateTime UseAt { get; set; }
@@ -146,6 +201,9 @@ public sealed class CardUseState
 
     [BsonElement("failureReason")]
     public string? FailureReason { get; set; }
+
+    [BsonElement("result")]
+    public BsonDocument? Result { get; set; }
 
     [BsonElement("card_use_count_before")]
     public int CardUseCountBefore { get; set; }
@@ -157,36 +215,18 @@ public sealed class CardUseState
     public BsonDocument ExtraElements { get; set; } = new();
 }
 
-public sealed class RestockScheduleState
-{
-    [BsonElement("id")]
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-
-    [BsonElement("scheduledAt")]
-    public DateTime ScheduledAt { get; set; }
-
-    [BsonElement("quantities")]
-    public Dictionary<string, int> Quantities { get; set; } = [];
-
-    [BsonElement("status")]
-    public string Status { get; set; } = "pending";
-
-    [BsonElement("createdAt")]
-    public DateTime CreatedAt { get; set; }
-
-    [BsonElement("executedAt")]
-    public DateTime? ExecutedAt { get; set; }
-
-    [BsonExtraElements]
-    public BsonDocument ExtraElements { get; set; } = new();
-}
-
 public static class CardEffectStatus
 {
     public const string Active = "active";
     public const string Resolved = "resolved";
     public const string Expired = "expired";
     public const string Blocked = "blocked";
+}
+
+public static class CardEffectResolutionCodes
+{
+    public const string OperatorConfirmed = "operator_confirmed";
+    public const string OperatorRejected = "operator_rejected";
 }
 
 public sealed class CardEffectDocument
@@ -237,6 +277,14 @@ public sealed class CardEffectDocument
     [BsonElement("triggerAt")]
     public DateTime? TriggerAt { get; set; }
 
+    [BsonElement("claimedAt")]
+    [BsonIgnoreIfNull]
+    public DateTime? ClaimedAt { get; set; }
+
+    [BsonElement("claimedByEventId")]
+    [BsonIgnoreIfNull]
+    public string? ClaimedByEventId { get; set; }
+
     [BsonElement("resolvedByEventCode")]
     public string? ResolvedByEventCode { get; set; }
 
@@ -271,28 +319,68 @@ public sealed class CardEffectDocument
     public BsonDocument ExtraElements { get; set; } = new();
 }
 
+public sealed record CardEffectResolution(
+    string EffectId,
+    string Resolution,
+    BsonDocument Result,
+    DateTime? NextTimeAvailable = null);
+
 public sealed record CardInputDefinition(string Key, string Label, string Type, bool Required, string Description);
 
 public sealed record CardDefinition(
     string CardId,
     string CardName,
+    string CardType,
     string Description,
     decimal Price,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs,
-    IReadOnlyDictionary<string, string> DefaultConfig);
+    BsonDocument DefaultConfig);
 
 public sealed record CardInventoryResponse(
     string CardId,
     string CardName,
+    string CardType,
     string Description,
     decimal Price,
     int RemainingStock,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs,
-    IReadOnlyDictionary<string, string> Config);
+    IReadOnlyDictionary<string, object?> Config);
 
-public sealed record CardStoreOverviewResponse(bool StoreOpen, IReadOnlyCollection<CardInventoryResponse> Cards);
+public sealed record CardStoreOverviewResponse(IReadOnlyCollection<CardInventoryResponse> Cards);
+
+public sealed record OverclockWindowResponse(
+    string Status,
+    DateTime? OpenedAt,
+    string? OpenedBy,
+    DateTime? ClosedAt,
+    string? ClosedBy,
+    DateTime? ResolvedAt,
+    string? ResolutionEventId);
+
+public sealed record OverclockResolutionResponse(
+    string Status,
+    int PredictionCount,
+    int CorrectCount,
+    int IncorrectCount,
+    int NotEvaluatedCount);
+
+public sealed record CardUseHistoryResponse(
+    string CardUseId,
+    string? EffectId,
+    string Status,
+    IReadOnlyDictionary<string, object?> Inputs,
+    DateTime UsedAt,
+    DateTime? EndAt,
+    string? FailureReason,
+    IReadOnlyDictionary<string, object?>? Result);
+
+public sealed record CardAvailabilityResponse(
+    bool CanUse,
+    string ReasonCode,
+    string Reason,
+    DateTime? NextTimeAvailable);
 
 public sealed record CardTeamResponse(
     string TeamId,
@@ -300,6 +388,7 @@ public sealed record CardTeamResponse(
     string CardInstanceId,
     string CardId,
     string CardName,
+    string CardType,
     int CardUseCountRemain,
     DateTime ReceivedAt,
     string ReceiveReason,
@@ -307,27 +396,31 @@ public sealed record CardTeamResponse(
     bool CanDelete,
     DateTime? DisabledAt,
     string? DisabledReason,
-    IReadOnlyCollection<CardUseState> CardUses);
+    IReadOnlyCollection<CardUseHistoryResponse> CardUses);
 
 public sealed record TeamCardResponse(
     string CardInstanceId,
     string CardId,
     string CardName,
+    string CardType,
     string Description,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs,
-    IReadOnlyDictionary<string, string> Config,
+    IReadOnlyDictionary<string, object?> Config,
     int CardUseCountRemain,
     DateTime ReceivedAt,
     string ReceiveReason,
     string Status,
-    IReadOnlyCollection<CardUseState> CardUses);
+    CardAvailabilityResponse Availability,
+    IReadOnlyCollection<CardUseHistoryResponse> CardUses);
 
 public sealed record CardUseResponse(
     string CardUseId,
+    string? EffectId,
     string CardInstanceId,
     string CardId,
     string CardName,
     string Status,
     DateTime UsedAt,
+    DateTime? EndAt,
     string Message);

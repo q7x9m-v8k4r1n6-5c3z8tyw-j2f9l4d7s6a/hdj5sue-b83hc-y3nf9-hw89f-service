@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using OVCMOVE.Application.Abstractions;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Abstractions.Services;
@@ -18,6 +19,7 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
     private readonly IRaceRepository _raceRepository;
     private readonly IBoothOrganizerRepository _boothOrganizerRepository;
     private readonly IPluginHub _pluginHub;
+    private readonly ILogger<SubmitBoothScoreCommandHandler> _logger;
 
     public SubmitBoothScoreCommandHandler(
         IBoothRepository boothRepository,
@@ -25,7 +27,8 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         IUnitOfWork unitOfWork,
         IRaceRepository raceRepository,
         IBoothOrganizerRepository boothOrganizerRepository,
-        IPluginHub pluginHub)
+        IPluginHub pluginHub,
+        ILogger<SubmitBoothScoreCommandHandler> logger)
     {
         _boothRepository = boothRepository;
         _notificationService = notificationService;
@@ -33,6 +36,7 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         _raceRepository = raceRepository;
         _boothOrganizerRepository = boothOrganizerRepository;
         _pluginHub = pluginHub;
+        _logger = logger;
     }
 
     public async Task<bool> Handle(SubmitBoothScoreCommand request, CancellationToken cancellationToken)
@@ -56,6 +60,9 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
         Booth? booth;
         bool result;
         BoothResultFinalizedData? finalizedData = null;
+        IPluginEventExecution pluginExecution = NoopPluginEventExecution.Instance;
+        var commitStarted = false;
+        string? eventId = null;
 
         await _unitOfWork.BeginAsync(cancellationToken);
         try
@@ -116,22 +123,42 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
                     ? BoothResultValues.Failed
                     : BoothResultValues.Succeeded
             };
-            await _pluginHub.DispatchAsync(
+            eventId = $"booth-result:{completionId:D}";
+            pluginExecution = await _pluginHub.DispatchAsync(
                 new PluginEventContext(
                     PluginEventNames.BoothResultFinalized,
                     booth.RaceId,
                     request.TeamID,
                     request.BoothID,
                     DateTime.UtcNow,
-                    $"booth-result:{completionId:D}",
+                    eventId,
                     finalizedData),
                 cancellationToken);
+            commitStarted = true;
             await _unitOfWork.CommitAsync(CancellationToken.None);
         }
         catch
         {
             await _unitOfWork.RollbackAsync(CancellationToken.None);
+            if (!commitStarted)
+                await pluginExecution.AbortAsync(CancellationToken.None);
+            else if (eventId is not null)
+                _logger.LogCritical(
+                    "SQL commit outcome is unknown for plugin event {EventId}; Mongo claim was retained to prevent replay.",
+                    eventId);
             throw;
+        }
+
+        try
+        {
+            await pluginExecution.CompleteAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogCritical(
+                exception,
+                "SQL committed but plugin event {EventId} could not be completed. The Mongo claim requires reconciliation.",
+                eventId);
         }
 
         if (result)

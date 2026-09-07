@@ -209,10 +209,38 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
             });
 
             var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
-            await repository.ResolveEffectsAsync(
+            var eventId = $"booth-result:{Guid.NewGuid():D}";
+            await repository.ClaimEffectsAsync(
+                raceId,
+                [effectId.ToString()],
+                eventId,
+                now.AddMinutes(1),
+                CancellationToken.None);
+
+            var claimedEffect = await rawEffectCollection
+                .Find(new BsonDocument("_id", effectId))
+                .SingleAsync();
+            var raceBeforeCompletion = await rawRaceCollection
+                .Find(new BsonDocument("_id", raceId.ToString()))
+                .SingleAsync();
+            Assert.Equal(CardEffectStatus.Active, claimedEffect["status"].AsString);
+            Assert.Equal(eventId, claimedEffect["claimedByEventId"].AsString);
+            Assert.Equal(
+                CardUseStatus.Active,
+                raceBeforeCompletion["teams"][0]["card"][0]["cardUse"][0]["status"].AsString);
+
+            await repository.CompleteClaimedEffectsAsync(
                 raceId,
                 CardEffectEventCodes.BoothResultFinalized,
-                $"booth-result:{Guid.NewGuid():D}",
+                eventId,
+                teamId,
+                now.AddMinutes(1),
+                [new CardEffectResolution(effectId.ToString(), "succeeded", new BsonDocument("awardedPoints", 20))],
+                CancellationToken.None);
+            await repository.CompleteClaimedEffectsAsync(
+                raceId,
+                CardEffectEventCodes.BoothResultFinalized,
+                eventId,
                 teamId,
                 now.AddMinutes(1),
                 [new CardEffectResolution(effectId.ToString(), "succeeded", new BsonDocument("awardedPoints", 20))],

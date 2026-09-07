@@ -242,6 +242,14 @@ public sealed class CardEffectDocument
     [BsonElement("triggerAt")]
     public DateTime? TriggerAt { get; set; }
 
+    [BsonElement("claimedAt")]
+    [BsonIgnoreIfNull]
+    public DateTime? ClaimedAt { get; set; }
+
+    [BsonElement("claimedByEventId")]
+    [BsonIgnoreIfNull]
+    public string? ClaimedByEventId { get; set; }
+
     [BsonElement("resolvedByEventCode")]
     public string? ResolvedByEventCode { get; set; }
 

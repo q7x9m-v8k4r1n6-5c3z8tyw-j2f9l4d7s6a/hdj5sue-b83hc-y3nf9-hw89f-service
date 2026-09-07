@@ -35,7 +35,7 @@ public sealed class BoothResultFinalizedCardHandlerTests
             });
 
         var exception = await Assert.ThrowsAsync<ApplicationConflictException>(() =>
-            handler.HandleAsync(context, CancellationToken.None));
+            handler.PrepareAsync(context, CancellationToken.None));
 
         Assert.Contains("Revive", exception.Message);
         Assert.Empty(repository.Resolutions);
@@ -76,7 +76,7 @@ public sealed class BoothResultFinalizedCardHandlerTests
             Result = BoothResultValues.Succeeded
         };
 
-        await handler.HandleAsync(
+        var execution = await handler.PrepareAsync(
             new PluginEventContext(
                 PluginEventNames.BoothResultFinalized,
                 raceId,
@@ -86,6 +86,8 @@ public sealed class BoothResultFinalizedCardHandlerTests
                 "booth-result:test",
                 payload),
             CancellationToken.None);
+        Assert.NotNull(execution);
+        await execution.CompleteAsync(CancellationToken.None);
 
         Assert.Equal(40, payload.FinalAwardedPoints);
         Assert.Collection(
@@ -146,7 +148,14 @@ public sealed class BoothResultFinalizedCardHandlerTests
             DateTime occurredAt,
             CancellationToken cancellationToken = default) => Task.FromResult(Effects);
 
-        public Task ResolveEffectsAsync(
+        public Task ClaimEffectsAsync(
+            Guid raceId,
+            IReadOnlyCollection<string> effectIds,
+            string eventId,
+            DateTime claimedAt,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task CompleteClaimedEffectsAsync(
             Guid raceId,
             string eventCode,
             string eventId,
@@ -158,6 +167,12 @@ public sealed class BoothResultFinalizedCardHandlerTests
             Resolutions = resolutions;
             return Task.CompletedTask;
         }
+
+        public Task ReleaseClaimedEffectsAsync(
+            Guid raceId,
+            string eventId,
+            DateTime releasedAt,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task EnsureIndexesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<RaceCardDocument> GetOrCreateAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

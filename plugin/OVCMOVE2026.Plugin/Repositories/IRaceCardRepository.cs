@@ -44,12 +44,23 @@ public interface IRaceCardRepository
         Guid teamId,
         DateTime occurredAt,
         CancellationToken cancellationToken = default);
-    Task ResolveEffectsAsync(
+    Task ClaimEffectsAsync(
+        Guid raceId,
+        IReadOnlyCollection<string> effectIds,
+        string eventId,
+        DateTime claimedAt,
+        CancellationToken cancellationToken = default);
+    Task CompleteClaimedEffectsAsync(
         Guid raceId,
         string eventCode,
         string eventId,
         Guid triggeredByTeamId,
         DateTime resolvedAt,
         IReadOnlyCollection<CardEffectResolution> resolutions,
+        CancellationToken cancellationToken = default);
+    Task ReleaseClaimedEffectsAsync(
+        Guid raceId,
+        string eventId,
+        DateTime releasedAt,
         CancellationToken cancellationToken = default);
 }

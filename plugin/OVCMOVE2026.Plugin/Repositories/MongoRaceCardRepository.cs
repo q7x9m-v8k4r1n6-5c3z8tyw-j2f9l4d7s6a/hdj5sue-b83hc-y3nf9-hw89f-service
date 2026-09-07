@@ -195,21 +195,17 @@ public sealed class MongoRaceCardRepository(
             Builders<CardEffectDocument>.Filter.Eq(item => item.TargetBoothId, boothId.ToString()),
             Builders<CardEffectDocument>.Filter.Eq(item => item.TriggerEventCode, resolvedByEventCode),
             Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null),
             Builders<CardEffectDocument>.Filter.Ne(item => item.OwnerTeamId, triggeringTeamId.ToString()),
             Builders<CardEffectDocument>.Filter.Or(
                 Builders<CardEffectDocument>.Filter.Eq(item => item.LimitEndAt, null),
                 Builders<CardEffectDocument>.Filter.Gt(item => item.LimitEndAt, triggeredAt)));
         var update = Builders<CardEffectDocument>.Update
-            .Set(item => item.Status, CardEffectStatus.Resolved)
-            .Set(item => item.Resolution, "triggered")
-            .Set(item => item.TriggerAt, triggeredAt)
-            .Set(item => item.ResolvedByEventCode, resolvedByEventCode)
-            .Set(item => item.ResolvedByEventId, resolvedByEventId)
+            .Set(item => item.ClaimedAt, triggeredAt)
+            .Set(item => item.ClaimedByEventId, resolvedByEventId)
             .Set(item => item.TriggeredByTeamId, triggeringTeamId.ToString())
-            .Set(item => item.ResolvedAt, triggeredAt)
             .Set(item => item.ModifiedAt, triggeredAt)
-            .Inc(item => item.Version, 1)
-            .Set(item => item.RemainingTriggers, 0);
+            .Inc(item => item.Version, 1);
 
         return await effectCollection.FindOneAndUpdateAsync(
             filter,
@@ -360,6 +356,7 @@ public sealed class MongoRaceCardRepository(
                 CardEffectEventCodes.BoothResultFinalized),
             Builders<CardEffectDocument>.Filter.Eq(item => item.TargetTeamId, teamId.ToString()),
             Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null),
             Builders<CardEffectDocument>.Filter.Or(
                 Builders<CardEffectDocument>.Filter.Eq(item => item.LimitEndAt, null),
                 Builders<CardEffectDocument>.Filter.Gt(item => item.LimitEndAt, occurredAt)));
@@ -370,7 +367,52 @@ public sealed class MongoRaceCardRepository(
             .ToListAsync(cancellationToken);
     }
 
-    public async Task ResolveEffectsAsync(
+    public async Task ClaimEffectsAsync(
+        Guid raceId,
+        IReadOnlyCollection<string> effectIds,
+        string eventId,
+        DateTime claimedAt,
+        CancellationToken cancellationToken = default)
+    {
+        if (effectIds.Count == 0) return;
+        if (effectIds.Count != effectIds.Distinct(StringComparer.Ordinal).Count())
+            throw new ArgumentException("Effect IDs must be distinct.", nameof(effectIds));
+
+        using var session = await collection.Database.Client.StartSessionAsync(
+            cancellationToken: cancellationToken);
+        session.StartTransaction();
+        try
+        {
+            foreach (var effectId in effectIds)
+            {
+                var filter = Builders<CardEffectDocument>.Filter.And(
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.Id, effectId),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null));
+                var update = Builders<CardEffectDocument>.Update
+                    .Set(item => item.ClaimedAt, claimedAt)
+                    .Set(item => item.ClaimedByEventId, eventId)
+                    .Set(item => item.ModifiedAt, claimedAt)
+                    .Inc(item => item.Version, 1);
+                var result = await effectCollection.UpdateOneAsync(
+                    session, filter, update, cancellationToken: cancellationToken);
+                if (result.MatchedCount != 1)
+                    throw new ApplicationConflictException(
+                        "Effect đã được claim bởi một sự kiện khác.");
+            }
+
+            await session.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            if (session.IsInTransaction)
+                await session.AbortTransactionAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    public async Task CompleteClaimedEffectsAsync(
         Guid raceId,
         string eventCode,
         string eventId,
@@ -380,6 +422,17 @@ public sealed class MongoRaceCardRepository(
         CancellationToken cancellationToken = default)
     {
         if (resolutions.Count == 0) return;
+
+        var resolutionIds = resolutions.Select(item => item.EffectId).ToArray();
+        var alreadyCompletedFilter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.In(item => item.Id, resolutionIds),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Resolved),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ResolvedByEventId, eventId));
+        var alreadyCompleted = await effectCollection.CountDocumentsAsync(
+            alreadyCompletedFilter,
+            cancellationToken: cancellationToken);
+        if (alreadyCompleted == resolutions.Count) return;
 
         using var session = await collection.Database.Client.StartSessionAsync(
             cancellationToken: cancellationToken);
@@ -413,7 +466,8 @@ public sealed class MongoRaceCardRepository(
                 var effectFilter = Builders<CardEffectDocument>.Filter.And(
                     Builders<CardEffectDocument>.Filter.Eq(item => item.Id, resolution.EffectId),
                     Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceKey),
-                    Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active));
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+                    Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, eventId));
                 var effectUpdate = Builders<CardEffectDocument>.Update
                     .Set(item => item.Status, CardEffectStatus.Resolved)
                     .Set(item => item.Resolution, resolution.Resolution)
@@ -423,6 +477,8 @@ public sealed class MongoRaceCardRepository(
                     .Set(item => item.TriggeredByTeamId, triggeredByTeamId.ToString())
                     .Set(item => item.ResolvedAt, resolvedAt)
                     .Set(item => item.ModifiedAt, resolvedAt)
+                    .Unset(item => item.ClaimedAt)
+                    .Unset(item => item.ClaimedByEventId)
                     .Set(item => item.RemainingTriggers, 0)
                     .Inc(item => item.Version, 1);
                 var effectResult = await effectCollection.UpdateOneAsync(
@@ -457,6 +513,26 @@ public sealed class MongoRaceCardRepository(
                 await session.AbortTransactionAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    public async Task ReleaseClaimedEffectsAsync(
+        Guid raceId,
+        string eventId,
+        DateTime releasedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, eventId));
+        var update = Builders<CardEffectDocument>.Update
+            .Unset(item => item.ClaimedAt)
+            .Unset(item => item.ClaimedByEventId)
+            .Unset(item => item.TriggeredByTeamId)
+            .Set(item => item.ModifiedAt, releasedAt)
+            .Inc(item => item.Version, 1);
+        await effectCollection.UpdateManyAsync(
+            filter, update, cancellationToken: cancellationToken);
     }
 
     private static FilterDefinition<RaceCardDocument> MatchRaceVersion(long expectedVersion) =>

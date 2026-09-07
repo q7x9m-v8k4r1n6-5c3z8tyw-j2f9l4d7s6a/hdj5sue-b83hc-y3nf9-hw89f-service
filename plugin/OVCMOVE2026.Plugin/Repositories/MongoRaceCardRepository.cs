@@ -111,11 +111,7 @@ public sealed class MongoRaceCardRepository(
         var expectedVersion = document.Version;
         document.ModifiedAt = DateTime.UtcNow;
         document.Version = expectedVersion + 1;
-        var versionFilter = expectedVersion == 0
-            ? Builders<RaceCardDocument>.Filter.Or(
-                Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
-                Builders<RaceCardDocument>.Filter.Exists("version", false))
-            : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion);
+        var versionFilter = MatchRaceVersion(expectedVersion);
         var filter = Builders<RaceCardDocument>.Filter.And(
             Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
             versionFilter);
@@ -147,11 +143,7 @@ public sealed class MongoRaceCardRepository(
         session.StartTransaction();
         try
         {
-            var versionFilter = expectedVersion == 0
-                ? Builders<RaceCardDocument>.Filter.Or(
-                    Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
-                    Builders<RaceCardDocument>.Filter.Exists("version", false))
-                : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion);
+            var versionFilter = MatchRaceVersion(expectedVersion);
             var filter = Builders<RaceCardDocument>.Filter.And(
                 Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
                 versionFilter);
@@ -282,11 +274,7 @@ public sealed class MongoRaceCardRepository(
             document.ModifiedAt = confirmedAt;
             document.Version++;
 
-            var raceVersionFilter = expectedDocumentVersion == 0
-                ? Builders<RaceCardDocument>.Filter.Or(
-                    Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
-                    Builders<RaceCardDocument>.Filter.Exists("version", false))
-                : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedDocumentVersion);
+            var raceVersionFilter = MatchRaceVersion(expectedDocumentVersion);
             var raceFilter = Builders<RaceCardDocument>.Filter.And(
                 Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
                 raceVersionFilter);
@@ -299,7 +287,7 @@ public sealed class MongoRaceCardRepository(
             var effectFilter = Builders<CardEffectDocument>.Filter.And(
                 Builders<CardEffectDocument>.Filter.Eq(item => item.Id, effect.Id),
                 Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
-                Builders<CardEffectDocument>.Filter.Eq(item => item.Version, effect.Version));
+                MatchEffectVersion(effect.Version));
             var effectUpdate = Builders<CardEffectDocument>.Update
                 .Set(item => item.Status, CardEffectStatus.Resolved)
                 .Set(item => item.Resolution, "operator_confirmed")
@@ -432,7 +420,7 @@ public sealed class MongoRaceCardRepository(
             document.Version++;
             var raceFilter = Builders<RaceCardDocument>.Filter.And(
                 Builders<RaceCardDocument>.Filter.Eq(item => item.Id, document.Id),
-                Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion));
+                MatchRaceVersion(expectedVersion));
             var raceResult = await collection.ReplaceOneAsync(
                 session,
                 raceFilter,
@@ -451,5 +439,19 @@ public sealed class MongoRaceCardRepository(
             throw;
         }
     }
+
+    private static FilterDefinition<RaceCardDocument> MatchRaceVersion(long expectedVersion) =>
+        expectedVersion == 0
+            ? Builders<RaceCardDocument>.Filter.Or(
+                Builders<RaceCardDocument>.Filter.Eq(item => item.Version, 0),
+                Builders<RaceCardDocument>.Filter.Exists("version", false))
+            : Builders<RaceCardDocument>.Filter.Eq(item => item.Version, expectedVersion);
+
+    private static FilterDefinition<CardEffectDocument> MatchEffectVersion(long expectedVersion) =>
+        expectedVersion == 0
+            ? Builders<CardEffectDocument>.Filter.Or(
+                Builders<CardEffectDocument>.Filter.Eq(item => item.Version, 0),
+                Builders<CardEffectDocument>.Filter.Exists("version", false))
+            : Builders<CardEffectDocument>.Filter.Eq(item => item.Version, expectedVersion);
 
 }

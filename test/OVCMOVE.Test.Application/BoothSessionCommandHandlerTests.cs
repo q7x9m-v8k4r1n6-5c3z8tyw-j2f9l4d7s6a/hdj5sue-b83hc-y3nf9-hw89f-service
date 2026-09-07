@@ -125,6 +125,30 @@ public sealed class BoothSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task SubmitScore_AboveBoothMaximum_IsRejectedAndRolledBack()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        booth.MaximumScore = 20;
+        var repository = new InMemoryBoothRepository(booth);
+        var unitOfWork = new UnitOfWorkSpy();
+        var handler = CreateSubmitHandler(
+            repository,
+            new BoothNotificationSpy(),
+            unitOfWork);
+
+        var exception = await Assert.ThrowsAsync<ApplicationValidationException>(() =>
+            handler.Handle(CreateSubmitCommand(booth, teamId, 21), CancellationToken.None));
+
+        Assert.Contains("20", exception.Message);
+        Assert.Equal(0, repository.SubmittedScoreCount);
+        Assert.Equal(0, unitOfWork.CommitCount);
+        Assert.Equal(1, unitOfWork.RollbackCount);
+        Assert.Equal(BoothConstants.BoothStatus.Occupied, booth.Status);
+        Assert.Equal(teamId, booth.TeamId);
+    }
+
+    [Fact]
     public async Task SubmitAndCancelConcurrently_OnlyOneTerminalActionSucceeds()
     {
         var teamId = Guid.NewGuid();

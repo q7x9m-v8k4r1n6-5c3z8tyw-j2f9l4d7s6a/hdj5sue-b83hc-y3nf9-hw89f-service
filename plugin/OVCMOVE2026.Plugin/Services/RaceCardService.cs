@@ -21,6 +21,7 @@ public sealed class RaceCardService(
     IBoothRepository boothRepository,
     IBoothOrganizerRepository boothOrganizerRepository,
     IRaceRepository raceRepository,
+    IUserRepository userRepository,
     ILogger<RaceCardService> logger) : IRaceCardService
 {
     public async Task<CardStoreOverviewResponse> GetAdminOverviewAsync(
@@ -136,14 +137,17 @@ public sealed class RaceCardService(
         Guid raceId,
         string cardId,
         Guid teamId,
-        string teamName,
         string reason,
         CancellationToken cancellationToken = default)
     {
-        if (teamId == Guid.Empty || string.IsNullOrWhiteSpace(teamName))
-            throw new ApplicationValidationException("TeamId và tên team là bắt buộc.");
+        if (teamId == Guid.Empty)
+            throw new ApplicationValidationException("TeamId là bắt buộc.");
         if (!await raceRepository.IsTeamInRaceAsync(raceId, teamId, cancellationToken))
             throw new ApplicationValidationException("Team được chọn không tham gia race này.");
+
+        var teamUser = await userRepository.GetByIdAsync(teamId, cancellationToken)
+            ?? throw new ApplicationValidationException("Không tìm thấy thông tin team đang hoạt động.");
+        var canonicalTeamName = GetCanonicalTeamName(teamUser);
 
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
@@ -158,13 +162,13 @@ public sealed class RaceCardService(
             team = new RaceCardTeamState
             {
                 TeamId = teamId.ToString(),
-                TeamName = teamName.Trim()
+                TeamName = canonicalTeamName
             };
             document.Teams.Add(team);
         }
         else
         {
-            team.TeamName = teamName.Trim();
+            team.TeamName = canonicalTeamName;
         }
 
         if (definition.CardType == CardTypes.CoreChip && team.Cards.Any(item =>
@@ -519,6 +523,12 @@ public sealed class RaceCardService(
 
     private static bool SameCardInstance(TeamCardState card, Guid cardInstanceId) =>
         Guid.TryParse(card.CardInfo.CardInstanceId, out var currentId) && currentId == cardInstanceId;
+
+    private static string GetCanonicalTeamName(OVCMOVE.Domain.Entities.User team) =>
+        new[] { team.DisplayName, team.Username, team.LinkedEmail }
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?.Trim()
+        ?? throw new ApplicationValidationException("Team chưa có tên hiển thị hợp lệ.");
 
     private static int GetUseCount(
         CardInventoryState inventory,

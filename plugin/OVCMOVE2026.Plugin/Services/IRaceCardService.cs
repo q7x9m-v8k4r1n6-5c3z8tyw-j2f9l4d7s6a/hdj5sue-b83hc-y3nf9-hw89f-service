@@ -12,7 +12,7 @@ public interface IRaceCardService
     Task<TeamCardResponse> GetTeamCardAsync(Guid raceId, Guid teamId, Guid cardInstanceId, CancellationToken cancellationToken = default);
     Task RestockAsync(Guid raceId, IReadOnlyDictionary<string, int> quantities, CancellationToken cancellationToken = default);
     Task UpdateConfigAsync(Guid raceId, string cardId, IReadOnlyDictionary<string, JsonElement> config, CancellationToken cancellationToken = default);
-    Task<CardTeamResponse> AssignAsync(Guid raceId, string cardId, Guid teamId, string teamName, string reason, CancellationToken cancellationToken = default);
+    Task<CardTeamResponse> AssignAsync(Guid raceId, string cardId, Guid teamId, string reason, CancellationToken cancellationToken = default);
     Task DeleteAssignmentAsync(Guid raceId, Guid cardInstanceId, Guid teamId, string reason, CancellationToken cancellationToken = default);
     Task<CardUseResponse> UseAsync(Guid raceId, Guid teamId, Guid cardInstanceId, Guid cardUseId, BsonDocument inputs, CancellationToken cancellationToken = default);
     Task ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, bool isAdmin, CancellationToken cancellationToken = default);

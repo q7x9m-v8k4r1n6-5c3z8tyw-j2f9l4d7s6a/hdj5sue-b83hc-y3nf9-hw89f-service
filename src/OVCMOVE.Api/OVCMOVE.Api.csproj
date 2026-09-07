@@ -11,6 +11,13 @@
     <ProjectReference Include="..\OVCMOVE.Infrastructure\OVCMOVE.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj')">
+    <ProjectReference
+      Include="..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj"
+      ReferenceOutputAssembly="false"
+      Private="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
@@ -33,10 +40,6 @@
   -->
   <Target Name="CopyOptionalMove2026Plugin" AfterTargets="Build"
           Condition="Exists('$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj')">
-    <MSBuild
-      Projects="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\OVCMOVE2026.Plugin.csproj"
-      Targets="Build"
-      Properties="Configuration=$(Configuration)" />
     <ItemGroup>
       <OptionalMovePluginFiles Include="$(MSBuildThisFileDirectory)..\..\plugin\OVCMOVE2026.Plugin\bin\$(Configuration)\net10.0\*.dll" />
     </ItemGroup>

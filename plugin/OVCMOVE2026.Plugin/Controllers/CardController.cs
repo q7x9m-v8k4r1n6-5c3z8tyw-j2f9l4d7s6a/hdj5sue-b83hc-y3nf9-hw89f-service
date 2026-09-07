@@ -58,7 +58,7 @@ public sealed class CardController(IRaceCardService cardService) : ControllerBas
         [FromBody] AssignCardRequest request,
         CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.AssignAsync(
-            raceId, cardId, request.TeamId, request.TeamName, request.Reason ?? string.Empty, cancellationToken)));
+            raceId, cardId, request.TeamId, request.Reason ?? string.Empty, cancellationToken)));
 
     [HttpDelete("races/{raceId:guid}/teams/{teamId:guid}/cards/{cardInstanceId:guid}")]
     [Authorize(Roles = "admin,organizer")]
@@ -150,9 +150,6 @@ public sealed class AssignCardRequest
 {
     [Required]
     public Guid TeamId { get; init; }
-
-    [Required, MaxLength(255)]
-    public string TeamName { get; init; } = string.Empty;
 
     [MaxLength(500)]
     public string? Reason { get; init; }

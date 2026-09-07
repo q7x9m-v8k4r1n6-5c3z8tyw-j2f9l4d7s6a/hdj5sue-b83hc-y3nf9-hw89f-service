@@ -1,0 +1,121 @@
+using MongoDB.Bson;
+using MongoDB.Driver;
+using OVCMOVE2026.Plugin.Models;
+using OVCMOVE2026.Plugin.Repositories;
+
+namespace OVCMOVE.Test.Application;
+
+public sealed class MongoRaceCardRepositoryIntegrationTests
+{
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ResolveEffects_UpgradesLegacyRaceDocumentWithoutVersion()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("OVCMOVE_TEST_MONGODB");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var client = new MongoClient(connectionString);
+        var databaseName = $"ovcmove_test_{Guid.NewGuid():N}";
+        var database = client.GetDatabase(databaseName);
+        var raceCollection = database.GetCollection<RaceCardDocument>("race_cards");
+        var effectCollection = database.GetCollection<CardEffectDocument>("effect");
+        var rawRaceCollection = database.GetCollection<BsonDocument>("race_cards");
+        var rawEffectCollection = database.GetCollection<BsonDocument>("effect");
+
+        var raceId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var cardInstanceId = Guid.NewGuid().ToString();
+        var cardUseId = Guid.NewGuid().ToString();
+        var effectId = ObjectId.GenerateNewId();
+        var now = DateTime.UtcNow;
+
+        try
+        {
+            await rawRaceCollection.InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = raceId.ToString(),
+                ["raceid"] = raceId.ToString(),
+                ["inventory"] = new BsonArray(),
+                ["teams"] = new BsonArray
+                {
+                    new BsonDocument
+                    {
+                        ["teamId"] = teamId.ToString(),
+                        ["teamName"] = "Legacy Team",
+                        ["card"] = new BsonArray
+                        {
+                            new BsonDocument
+                            {
+                                ["cardInfo"] = new BsonDocument
+                                {
+                                    ["cardInstanceId"] = cardInstanceId,
+                                    ["cardId"] = CardIds.Cupid,
+                                    ["card_use_count_remain"] = 2
+                                },
+                                ["cardUse"] = new BsonArray
+                                {
+                                    new BsonDocument
+                                    {
+                                        ["id"] = cardUseId,
+                                        ["effectId"] = effectId.ToString(),
+                                        ["status"] = CardUseStatus.Active,
+                                        ["inputs"] = new BsonDocument(),
+                                        ["useAt"] = now,
+                                        ["card_use_count_before"] = 3,
+                                        ["card_use_count_after"] = 2
+                                    }
+                                },
+                                ["receivedAt"] = now,
+                                ["receiveReason"] = "legacy_seed",
+                                ["status"] = CardStatus.Received
+                            }
+                        }
+                    }
+                },
+                ["modifiedAt"] = now
+            });
+            await rawEffectCollection.InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = effectId,
+                ["raceId"] = raceId.ToString(),
+                ["cardId"] = CardIds.Cupid,
+                ["cardInstanceId"] = cardInstanceId,
+                ["cardUseId"] = cardUseId,
+                ["ownerTeamId"] = Guid.NewGuid().ToString(),
+                ["targetTeamId"] = teamId.ToString(),
+                ["triggerEventCode"] = CardEffectEventCodes.BoothResultFinalized,
+                ["status"] = CardEffectStatus.Active,
+                ["remainingTriggers"] = 1,
+                ["startAt"] = now,
+                ["data"] = new BsonDocument(),
+                ["createdAt"] = now,
+                ["createdBy"] = "legacy_seed",
+                ["modifiedAt"] = now,
+                ["modifiedBy"] = "legacy_seed"
+            });
+
+            var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
+            await repository.ResolveEffectsAsync(
+                raceId,
+                CardEffectEventCodes.BoothResultFinalized,
+                $"booth-result:{Guid.NewGuid():D}",
+                teamId,
+                now.AddMinutes(1),
+                [new CardEffectResolution(effectId.ToString(), "succeeded", new BsonDocument("awardedPoints", 20))],
+                CancellationToken.None);
+
+            var storedRace = await rawRaceCollection.Find(new BsonDocument("_id", raceId.ToString())).SingleAsync();
+            var storedEffect = await rawEffectCollection.Find(new BsonDocument("_id", effectId)).SingleAsync();
+            var storedUse = storedRace["teams"][0]["card"][0]["cardUse"][0].AsBsonDocument;
+
+            Assert.Equal(1, storedRace["version"].ToInt64());
+            Assert.Equal(CardUseStatus.Resolved, storedUse["status"].AsString);
+            Assert.Equal(1, storedEffect["version"].ToInt64());
+            Assert.Equal(CardEffectStatus.Resolved, storedEffect["status"].AsString);
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(databaseName);
+        }
+    }
+}

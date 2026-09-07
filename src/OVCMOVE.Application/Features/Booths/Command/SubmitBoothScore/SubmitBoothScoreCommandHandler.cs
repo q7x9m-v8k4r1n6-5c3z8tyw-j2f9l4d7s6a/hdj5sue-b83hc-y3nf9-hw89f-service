@@ -37,6 +37,12 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
 
     public async Task<bool> Handle(SubmitBoothScoreCommand request, CancellationToken cancellationToken)
     {
+        if (request.Score is < 0 or > 100)
+        {
+            throw new ApplicationValidationException(
+                "Điểm booth phải nằm trong khoảng 0 đến 100.");
+        }
+
         var completionId = Guid.NewGuid();
         var model = new SubmitBoothScoreModel
         {
@@ -58,6 +64,12 @@ public class SubmitBoothScoreCommandHandler : IRequestHandler<SubmitBoothScoreCo
             if (booth is null)
             {
                 throw new ApplicationNotFoundException("Trạm thi đấu không tồn tại.");
+            }
+
+            if (booth.MaximumScore.HasValue && request.Score > booth.MaximumScore.Value)
+            {
+                throw new ApplicationValidationException(
+                    $"Điểm booth không được vượt quá điểm tối đa {booth.MaximumScore.Value}.");
             }
 
             var isAssigned = await _boothOrganizerRepository.IsAssignedAsync(

@@ -252,7 +252,8 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
 
             Assert.Equal(1, storedRace["version"].ToInt64());
             Assert.Equal(CardUseStatus.Resolved, storedUse["status"].AsString);
-            Assert.Equal(1, storedEffect["version"].ToInt64());
+            // Claim and completion are two separate writes guarded by the effect version.
+            Assert.Equal(2, storedEffect["version"].ToInt64());
             Assert.Equal(CardEffectStatus.Resolved, storedEffect["status"].AsString);
         }
         finally

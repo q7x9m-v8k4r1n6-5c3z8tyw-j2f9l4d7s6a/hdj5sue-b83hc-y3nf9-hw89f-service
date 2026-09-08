@@ -35,6 +35,7 @@ public sealed class CardShopServiceTests
         Assert.Equal(25, result.ScoreAfter);
         Assert.Equal(CardStatus.Received, result.Status);
         Assert.Equal(1, Assert.Single(fixture.CardRepository.Document.Inventory).RemainingStock);
+        Assert.Equal(2, Assert.Single(fixture.CardRepository.Document.Inventory).MaxStock);
         var card = Assert.Single(Assert.Single(fixture.CardRepository.Document.Teams).Cards);
         Assert.Equal(purchaseId.ToString(), card.PurchaseId);
         Assert.Equal(15, card.PurchasePrice);
@@ -222,6 +223,7 @@ public sealed class CardShopServiceTests
                     CardId = definition.CardId,
                     Price = 15,
                     RemainingStock = stock,
+                    MaxStock = stock,
                     CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
                 }
             ]

@@ -475,6 +475,7 @@ public sealed class RaceCardService(
             definition.Description,
             inventory.Price,
             inventory.RemainingStock,
+            inventory.MaxStock,
             definition.Usage,
             definition.Inputs,
             config);
@@ -640,7 +641,11 @@ public sealed class RaceCardService(
     {
         ValidateQuantities(quantities);
         foreach (var (cardId, quantity) in quantities)
-            FindInventory(document, CardCatalog.Get(cardId).CardId).RemainingStock += quantity;
+        {
+            var inventory = FindInventory(document, CardCatalog.Get(cardId).CardId);
+            inventory.RemainingStock += quantity;
+            inventory.MaxStock += quantity;
+        }
     }
 
     private static void ValidateQuantities(IReadOnlyDictionary<string, int> quantities)

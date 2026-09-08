@@ -67,6 +67,7 @@ public sealed class MongoRaceCardRepository(
                     .Select(card => new CardInventoryState
                     {
                         CardId = card.CardId,
+                        MaxStock = 0,
                         Price = ToPrice(card),
                         CardConfig = card.DefaultConfig.DeepClone().AsBsonDocument
                     })
@@ -98,6 +99,7 @@ public sealed class MongoRaceCardRepository(
                 {
                     CardId = definition.CardId,
                     RemainingStock = 0,
+                    MaxStock = 0,
                     Price = ToPrice(definition),
                     CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
                 }));
@@ -105,11 +107,24 @@ public sealed class MongoRaceCardRepository(
 
         foreach (var inventory in document.Inventory)
         {
-            if (inventory.Price >= 0) continue;
             var definition = CardCatalog.TryGet(inventory.CardId);
             if (definition is null) continue;
-            inventory.Price = ToPrice(definition);
-            changed = true;
+            if (inventory.Price < 0)
+            {
+                inventory.Price = ToPrice(definition);
+                changed = true;
+            }
+
+            var knownStock = inventory.RemainingStock + document.Teams
+                .SelectMany(team => team.Cards)
+                .Count(card =>
+                    card.Status != CardStatus.Deleted &&
+                    card.CardInfo.CardId.Equals(inventory.CardId, StringComparison.OrdinalIgnoreCase));
+            if (inventory.MaxStock < knownStock)
+            {
+                inventory.MaxStock = knownStock;
+                changed = true;
+            }
         }
 
         if (changed)

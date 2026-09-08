@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using System.Reflection; 
 using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Options;
@@ -21,6 +21,7 @@ public static class DependencyInjection
     {
         services.AddScoped<ISecretMissionRepository, SecretMissionRepository>();
         services.AddScoped<IQrCodeGeneratorService, QrCodeGeneratorService>();
+
         services.AddOptions<MongoDbOptions>()
             .Bind(configuration.GetSection(MongoDbOptions.SectionName))
             .Validate(options => !string.IsNullOrWhiteSpace(options.ConnectionString),
@@ -46,10 +47,26 @@ public static class DependencyInjection
             var options = provider.GetRequiredService<IOptions<MongoDbOptions>>().Value;
             return provider.GetRequiredService<IMongoDatabase>().GetCollection<CardEffectDocument>(options.EffectCollectionName);
         });
+
         services.AddScoped<IRaceCardRepository, MongoRaceCardRepository>();
         services.AddScoped<IRaceCardService, RaceCardService>();
+        services.AddScoped<IOverclockService, OverclockService>();
+        services.AddScoped<ICardEventReconciliationService, CardEventReconciliationService>();
+        services.AddScoped<CardUseHandlerResolver>();
+
+        services.AddScoped<ICardUseHandler, OverclockCardUseHandler>();
+        services.AddScoped<ICardUseHandler, CupidCardUseHandler>();
+        services.AddScoped<ICardUseHandler, EngineerCardUseHandler>();
+        services.AddScoped<ICardUseHandler, AthleteCardUseHandler>();
+        services.AddScoped<ICardUseHandler, ReviveCardUseHandler>();
+        services.AddScoped<ICardUseHandler, SwapCardUseHandler>();
+        services.AddScoped<ICardUseHandler, TrapCardUseHandler>();
+
         services.AddScoped<IPluginEventHandler, TrapBoothEntryRequestedHandler>();
+        services.AddScoped<IPluginEventHandler, BoothResultFinalizedCardHandler>();
         services.AddScoped<IPluginHub, Move2026PluginHub>();
+
+        services.AddHostedService<CardMongoIndexInitializer>();
         services.AddHostedService<ScheduledRestockWorker>();
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));

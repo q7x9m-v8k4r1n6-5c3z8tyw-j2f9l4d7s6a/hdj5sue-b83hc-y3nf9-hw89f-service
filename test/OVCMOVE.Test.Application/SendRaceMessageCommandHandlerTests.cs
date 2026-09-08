@@ -168,6 +168,34 @@ public sealed class SendRaceMessageCommandHandlerTests
         Assert.Equal(0, notification.ScoreNotificationCount);
     }
 
+    [Fact]
+    public async Task Update_score_reuses_existing_result_for_same_event_and_team()
+    {
+        var repository = new RaceRepositoryDouble { CurrentScore = 20 };
+        var notification = new BoothNotificationServiceDouble();
+        var handler = new UpdateTeamScoreCommandHandler(
+            repository,
+            notification,
+            new UnitOfWorkSpy());
+        var command = new UpdateTeamScoreCommand
+        {
+            RaceId = Guid.NewGuid(),
+            TeamId = Guid.NewGuid(),
+            EventId = $"card-event:{Guid.NewGuid():N}",
+            Delta = 15,
+            Reason = "Idempotent card adjustment",
+            PublishRealtimeNotification = false
+        };
+
+        var first = await handler.Handle(command, CancellationToken.None);
+        var duplicate = await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(first);
+        Assert.Equal(first, duplicate);
+        Assert.Equal(35, repository.CurrentScore);
+        Assert.Equal(1, repository.ScoringLogCreateCount);
+    }
+
     private sealed class BoothNotificationServiceDouble : IBoothNotificationService
     {
         public Guid RaceId { get; private set; }
@@ -203,6 +231,7 @@ public sealed class SendRaceMessageCommandHandlerTests
         public RaceDetailResultModel? RaceDetail { get; set; }
         public int? CurrentScore { get; set; }
         public ScoringLog? CreatedScoringLog { get; private set; }
+        public int ScoringLogCreateCount { get; private set; }
 
         public Task CreateRaceMessageAsync(RaceMessage message, CancellationToken cancellationToken = default)
         {
@@ -248,8 +277,20 @@ public sealed class SendRaceMessageCommandHandlerTests
         public Task CreateScoringLogAsync(ScoringLog log, CancellationToken cancellationToken = default)
         {
             CreatedScoringLog = log;
+            ScoringLogCreateCount++;
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+            Guid raceId,
+            string eventId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<ScoringLog>>(
+                CreatedScoringLog is not null &&
+                CreatedScoringLog.RaceId == raceId &&
+                CreatedScoringLog.EventId == eventId
+                    ? [CreatedScoringLog]
+                    : []);
 
         public Task<IReadOnlyCollection<RaceMessageResultModel>> GetRaceMessagesAsync(Guid raceId, int limit, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
@@ -261,6 +302,9 @@ public sealed class SendRaceMessageCommandHandlerTests
             throw new NotSupportedException();
 
         public Task<BoothProgressResultModel> GetBoothProgressAsync(Guid raceId, Guid teamId, Guid boothId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(Guid raceId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         private bool SetCurrentScore(int totalScore)

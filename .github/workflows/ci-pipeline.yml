@@ -43,6 +43,7 @@ jobs:
           - 1433:1433
     env:
       OVCMOVE_TEST_SQLSERVER_MASTER: "Server=localhost,1433;Database=master;User Id=sa;Password=OVCMove_test_2026!;Encrypt=false;TrustServerCertificate=true;Connection Timeout=30"
+      OVCMOVE_TEST_MONGODB: "mongodb://localhost:27017/?replicaSet=rs0&directConnection=true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,11 +53,30 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Start MongoDB replica set
+        run: |
+          docker run --detach --name ovcmove-mongo-test --publish 27017:27017 mongo:7.0 --replSet rs0 --bind_ip_all
+          for attempt in {1..30}; do
+            if docker exec ovcmove-mongo-test mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec ovcmove-mongo-test mongosh --quiet --eval 'rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "localhost:27017" }] })'
+          for attempt in {1..30}; do
+            if docker exec ovcmove-mongo-test mongosh --quiet --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ovcmove-mongo-test
+          exit 1
+
       - name: Restore dependencies
         run: dotnet restore OVCMOVE.slnx
 
       - name: Build
         run: dotnet build OVCMOVE.slnx --no-restore -c Release
 
-      - name: SQL integration test
+      - name: SQL and MongoDB integration tests
         run: dotnet test OVCMOVE.slnx --no-build -c Release --filter "Category=Integration" --verbosity normal

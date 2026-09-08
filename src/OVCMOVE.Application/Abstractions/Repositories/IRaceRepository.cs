@@ -53,6 +53,10 @@ public interface IRaceRepository
     Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default);
     Task CreateRaceMessageAsync(
         RaceMessage message,
         CancellationToken cancellationToken = default);
@@ -69,5 +73,8 @@ public interface IRaceRepository
         Guid raceId,
         Guid teamId,
         Guid boothId,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
         CancellationToken cancellationToken = default);
 }

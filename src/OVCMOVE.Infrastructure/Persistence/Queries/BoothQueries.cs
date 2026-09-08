@@ -16,6 +16,8 @@ public static class BoothQueries
                 RaceID,
                 TeamId,
                 IsHidden,
+                [Type],
+                [MaximumScore],
                 Status,
                 CreatedBy,
                 CreatedAt,
@@ -36,6 +38,8 @@ public static class BoothQueries
             [RaceID],
             [TeamId],
             [IsHidden],
+            [Type],
+            [MaximumScore],
             [Status],
             [CreatedBy],
             [CreatedAt],
@@ -140,14 +144,14 @@ public static class BoothQueries
         return @"
             INSERT INTO [dbo].[ScoringLog]
             (
-                [Id], [EventCode], [EventName], [RaceId], [TeamId], 
+                [Id], [EventId], [EventCode], [EventName], [RaceId], [TeamId],
                 [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter], 
                 [ReasonCode], [Reason], [CreatedBy], [CreatedAt], 
                 [ModifiedBy], [ModifiedAt], [IsDeleted]
             )
             VALUES
             (
-                @Id, @EventCode, @EventName, @RaceId, @TeamId, 
+                @Id, @EventId, @EventCode, @EventName, @RaceId, @TeamId,
                 @ActorId, @BoothId, @Delta, @ScoreBefore, @ScoreAfter, 
                 @ReasonCode, @Reason, @CreatedBy, GETUTCDATE(), 
                 @ModifiedBy, GETUTCDATE(), 0

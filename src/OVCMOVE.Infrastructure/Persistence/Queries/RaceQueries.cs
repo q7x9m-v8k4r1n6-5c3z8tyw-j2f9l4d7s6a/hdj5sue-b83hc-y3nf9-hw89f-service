@@ -384,6 +384,20 @@ public static class RaceQueries
           AND [TeamID] = @TeamId
           AND [IsDeleted] = 0;";
 
+    public static string TryDebitRaceTeamScoreQuery() => @"
+        UPDATE [dbo].[RaceTeam] WITH (UPDLOCK, ROWLOCK)
+        SET
+            [TotalScore] = [TotalScore] - @Amount,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        OUTPUT
+            DELETED.[TotalScore] AS [ScoreBefore],
+            INSERTED.[TotalScore] AS [ScoreAfter]
+        WHERE [RaceID] = @RaceId
+          AND [TeamID] = @TeamId
+          AND [IsDeleted] = 0
+          AND [TotalScore] >= @Amount;";
+
     public static string CreateScoringLogQuery() => @"
         INSERT INTO [dbo].[ScoringLog]
         (

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
+using OVCMOVE.Application.Common;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Repositories;
@@ -57,6 +58,86 @@ public sealed class RaceCardServiceTests
         Assert.Equal("Tên đội từ SQL", Assert.Single(repository.Document.Teams).TeamName);
         Assert.Equal(0, Assert.Single(repository.Document.Inventory).RemainingStock);
     }
+
+    [Fact]
+    public async Task DeleteAssignment_RejectsPurchasedCardAndDoesNotReturnStock()
+    {
+        var raceId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var cardInstanceId = Guid.NewGuid();
+        var definition = CardCatalog.Get(CardIds.Engineer);
+        var repository = new InMemoryRaceCardRepository(new RaceCardDocument
+        {
+            Id = raceId.ToString(),
+            RaceId = raceId.ToString(),
+            Inventory =
+            [
+                new CardInventoryState
+                {
+                    CardId = definition.CardId,
+                    RemainingStock = 1,
+                    CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
+                }
+            ],
+            Teams =
+            [
+                new RaceCardTeamState
+                {
+                    TeamId = teamId.ToString(),
+                    TeamName = "Team A",
+                    Cards =
+                    [
+                        new TeamCardState
+                        {
+                            CardInfo = new TeamCardInfo
+                            {
+                                CardInstanceId = cardInstanceId.ToString(),
+                                CardId = definition.CardId,
+                                CardUseCountRemain = 1
+                            },
+                            ReceiveReason = "shop_purchase",
+                            PurchaseId = Guid.NewGuid().ToString(),
+                            PurchasePrice = 15,
+                            Status = CardStatus.Received,
+                            ReceivedAt = DateTime.UtcNow
+                        }
+                    ]
+                }
+            ]
+        });
+        var service = CreateService(repository, teamId);
+
+        var exception = await Assert.ThrowsAsync<ApplicationConflictException>(() =>
+            service.DeleteAssignmentAsync(
+                raceId,
+                cardInstanceId,
+                teamId,
+                "admin cleanup",
+                CancellationToken.None));
+
+        Assert.Contains("hoàn tiền", exception.Message);
+        Assert.Equal(CardStatus.Received,
+            Assert.Single(Assert.Single(repository.Document.Teams).Cards).Status);
+        Assert.Equal(1, Assert.Single(repository.Document.Inventory).RemainingStock);
+    }
+
+    private static RaceCardService CreateService(
+        IRaceCardRepository repository,
+        Guid teamId) =>
+        new(
+            repository,
+            new CardUseHandlerResolver([]),
+            null!,
+            new InMemoryBoothRepository(new Booth()),
+            new AssignedBoothOrganizerRepository(),
+            new ValidBoothRaceRepository(),
+            new StubTeamUserRepository(new User
+            {
+                Id = teamId,
+                DisplayName = "Team A",
+                Username = "team-a"
+            }),
+            NullLogger<RaceCardService>.Instance);
 
     private sealed class InMemoryRaceCardRepository(RaceCardDocument document)
         : IRaceCardRepository

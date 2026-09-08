@@ -2,11 +2,50 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Repositories;
+using OVCMOVE2026.Plugin.Services;
 
 namespace OVCMOVE.Test.Application;
 
 public sealed class MongoRaceCardRepositoryIntegrationTests
 {
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task GetOrCreate_SeedsCanonicalShopCatalogAndPrices()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("OVCMOVE_TEST_MONGODB");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var client = new MongoClient(connectionString);
+        var databaseName = $"ovc_test_{Guid.NewGuid():N}"[..33];
+        var database = client.GetDatabase(databaseName);
+        var raceCollection = database.GetCollection<RaceCardDocument>("race_cards");
+        var effectCollection = database.GetCollection<CardEffectDocument>("effect");
+        var raceId = Guid.NewGuid();
+
+        try
+        {
+            var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
+            await repository.EnsureIndexesAsync();
+
+            var document = await repository.GetOrCreateAsync(raceId);
+            var secondRead = await repository.GetOrCreateAsync(raceId);
+
+            Assert.False(document.StoreOpen);
+            Assert.Equal(3, document.MaxDataPatchPerTeam);
+            Assert.Equal(CardCatalog.All.Count, document.Inventory.Count);
+            Assert.All(document.Inventory, item => Assert.True(item.Price >= 0));
+            Assert.Equal(
+                15,
+                document.Inventory.Single(item => item.CardId == CardIds.Engineer).Price);
+            Assert.Equal(document.Version, secondRead.Version);
+            Assert.Equal(1, await raceCollection.CountDocumentsAsync(_ => true));
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(databaseName);
+        }
+    }
+
     [Fact]
     [Trait("Category", "Integration")]
     public async Task RejectRevive_ConsumesCardAndResolvesPendingUseOnce()

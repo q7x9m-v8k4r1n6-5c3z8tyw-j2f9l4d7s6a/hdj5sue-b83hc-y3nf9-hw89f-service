@@ -5,6 +5,7 @@ namespace OVCMOVE2026.Plugin.Models;
 
 public static class CardStatus
 {
+    public const string PendingPurchase = "pending_purchase";
     public const string Received = "received";
     public const string Used = "used";
     public const string Deleted = "deleted";
@@ -67,6 +68,12 @@ public sealed class RaceCardDocument
     [BsonElement("teams")]
     public List<RaceCardTeamState> Teams { get; set; } = [];
 
+    [BsonElement("storeOpen")]
+    public bool StoreOpen { get; set; }
+
+    [BsonElement("maxDataPatchPerTeam")]
+    public int MaxDataPatchPerTeam { get; set; } = 3;
+
     [BsonElement("overclockWindow")]
     public OverclockWindowState OverclockWindow { get; set; } = new();
 
@@ -112,6 +119,10 @@ public sealed class CardInventoryState
     [BsonElement("remainingStock")]
     public int RemainingStock { get; set; }
 
+    // -1 distinguishes a legacy document with no price from an intentional free card.
+    [BsonElement("price")]
+    public int Price { get; set; } = -1;
+
     [BsonElement("cardConfig")]
     public BsonDocument CardConfig { get; set; } = new();
 
@@ -147,6 +158,12 @@ public sealed class TeamCardState
 
     [BsonElement("receiveReason")]
     public string ReceiveReason { get; set; } = string.Empty;
+
+    [BsonElement("purchaseId"), BsonIgnoreIfNull]
+    public string? PurchaseId { get; set; }
+
+    [BsonElement("purchasePrice"), BsonIgnoreIfNull]
+    public int? PurchasePrice { get; set; }
 
     [BsonElement("status")]
     public string Status { get; set; } = CardStatus.Received;
@@ -349,6 +366,38 @@ public sealed record CardInventoryResponse(
     IReadOnlyDictionary<string, object?> Config);
 
 public sealed record CardStoreOverviewResponse(IReadOnlyCollection<CardInventoryResponse> Cards);
+
+public sealed record CardShopStateResponse(
+    bool StoreOpen,
+    int MaxDataPatchPerTeam);
+
+public sealed record CardShopItemResponse(
+    string CardId,
+    string CardName,
+    string Description,
+    int Price,
+    int RemainingStock,
+    string Usage,
+    IReadOnlyCollection<CardInputDefinition> Inputs);
+
+public sealed record TeamCardShopResponse(
+    bool StoreOpen,
+    int MaxDataPatchPerTeam,
+    int PurchasedCount,
+    int RemainingSlots,
+    IReadOnlyCollection<CardShopItemResponse> Cards);
+
+public sealed record CardPurchaseResponse(
+    string PurchaseId,
+    string EventId,
+    string CardInstanceId,
+    string CardId,
+    int Price,
+    int ScoreBefore,
+    int ScoreAfter,
+    int RemainingStock,
+    string Status,
+    string Message);
 
 public sealed record OverclockWindowResponse(
     string Status,

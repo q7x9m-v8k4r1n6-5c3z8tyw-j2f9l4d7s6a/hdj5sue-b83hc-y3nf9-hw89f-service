@@ -67,6 +67,7 @@ public sealed class MongoRaceCardRepository(
                     .Select(card => new CardInventoryState
                     {
                         CardId = card.CardId,
+                        Price = ToPrice(card),
                         CardConfig = card.DefaultConfig.DeepClone().AsBsonDocument
                     })
                     .ToList()
@@ -89,6 +90,7 @@ public sealed class MongoRaceCardRepository(
             .Where(definition => document.Inventory.All(item =>
                 !item.CardId.Equals(definition.CardId, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
+        var changed = missingDefinitions.Length > 0;
         if (missingDefinitions.Length > 0)
         {
             document.Inventory.AddRange(missingDefinitions.Select(definition =>
@@ -96,10 +98,22 @@ public sealed class MongoRaceCardRepository(
                 {
                     CardId = definition.CardId,
                     RemainingStock = 0,
+                    Price = ToPrice(definition),
                     CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
                 }));
-            await ReplaceAsync(document, cancellationToken);
         }
+
+        foreach (var inventory in document.Inventory)
+        {
+            if (inventory.Price >= 0) continue;
+            var definition = CardCatalog.TryGet(inventory.CardId);
+            if (definition is null) continue;
+            inventory.Price = ToPrice(definition);
+            changed = true;
+        }
+
+        if (changed)
+            await ReplaceAsync(document, cancellationToken);
 
         return document;
     }
@@ -581,5 +595,8 @@ public sealed class MongoRaceCardRepository(
                 Builders<CardEffectDocument>.Filter.Eq(item => item.Version, 0),
                 Builders<CardEffectDocument>.Filter.Exists("version", false))
             : Builders<CardEffectDocument>.Filter.Eq(item => item.Version, expectedVersion);
+
+    private static int ToPrice(CardDefinition definition) =>
+        decimal.ToInt32(definition.Price);
 
 }

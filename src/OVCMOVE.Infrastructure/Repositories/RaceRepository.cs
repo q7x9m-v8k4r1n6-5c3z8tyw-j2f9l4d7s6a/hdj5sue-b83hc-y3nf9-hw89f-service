@@ -312,6 +312,28 @@ public class RaceRepository : IRaceRepository
         return affectedRows >= 1;
     }
 
+    public Task<RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int amount,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _db.QueryFirstOrDefaultAsync<RaceTeamScoreMutation>(
+            RaceQueries.TryDebitRaceTeamScoreQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                Amount = amount,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken);
+    }
+
     public async Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default)

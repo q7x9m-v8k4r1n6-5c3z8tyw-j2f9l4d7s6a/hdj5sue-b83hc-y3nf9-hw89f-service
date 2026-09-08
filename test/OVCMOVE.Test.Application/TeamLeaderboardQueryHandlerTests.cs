@@ -283,6 +283,15 @@ public class TeamLeaderboardQueryHandlerTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<OVCMOVE.Application.Features.Races.Common.RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(
+            Guid raceId,
+            Guid teamId,
+            int amount,
+            string modifiedBy,
+            DateTime modifiedAt,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
             Guid raceId,
             string eventId,

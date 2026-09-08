@@ -50,6 +50,13 @@ public interface IRaceRepository
         string modifiedBy,
         DateTime modifiedAt,
         CancellationToken cancellationToken = default);
+    Task<RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int amount,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default);
     Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default);

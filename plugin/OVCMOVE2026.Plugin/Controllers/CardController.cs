@@ -17,6 +17,7 @@ namespace OVCMOVE2026.Plugin.Controllers;
 [Route("api/v1/plugin/cards")]
 public sealed class CardController(
     IRaceCardService cardService,
+    ICardShopService cardShopService,
     IOverclockService overclockService,
     ICardEventReconciliationService reconciliationService) : ControllerBase
 {
@@ -30,8 +31,46 @@ public sealed class CardController(
     public async Task<IActionResult> GetCardTeams(Guid raceId, string cardId, CancellationToken cancellationToken) =>
         Ok(PluginResponse.Success(await cardService.GetCardTeamsAsync(raceId, cardId, cancellationToken)));
 
-    [HttpPost("races/{raceId:guid}/inventory/restock")]
+    [HttpGet("races/{raceId:guid}/shop")]
     [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> GetShopState(Guid raceId, CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardShopService.GetStateAsync(raceId, cancellationToken)));
+
+    [HttpPost("races/{raceId:guid}/shop/open")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> OpenShop(Guid raceId, CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(
+            await cardShopService.SetStoreOpenAsync(raceId, true, cancellationToken),
+            "Đã mở cửa hàng Data Patch."));
+
+    [HttpPost("races/{raceId:guid}/shop/close")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> CloseShop(Guid raceId, CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(
+            await cardShopService.SetStoreOpenAsync(raceId, false, cancellationToken),
+            "Đã đóng cửa hàng Data Patch."));
+
+    [HttpPut("races/{raceId:guid}/shop/policy")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> UpdateShopPolicy(
+        Guid raceId,
+        [FromBody] UpdateShopPolicyRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardShopService.SetMaxDataPatchPerTeamAsync(
+            raceId, request.MaxDataPatchPerTeam, cancellationToken)));
+
+    [HttpPut("races/{raceId:guid}/cards/{cardId}/price")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> UpdatePrice(
+        Guid raceId,
+        string cardId,
+        [FromBody] UpdateCardPriceRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardShopService.SetPriceAsync(
+            raceId, cardId, request.Price, cancellationToken)));
+
+    [HttpPost("races/{raceId:guid}/inventory/restock")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Restock(
         Guid raceId,
         [FromBody] RestockRequest request,
@@ -42,7 +81,7 @@ public sealed class CardController(
     }
 
     [HttpPut("races/{raceId:guid}/cards/{cardId}/config")]
-    [Authorize(Roles = "admin,organizer")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> UpdateConfig(
         Guid raceId,
         string cardId,
@@ -54,7 +93,7 @@ public sealed class CardController(
     }
 
     [HttpPost("races/{raceId:guid}/cards/{cardId}/teams")]
-    [Authorize(Roles = "admin,organizer")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Assign(
         Guid raceId,
         string cardId,
@@ -64,7 +103,7 @@ public sealed class CardController(
             raceId, cardId, request.TeamId, request.Reason ?? string.Empty, cancellationToken)));
 
     [HttpDelete("races/{raceId:guid}/teams/{teamId:guid}/cards/{cardInstanceId:guid}")]
-    [Authorize(Roles = "admin,organizer")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeleteAssignment(
         Guid raceId,
         Guid teamId,
@@ -154,6 +193,24 @@ public sealed class CardController(
         Ok(PluginResponse.Success(await cardService.GetTeamCardsAsync(
             raceId, GetRequiredCurrentUserId(), cancellationToken)));
 
+    [HttpGet("team/races/{raceId:guid}/shop")]
+    public async Task<IActionResult> GetTeamShop(Guid raceId, CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardShopService.GetTeamShopAsync(
+            raceId, GetRequiredCurrentUserId(), cancellationToken)));
+
+    [HttpPost("team/races/{raceId:guid}/shop/cards/{cardId}/purchase")]
+    public async Task<IActionResult> Purchase(
+        Guid raceId,
+        string cardId,
+        [FromBody] PurchaseCardRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardShopService.PurchaseAsync(
+            raceId,
+            GetRequiredCurrentUserId(),
+            cardId,
+            request.PurchaseId,
+            cancellationToken)));
+
     [HttpGet("team/races/{raceId:guid}/cards/{cardInstanceId:guid}")]
     public async Task<IActionResult> GetTeamCard(
         Guid raceId,
@@ -204,6 +261,24 @@ public sealed class CardConfigRequest
 {
     [Required]
     public Dictionary<string, JsonElement> Config { get; init; } = [];
+}
+
+public sealed class UpdateShopPolicyRequest
+{
+    [Range(1, 20)]
+    public int MaxDataPatchPerTeam { get; init; } = 3;
+}
+
+public sealed class UpdateCardPriceRequest
+{
+    [Range(1, 1_000_000)]
+    public int Price { get; init; }
+}
+
+public sealed class PurchaseCardRequest
+{
+    [Required]
+    public Guid PurchaseId { get; init; }
 }
 
 public sealed class AssignCardRequest

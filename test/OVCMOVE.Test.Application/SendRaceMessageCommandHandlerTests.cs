@@ -274,6 +274,9 @@ public sealed class SendRaceMessageCommandHandlerTests
         public Task<bool> UpdateRaceTeamScoreAsync(Guid raceId, Guid teamId, int totalScore, string modifiedBy, DateTime modifiedAt, CancellationToken cancellationToken = default) =>
             Task.FromResult(SetCurrentScore(totalScore));
 
+        public Task<OVCMOVE.Application.Features.Races.Common.RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(Guid raceId, Guid teamId, int amount, string modifiedBy, DateTime modifiedAt, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task CreateScoringLogAsync(ScoringLog log, CancellationToken cancellationToken = default)
         {
             CreatedScoringLog = log;

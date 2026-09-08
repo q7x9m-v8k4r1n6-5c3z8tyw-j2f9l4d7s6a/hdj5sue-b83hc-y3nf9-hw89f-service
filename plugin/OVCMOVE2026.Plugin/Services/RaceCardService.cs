@@ -95,6 +95,8 @@ public sealed class RaceCardService(
         CancellationToken cancellationToken = default)
     {
         var document = await GetDocumentAsync(raceId, cancellationToken);
+        if (document.StoreOpen)
+            throw new ApplicationConflictException("Hãy đóng cửa hàng trước khi nhập kho card.");
         ApplyQuantities(document, quantities);
         await repository.ReplaceAsync(document, cancellationToken);
     }
@@ -107,6 +109,8 @@ public sealed class RaceCardService(
     {
         var definition = CardCatalog.Get(cardId);
         var document = await GetDocumentAsync(raceId, cancellationToken);
+        if (document.StoreOpen)
+            throw new ApplicationConflictException("Hãy đóng cửa hàng trước khi đổi cấu hình card.");
         var inventory = FindInventory(document, definition.CardId);
         var supportedKeys = definition.DefaultConfig.Names.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var unsupportedKey = config.Keys.FirstOrDefault(key => !supportedKeys.Contains(key));
@@ -215,6 +219,9 @@ public sealed class RaceCardService(
             item.CardUses.Count == 0);
         if (card is null)
             throw new ApplicationConflictException("Chỉ được xóa card chưa sử dụng.");
+        if (card.ReceiveReason == "shop_purchase")
+            throw new ApplicationConflictException(
+                "Card đã mua phải đi qua nghiệp vụ hoàn tiền; không được xóa như card cấp miễn phí.");
 
         var definition = CardCatalog.Get(card.CardInfo.CardId);
 
@@ -466,7 +473,7 @@ public sealed class RaceCardService(
             definition.CardName,
             definition.CardType,
             definition.Description,
-            definition.Price,
+            inventory.Price,
             inventory.RemainingStock,
             definition.Usage,
             definition.Inputs,
@@ -487,7 +494,9 @@ public sealed class RaceCardService(
         card.ReceivedAt,
         card.ReceiveReason,
         card.Status,
-        card.Status == CardStatus.Received && card.CardUses.Count == 0,
+        card.Status == CardStatus.Received &&
+        card.CardUses.Count == 0 &&
+        card.ReceiveReason != "shop_purchase",
         card.DisabledAt,
         card.DisabledReason,
         card.CardUses.Select(ToCardUseHistory).ToArray());
@@ -527,6 +536,8 @@ public sealed class RaceCardService(
         OVCMOVE.Domain.Entities.Booth? activeBooth,
         DateTime now)
     {
+        if (card.Status == CardStatus.PendingPurchase)
+            return new(false, "purchase_pending", "Giao dịch mua card đang được đồng bộ.", null);
         if (card.Status != CardStatus.Received || card.CardInfo.CardUseCountRemain <= 0)
             return new(false, "used", "Card đã hết lượt sử dụng.", null);
         if (card.CardUses.Any(use => use.Status == CardUseStatus.Pending))

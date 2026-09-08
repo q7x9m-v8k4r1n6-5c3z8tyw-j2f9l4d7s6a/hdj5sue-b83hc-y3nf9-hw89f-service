@@ -300,6 +300,21 @@ public sealed class RaceCardService(
                     "Đội được chọn không tham gia race này.");
         }
 
+        if (definition.CardId == CardIds.Revive)
+        {
+            var boothId = GetRequiredGuidInput(
+                inputs,
+                "boothId",
+                "Revive cần boothId hiện tại hợp lệ.");
+            if (await repository.HasPendingReviveAsync(
+                    raceId,
+                    teamId,
+                    boothId,
+                    cancellationToken))
+                throw new ApplicationConflictException(
+                    "Đội đã có yêu cầu Revive đang chờ quản trạm xác nhận tại booth này.");
+        }
+
         if (definition.CardId == CardIds.Trap)
         {
             var boothId = GetRequiredGuidInput(inputs, "boothId", "Trap cần input boothId hợp lệ.");
@@ -368,40 +383,47 @@ public sealed class RaceCardService(
             eventId,
             cancellationToken);
 
-    public Task ConfirmReviveAsync(
+    public async Task<PendingReviveResponse?> GetPendingReviveAsync(
         Guid raceId,
-        string effectId,
+        Guid boothId,
         Guid organizerId,
         bool isAdmin,
-        CancellationToken cancellationToken = default) =>
-        ResolveReviveAsync(
-            raceId,
-            effectId,
-            organizerId,
-            isAdmin,
-            CardEffectResolutionCodes.OperatorConfirmed,
-            cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var booth = await boothRepository.GetByIdAsync(boothId, cancellationToken);
+        if (booth is null || booth.RaceId != raceId)
+            throw new ApplicationNotFoundException("Không tìm thấy booth trong race này.");
+        if (!isAdmin && !await boothOrganizerRepository.IsAssignedAsync(
+                organizerId,
+                boothId,
+                cancellationToken))
+            throw new ApplicationForbiddenException("Bạn không quản lý booth này.");
 
-    public Task RejectReviveAsync(
-        Guid raceId,
-        string effectId,
-        Guid organizerId,
-        bool isAdmin,
-        CancellationToken cancellationToken = default) =>
-        ResolveReviveAsync(
+        var effect = await repository.GetPendingReviveAsync(
             raceId,
-            effectId,
-            organizerId,
-            isAdmin,
-            CardEffectResolutionCodes.OperatorRejected,
+            boothId,
             cancellationToken);
+        if (effect is null) return null;
+        if (!Guid.TryParse(effect.OwnerTeamId, out var teamId) ||
+            !Guid.TryParse(effect.TargetBoothId, out var targetBoothId))
+            throw new ApplicationValidationException(
+                "Yêu cầu Revive có dữ liệu team hoặc booth không hợp lệ.");
+        if (booth.Status != BoothConstants.BoothStatus.Occupied || booth.TeamId != teamId)
+            return null;
 
-    private async Task ResolveReviveAsync(
+        return new PendingReviveResponse(
+            effect.Id,
+            effect.CardUseId,
+            teamId.ToString(),
+            targetBoothId.ToString(),
+            effect.StartAt);
+    }
+
+    public async Task ConfirmReviveAsync(
         Guid raceId,
         string effectId,
         Guid organizerId,
         bool isAdmin,
-        string resolution,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(effectId))
@@ -413,7 +435,7 @@ public sealed class RaceCardService(
             throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
 
         if (pendingEffect.Status == CardEffectStatus.Resolved &&
-            pendingEffect.Resolution == resolution)
+            pendingEffect.Resolution == CardEffectResolutionCodes.OperatorConfirmed)
             return;
         if (pendingEffect.Status != CardEffectStatus.Active)
             throw new ApplicationConflictException("Yêu cầu Revive đã được xử lý với kết quả khác.");
@@ -424,12 +446,11 @@ public sealed class RaceCardService(
         if (!isAdmin && !await boothOrganizerRepository.IsAssignedAsync(
                 organizerId, boothId, cancellationToken))
             throw new ApplicationForbiddenException("Bạn không quản lý booth này.");
-        if (resolution == CardEffectResolutionCodes.OperatorConfirmed &&
-            (booth.TeamId != ownerTeamId || booth.Status != BoothConstants.BoothStatus.Occupied))
+        if (booth.TeamId != ownerTeamId || booth.Status != BoothConstants.BoothStatus.Occupied)
             throw new ApplicationConflictException("Booth đã kết thúc nên không thể xác nhận Revive.");
 
-        var effect = await repository.ResolveReviveAsync(
-            raceId, effectId, organizerId, resolution, DateTime.UtcNow, cancellationToken);
+        var effect = await repository.ConfirmReviveAsync(
+            raceId, effectId, organizerId, DateTime.UtcNow, cancellationToken);
         if (effect is null)
             throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
 
@@ -438,9 +459,7 @@ public sealed class RaceCardService(
                 raceId,
                 organizerId,
                 [new(RaceMessageRecipientConstants.Team, teamId,
-                    resolution == CardEffectResolutionCodes.OperatorConfirmed
-                        ? "Quản trạm đã xác nhận Revive. Bạn được chơi lại booth hiện tại."
-                        : "Quản trạm đã từ chối Revive. Card Revive đã được sử dụng.")],
+                    "Quản trạm đã xác nhận Revive. Bạn được chơi lại booth hiện tại.")],
                 cancellationToken);
     }
 

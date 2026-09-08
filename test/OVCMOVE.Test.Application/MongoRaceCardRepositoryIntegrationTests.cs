@@ -48,7 +48,7 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task RejectRevive_ConsumesCardAndResolvesPendingUseOnce()
+    public async Task ConfirmRevive_ConsumesCardAndResolvesPendingUseOnce()
     {
         var connectionString = Environment.GetEnvironmentVariable("OVCMOVE_TEST_MONGODB");
         if (string.IsNullOrWhiteSpace(connectionString)) return;
@@ -129,19 +129,21 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
             await effectCollection.InsertOneAsync(effect);
             var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
 
-            var resolved = await repository.ResolveReviveAsync(
+            var pending = await repository.GetPendingReviveAsync(raceId, boothId);
+
+            var resolved = await repository.ConfirmReviveAsync(
                 raceId,
                 effect.Id,
                 organizerId,
-                CardEffectResolutionCodes.OperatorRejected,
                 now.AddMinutes(1));
-            var duplicate = await repository.ResolveReviveAsync(
+            var duplicate = await repository.ConfirmReviveAsync(
                 raceId,
                 effect.Id,
                 organizerId,
-                CardEffectResolutionCodes.OperatorRejected,
                 now.AddMinutes(2));
 
+            Assert.NotNull(pending);
+            Assert.Equal(effect.Id, pending.Id);
             Assert.NotNull(resolved);
             Assert.Null(duplicate);
             var storedRace = await raceCollection.Find(item => item.Id == raceId.ToString()).SingleAsync();
@@ -151,8 +153,8 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
             Assert.Equal(0, storedCard.CardInfo.CardUseCountRemain);
             Assert.Equal(CardStatus.Used, storedCard.Status);
             Assert.Equal(CardUseStatus.Resolved, storedUse.Status);
-            Assert.Equal(CardEffectResolutionCodes.OperatorRejected, storedUse.Result?["decision"].AsString);
-            Assert.Equal(CardEffectResolutionCodes.OperatorRejected, storedEffect.Resolution);
+            Assert.Equal(CardEffectResolutionCodes.OperatorConfirmed, storedUse.Result?["decision"].AsString);
+            Assert.Equal(CardEffectResolutionCodes.OperatorConfirmed, storedEffect.Resolution);
         }
         finally
         {

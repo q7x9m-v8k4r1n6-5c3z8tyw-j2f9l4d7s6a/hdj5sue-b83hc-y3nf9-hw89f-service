@@ -9,7 +9,7 @@ using OVCMOVE2026.Plugin.Common;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Services;
 
-namespace OVCMOVE.Api.Controllers.Plugin;
+namespace OVCMOVE2026.Plugin.Controllers;
 
 [ApiController]
 [Authorize]

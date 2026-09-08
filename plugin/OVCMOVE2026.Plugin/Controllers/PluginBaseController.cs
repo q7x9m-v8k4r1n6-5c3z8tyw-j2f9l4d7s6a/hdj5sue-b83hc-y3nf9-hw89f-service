@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace OVCMOVE.Api.Controllers.Plugin;
+namespace OVCMOVE2026.Plugin.Controllers;
 
 [ApiController]
 [ApiExplorerSettings(GroupName = "plugin-2026")]

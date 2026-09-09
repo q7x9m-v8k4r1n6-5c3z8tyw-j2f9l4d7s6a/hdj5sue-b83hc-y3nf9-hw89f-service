@@ -199,6 +199,7 @@ public sealed class CardShopServiceTests
             fixture.RaceId, CardIds.Engineer, 25);
 
         Assert.Equal(25, updated.Price);
+        Assert.Equal(2, updated.MaxStock);
         Assert.Equal(25, Assert.Single(fixture.CardRepository.Document.Inventory).Price);
         await Assert.ThrowsAsync<ApplicationValidationException>(() =>
             fixture.Service.SetPriceAsync(fixture.RaceId, CardIds.Cupid, 25));
@@ -222,6 +223,7 @@ public sealed class CardShopServiceTests
                     CardId = definition.CardId,
                     Price = 15,
                     RemainingStock = stock,
+                    MaxStock = stock,
                     CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
                 }
             ]

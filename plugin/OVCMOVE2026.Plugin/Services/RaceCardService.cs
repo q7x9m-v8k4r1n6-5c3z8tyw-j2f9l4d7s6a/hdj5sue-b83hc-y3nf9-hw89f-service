@@ -475,6 +475,7 @@ public sealed class RaceCardService(
             definition.Description,
             inventory.Price,
             inventory.RemainingStock,
+            inventory.MaxStock,
             definition.Usage,
             definition.Inputs,
             config);

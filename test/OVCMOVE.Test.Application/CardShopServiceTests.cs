@@ -20,6 +20,30 @@ namespace OVCMOVE.Test.Application;
 public sealed class CardShopServiceTests
 {
     [Fact]
+    public async Task GetTeamShop_ReturnsMaximumStockForEveryDataPatch()
+    {
+        var fixture = CreateFixture(score: 40, stock: 2, storeOpen: true);
+        var document = fixture.CardRepository.Document;
+        document.Inventory = CardCatalog.All
+            .Where(definition => definition.CardType == CardTypes.DataPatch)
+            .Select(definition => new CardInventoryState
+            {
+                CardId = definition.CardId,
+                Price = (int)definition.Price,
+                RemainingStock = 2,
+                MaxStock = 5,
+                CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
+            })
+            .ToList();
+        await fixture.CardRepository.ReplaceAsync(document);
+
+        var shop = await fixture.Service.GetTeamShopAsync(fixture.RaceId, fixture.TeamId);
+
+        Assert.NotEmpty(shop.Cards);
+        Assert.All(shop.Cards, card => Assert.Equal(5, card.MaxStock));
+    }
+
+    [Fact]
     public async Task Purchase_DebitsScoreReservesStockAndAssignsCard()
     {
         var fixture = CreateFixture(score: 40, stock: 2, storeOpen: true);

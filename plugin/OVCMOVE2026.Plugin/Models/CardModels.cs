@@ -393,6 +393,7 @@ public sealed record CardShopItemResponse(
     string Description,
     int Price,
     int RemainingStock,
+    int MaxStock,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs);
 

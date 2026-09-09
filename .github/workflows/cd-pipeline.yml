@@ -83,6 +83,7 @@ jobs:
           EMAIL_SERVICE_PASSWORD: ${{ secrets.EMAIL_SERVICE_PASSWORD }}
           AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
           AZURE_BLOB_CONTAINER_NAME: ${{ secrets.AZURE_BLOB_CONTAINER_NAME }}
+          AZURE_BLOB_MAP_CONTAINER_NAME: ${{ secrets.AZURE_BLOB_MAP_CONTAINER_NAME }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
           JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
@@ -96,7 +97,7 @@ jobs:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           password: ${{ secrets.AZURE_VM_PASSWORD }}
-          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DB_CONNECTION_STRING,MONGODB_CONNECTION_STRING,MONGODB_DATABASE_NAME,MONGODB_COLLECTION_NAME,EMAIL_SERVICE_EMAIL,EMAIL_SERVICE_PASSWORD,AZURE_BLOB_CONNECTION_STRING,AZURE_BLOB_CONTAINER_NAME,JWT_SECRET_KEY,JWT_ISSUER,JWT_AUDIENCE,JWT_ACCESS_TOKEN_EXPIRATION_MINUTES,JWT_REFRESH_TOKEN_EXPIRATION_DAYS,JWT_SIGNING_KEY_ID,JWT_PREVIOUS_SIGNING_KEY_ID,JWT_PREVIOUS_SECRET_KEY,GOOGLE_CLIENT_ID
+          envs: DOCKER_IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DB_CONNECTION_STRING,MONGODB_CONNECTION_STRING,MONGODB_DATABASE_NAME,MONGODB_COLLECTION_NAME,EMAIL_SERVICE_EMAIL,EMAIL_SERVICE_PASSWORD,AZURE_BLOB_CONNECTION_STRING,AZURE_BLOB_CONTAINER_NAME,AZURE_BLOB_MAP_CONTAINER_NAME,JWT_SECRET_KEY,JWT_ISSUER,JWT_AUDIENCE,JWT_ACCESS_TOKEN_EXPIRATION_MINUTES,JWT_REFRESH_TOKEN_EXPIRATION_DAYS,JWT_SIGNING_KEY_ID,JWT_PREVIOUS_SIGNING_KEY_ID,JWT_PREVIOUS_SECRET_KEY,GOOGLE_CLIENT_ID
           script: |
             cd ${{ env.AZURE_APP_DIR }}
             cat > .env <<EOF
@@ -109,6 +110,7 @@ jobs:
             OVCMOVE_ExternalServicesConfig__EmailService__Password=$EMAIL_SERVICE_PASSWORD
             OVCMOVE_AzureBlobStorage__ConnectionString=$AZURE_BLOB_CONNECTION_STRING
             OVCMOVE_AzureBlobStorage__ContainerName=$AZURE_BLOB_CONTAINER_NAME
+            OVCMOVE_AzureBlobStorage__MapContainerName=$AZURE_BLOB_MAP_CONTAINER_NAME
             OVCMOVE_JwtConfig__SecretKey=$JWT_SECRET_KEY
             OVCMOVE_JwtConfig__Issuer=$JWT_ISSUER
             OVCMOVE_JwtConfig__Audience=$JWT_AUDIENCE
@@ -124,4 +126,11 @@ jobs:
             EOF
             docker pull "$DOCKER_IMAGE"
             docker compose --env-file .env up -d
+            sleep 10
+            container_status=$(docker inspect --format '{{.State.Status}}' ovcmove-backend)
+            restart_count=$(docker inspect --format '{{.RestartCount}}' ovcmove-backend)
+            if [ "$container_status" != "running" ] || [ "$restart_count" -gt 0 ]; then
+              docker logs --tail 100 ovcmove-backend
+              exit 1
+            fi
             docker image prune -f

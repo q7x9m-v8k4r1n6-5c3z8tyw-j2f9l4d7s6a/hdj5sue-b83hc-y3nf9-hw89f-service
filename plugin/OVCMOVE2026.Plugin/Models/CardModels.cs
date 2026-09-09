@@ -252,7 +252,6 @@ public static class CardEffectStatus
 public static class CardEffectResolutionCodes
 {
     public const string OperatorConfirmed = "operator_confirmed";
-    public const string OperatorRejected = "operator_rejected";
 }
 
 public sealed class CardEffectDocument
@@ -489,3 +488,10 @@ public sealed record CardUseResponse(
     DateTime UsedAt,
     DateTime? EndAt,
     string Message);
+
+public sealed record PendingReviveResponse(
+    string EffectId,
+    string CardUseId,
+    string TeamId,
+    string BoothId,
+    DateTime RequestedAt);

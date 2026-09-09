@@ -115,6 +115,19 @@ public sealed class CardController(
         return Ok(PluginResponse.Success(true, "Đã ghi nhận xóa card."));
     }
 
+    [HttpGet("races/{raceId:guid}/booths/{boothId:guid}/revive-effect/pending")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> GetPendingRevive(
+        Guid raceId,
+        Guid boothId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardService.GetPendingReviveAsync(
+            raceId,
+            boothId,
+            GetRequiredCurrentUserId(),
+            User.IsInRole("admin"),
+            cancellationToken)));
+
     [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/confirm")]
     [Authorize(Roles = "admin,organizer")]
     public async Task<IActionResult> ConfirmRevive(
@@ -129,22 +142,6 @@ public sealed class CardController(
             User.IsInRole("admin"),
             cancellationToken);
         return Ok(PluginResponse.Success(true, "Đã xác nhận Revive."));
-    }
-
-    [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/reject")]
-    [Authorize(Roles = "admin,organizer")]
-    public async Task<IActionResult> RejectRevive(
-        Guid raceId,
-        string effectId,
-        CancellationToken cancellationToken)
-    {
-        await cardService.RejectReviveAsync(
-            raceId,
-            effectId,
-            GetRequiredCurrentUserId(),
-            User.IsInRole("admin"),
-            cancellationToken);
-        return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được sử dụng."));
     }
 
     [HttpGet("races/{raceId:guid}/overclock")]

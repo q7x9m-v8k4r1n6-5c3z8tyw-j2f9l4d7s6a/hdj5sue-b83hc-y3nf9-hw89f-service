@@ -59,6 +59,7 @@ public sealed class CardShopService(
                     definition.Description,
                     inventory.Price,
                     inventory.RemainingStock,
+                    inventory.MaxStock,
                     definition.Usage,
                     definition.Inputs);
             })

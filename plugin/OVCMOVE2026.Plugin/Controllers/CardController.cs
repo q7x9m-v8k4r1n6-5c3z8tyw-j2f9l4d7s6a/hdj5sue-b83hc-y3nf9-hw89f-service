@@ -115,6 +115,19 @@ public sealed class CardController(
         return Ok(PluginResponse.Success(true, "Đã ghi nhận xóa card."));
     }
 
+    [HttpGet("races/{raceId:guid}/booths/{boothId:guid}/revive-effect/pending")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> GetPendingRevive(
+        Guid raceId,
+        Guid boothId,
+        CancellationToken cancellationToken) =>
+        Ok(PluginResponse.Success(await cardService.GetPendingReviveAsync(
+            raceId,
+            boothId,
+            GetRequiredCurrentUserId(),
+            User.IsInRole("admin"),
+            cancellationToken)));
+
     [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/confirm")]
     [Authorize(Roles = "admin,organizer")]
     public async Task<IActionResult> ConfirmRevive(
@@ -144,7 +157,7 @@ public sealed class CardController(
             GetRequiredCurrentUserId(),
             User.IsInRole("admin"),
             cancellationToken);
-        return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được sử dụng."));
+        return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được tiêu thụ."));
     }
 
     [HttpGet("races/{raceId:guid}/overclock")]

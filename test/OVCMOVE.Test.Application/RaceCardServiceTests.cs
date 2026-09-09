@@ -38,6 +38,39 @@ public sealed class RaceCardServiceTests
     }
 
     [Fact]
+    public async Task Restock_IncreasesAvailableAndMaximumStockTogether()
+    {
+        var raceId = Guid.NewGuid();
+        var definition = CardCatalog.Get(CardIds.Engineer);
+        var repository = new InMemoryRaceCardRepository(new RaceCardDocument
+        {
+            Id = raceId.ToString(),
+            RaceId = raceId.ToString(),
+            StoreOpen = false,
+            Inventory =
+            [
+                new CardInventoryState
+                {
+                    CardId = definition.CardId,
+                    RemainingStock = 2,
+                    MaxStock = 5,
+                    Price = (int)definition.Price,
+                    CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
+                }
+            ]
+        });
+        var service = CreateService(repository, Guid.NewGuid());
+
+        await service.RestockAsync(
+            raceId,
+            new Dictionary<string, int> { [CardIds.Engineer] = 3 });
+
+        var inventory = Assert.Single(repository.Document.Inventory);
+        Assert.Equal(5, inventory.RemainingStock);
+        Assert.Equal(8, inventory.MaxStock);
+    }
+
+    [Fact]
     public async Task Assign_UsesCanonicalTeamNameFromSqlUser()
     {
         var raceId = Guid.NewGuid();
@@ -184,7 +217,9 @@ public sealed class RaceCardServiceTests
         public Task<bool> HasActiveTrapAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> TryClaimTrapAsync(Guid raceId, Guid boothId, Guid triggeringTeamId, DateTime triggeredAt, string resolvedByEventCode, string resolvedByEventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> HasPendingReviveAsync(Guid raceId, Guid teamId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<CardEffectDocument?> ResolveReviveAsync(Guid raceId, string effectId, Guid organizerId, string resolution, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> GetPendingReviveAsync(Guid raceId, Guid boothId, Guid teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> RejectReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime rejectedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> GetEffectAsync(Guid raceId, string effectId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveBoothResultEffectsAsync(Guid raceId, Guid teamId, DateTime occurredAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveEffectsByCardAsync(Guid raceId, string cardId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

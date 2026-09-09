@@ -43,6 +43,7 @@ public static class CardEffectEventCodes
     public const string BoothEntryRequested = "booth.entry.requested";
     public const string BoothResultFinalized = "booth.result.finalized";
     public const string ReviveOperatorConfirmation = "booth.revive.operator-confirmed";
+    public const string ReviveOperatorRejection = "booth.revive.operator-rejected";
     public const string OverclockResolution = "race.overclock.resolve";
 }
 
@@ -490,3 +491,10 @@ public sealed record CardUseResponse(
     DateTime UsedAt,
     DateTime? EndAt,
     string Message);
+
+public sealed record PendingReviveResponse(
+    string EffectId,
+    string CardUseId,
+    string TeamId,
+    string BoothId,
+    DateTime RequestedAt);

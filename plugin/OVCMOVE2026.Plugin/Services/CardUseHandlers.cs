@@ -220,7 +220,7 @@ public sealed class ReviveCardUseHandler(IBoothRepository boothRepository) : Eff
         return new CardUsePlan(
             CardUseStatus.Pending,
             false,
-            "Đã gửi yêu cầu Revive; thẻ sẽ được tiêu thụ khi quản trạm xử lý yêu cầu.",
+            "Đã gửi yêu cầu Revive; thẻ sẽ được tiêu thụ khi quản trạm xác nhận yêu cầu.",
             effect);
     }
 }

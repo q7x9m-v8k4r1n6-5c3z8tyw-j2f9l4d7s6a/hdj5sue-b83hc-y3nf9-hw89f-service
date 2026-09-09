@@ -45,6 +45,17 @@ public sealed class MongoRaceCardRepository(
                     .Ascending(item => item.StartAt),
                 new CreateIndexOptions { Name = "ix_effect_trigger_target" }),
             cancellationToken: cancellationToken);
+
+        await effectCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<CardEffectDocument>(
+                Builders<CardEffectDocument>.IndexKeys
+                    .Ascending(item => item.RaceId)
+                    .Ascending(item => item.CardId)
+                    .Ascending(item => item.TargetBoothId)
+                    .Ascending(item => item.Status)
+                    .Ascending(item => item.StartAt),
+                new CreateIndexOptions { Name = "ix_effect_card_booth_status" }),
+            cancellationToken: cancellationToken);
     }
 
     public async Task<RaceCardDocument> GetOrCreateAsync(
@@ -244,18 +255,44 @@ public sealed class MongoRaceCardRepository(
                 effect.Status == CardEffectStatus.Active)
             .AnyAsync(cancellationToken);
 
-    public async Task<CardEffectDocument?> ResolveReviveAsync(
+    public async Task<CardEffectDocument?> GetPendingReviveAsync(
+        Guid raceId,
+        Guid boothId,
+        Guid teamId,
+        CancellationToken cancellationToken = default) =>
+        await effectCollection.Find(effect =>
+                effect.RaceId == raceId.ToString() &&
+                effect.CardId == CardIds.Revive &&
+                effect.TargetBoothId == boothId.ToString() &&
+            effect.OwnerTeamId == teamId.ToString() &&
+                effect.Status == CardEffectStatus.Active)
+            .SortBy(effect => effect.StartAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<CardEffectDocument?> ConfirmReviveAsync(
         Guid raceId,
         string effectId,
         Guid organizerId,
-        string resolution,
         DateTime confirmedAt,
+        CancellationToken cancellationToken = default) =>
+        ResolveReviveAsync(raceId, effectId, organizerId, confirmedAt, true, cancellationToken);
+
+    public Task<CardEffectDocument?> RejectReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        DateTime rejectedAt,
+        CancellationToken cancellationToken = default) =>
+        ResolveReviveAsync(raceId, effectId, organizerId, rejectedAt, false, cancellationToken);
+
+    private async Task<CardEffectDocument?> ResolveReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        DateTime resolvedAt,
+        bool confirmed,
         CancellationToken cancellationToken = default)
     {
-        if (resolution is not (
-                CardEffectResolutionCodes.OperatorConfirmed or
-                CardEffectResolutionCodes.OperatorRejected))
-            throw new ArgumentOutOfRangeException(nameof(resolution));
         if (!ObjectId.TryParse(effectId, out var objectId)) return null;
 
         using var session = await collection.Database.Client.StartSessionAsync(
@@ -292,15 +329,17 @@ public sealed class MongoRaceCardRepository(
             card.CardInfo.CardUseCountRemain--;
             card.Status = card.CardInfo.CardUseCountRemain == 0 ? CardStatus.Used : CardStatus.Received;
             use.Status = CardUseStatus.Resolved;
-            use.EndAt = confirmedAt;
+            use.EndAt = resolvedAt;
             use.CardUseCountAfter = card.CardInfo.CardUseCountRemain;
             use.Result = new BsonDocument
             {
-                ["decision"] = resolution,
+                ["decision"] = confirmed
+                    ? CardEffectResolutionCodes.OperatorConfirmed
+                    : CardEffectResolutionCodes.OperatorRejected,
                 ["resolvedBy"] = organizerId.ToString(),
-                ["resolvedAt"] = confirmedAt
+                ["resolvedAt"] = resolvedAt
             };
-            document.ModifiedAt = confirmedAt;
+            document.ModifiedAt = resolvedAt;
             document.Version++;
 
             var raceVersionFilter = MatchRaceVersion(expectedDocumentVersion);
@@ -311,7 +350,7 @@ public sealed class MongoRaceCardRepository(
                 session, raceFilter, document, cancellationToken: cancellationToken);
             if (raceResult.MatchedCount != 1)
                 throw new ApplicationConflictException(
-                    "Dữ liệu card vừa thay đổi. Vui lòng tải lại và xác nhận lại Revive.");
+                    "Dữ liệu card vừa thay đổi. Vui lòng tải lại và xử lý lại Revive.");
 
             var effectFilter = Builders<CardEffectDocument>.Filter.And(
                 Builders<CardEffectDocument>.Filter.Eq(item => item.Id, effect.Id),
@@ -319,11 +358,15 @@ public sealed class MongoRaceCardRepository(
                 MatchEffectVersion(effect.Version));
             var effectUpdate = Builders<CardEffectDocument>.Update
                 .Set(item => item.Status, CardEffectStatus.Resolved)
-                .Set(item => item.Resolution, resolution)
-                .Set(item => item.ResolvedAt, confirmedAt)
-                .Set(item => item.ResolvedByEventCode, CardEffectEventCodes.ReviveOperatorConfirmation)
-                .Set(item => item.ResolvedByEventId, $"revive-confirm:{effect.Id}")
-                .Set(item => item.ModifiedAt, confirmedAt)
+                .Set(item => item.Resolution, confirmed
+                    ? CardEffectResolutionCodes.OperatorConfirmed
+                    : CardEffectResolutionCodes.OperatorRejected)
+                .Set(item => item.ResolvedAt, resolvedAt)
+                .Set(item => item.ResolvedByEventCode, confirmed
+                    ? CardEffectEventCodes.ReviveOperatorConfirmation
+                    : CardEffectEventCodes.ReviveOperatorRejection)
+                .Set(item => item.ResolvedByEventId, $"revive-{(confirmed ? "confirm" : "reject")}:{effect.Id}")
+                .Set(item => item.ModifiedAt, resolvedAt)
                 .Set(item => item.ModifiedBy, organizerId.ToString())
                 .Set(item => item.RemainingTriggers, 0)
                 .Inc(item => item.Version, 1);
@@ -334,8 +377,10 @@ public sealed class MongoRaceCardRepository(
 
             await session.CommitTransactionAsync(cancellationToken);
             effect.Status = CardEffectStatus.Resolved;
-            effect.Resolution = resolution;
-            effect.ResolvedAt = confirmedAt;
+            effect.Resolution = confirmed
+                ? CardEffectResolutionCodes.OperatorConfirmed
+                : CardEffectResolutionCodes.OperatorRejected;
+            effect.ResolvedAt = resolvedAt;
             return effect;
         }
         catch

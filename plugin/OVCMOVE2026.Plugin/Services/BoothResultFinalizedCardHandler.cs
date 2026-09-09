@@ -36,7 +36,7 @@ public sealed class BoothResultFinalizedCardHandler(
                 context.BoothId.Value,
                 cancellationToken))
             throw new ApplicationConflictException(
-                "Đội đang chờ quản trạm xử lý Revive. Hãy xác nhận hoặc từ chối Revive trước khi kết thúc booth.");
+                "Đội đang chờ quản trạm xác nhận Revive. Hãy xác nhận Revive trước khi kết thúc booth.");
 
         var effects = await repository.GetActiveBoothResultEffectsAsync(
             context.RaceId,

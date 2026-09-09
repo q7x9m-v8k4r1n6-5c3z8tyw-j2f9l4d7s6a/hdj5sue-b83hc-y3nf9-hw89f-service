@@ -77,7 +77,7 @@ public static class CardCatalog
             CardTypes.DataPatch,
             "Yêu cầu quản trạm cho chơi lại trước khi booth được kết thúc.",
             15,
-            "Dùng khi đội đang chơi booth; thẻ sẽ được tiêu thụ khi quản trạm xử lý yêu cầu.",
+            "Dùng khi đội đang chơi booth; thẻ sẽ được tiêu thụ khi quản trạm xác nhận yêu cầu.",
             [new("boothId", "Booth hiện tại", "booth", true, "Booth đội đang chơi.")],
             new BsonDocument
             {

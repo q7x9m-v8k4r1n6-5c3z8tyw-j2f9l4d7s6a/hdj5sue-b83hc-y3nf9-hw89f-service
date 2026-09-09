@@ -25,6 +25,9 @@ Admin/organizer endpoints are under `/api/v1/plugin/cards/races/{raceId}`:
 - `POST /store/open` and `POST /store/close`
 - `POST /inventory/restock`
 - `POST /inventory/schedule`
+- `GET /booths/{boothId}/revive-effect/pending`
+- `POST /revive-effects/{effectId}/confirm`
+- `POST /revive-effects/{effectId}/reject`
 - `PUT /cards/{cardId}/config`
 - `GET /cards/{cardId}/teams`
 - `POST /cards/{cardId}/teams`

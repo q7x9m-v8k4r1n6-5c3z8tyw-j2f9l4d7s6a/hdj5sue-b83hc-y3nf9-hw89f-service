@@ -65,13 +65,18 @@ public class RaceController : BaseController
     public async Task<IActionResult> GetRaceDetail([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var isTeam = IsCurrentUserTeam();
+        var hasManagePermission = HasPermission(PermissionCodes.RaceManage);
+        var isParticipantView = isTeam || !hasManagePermission;
+
         var result = await _mediator.Send(
             new GetRaceDetailQuery
             {
                 RaceId = raceId,
-                TeamId = IsCurrentUserTeam()
+                TeamId = isTeam
                     ? GetCurrentUserId() ?? Guid.Empty
-                    : null
+                    : null,
+                IsParticipantView = isParticipantView
             },
             cancellationToken);
         if (result is null)

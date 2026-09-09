@@ -56,8 +56,19 @@ public interface IRaceRepository
         string modifiedBy,
         DateTime modifiedAt,
         CancellationToken cancellationToken = default);
+    Task<RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int amount,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default);
     Task CreateScoringLogAsync(
         ScoringLog log,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
         CancellationToken cancellationToken = default);
     Task CreateRaceMessageAsync(
         RaceMessage message,
@@ -75,5 +86,8 @@ public interface IRaceRepository
         Guid raceId,
         Guid teamId,
         Guid boothId,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
         CancellationToken cancellationToken = default);
 }

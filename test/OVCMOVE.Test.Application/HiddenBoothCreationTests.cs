@@ -10,6 +10,7 @@ using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
+using Microsoft.Extensions.Logging.Abstractions;
 using OVCMOVE.Infrastructure.Persistence.Queries;
 
 namespace OVCMOVE.Test.Application;
@@ -167,7 +168,9 @@ public sealed class HiddenBoothCreationTests
             }),
             new BoothNotificationSpy(),
             new StubTeamUserRepository(team),
-            new NoopPluginHub());
+            new NoopPluginHub(),
+            new UnitOfWorkSpy(),
+            NullLogger<RequestEntryToBoothCommandHandler>.Instance);
 
         var result = await handler.Handle(
             new RequestEntryToBoothCommand

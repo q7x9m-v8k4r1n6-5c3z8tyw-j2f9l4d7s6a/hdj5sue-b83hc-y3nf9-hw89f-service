@@ -7,6 +7,7 @@ namespace OVCMOVE.Domain.Entities;
 /// </summary>
 public class ScoringLog : BaseEntity
 {
+    public string? EventId { get; set; }
     public string EventCode {get; set;} = string.Empty;
     public string EventName {get; set;} = string.Empty;
     public Guid RaceId {get; set;}

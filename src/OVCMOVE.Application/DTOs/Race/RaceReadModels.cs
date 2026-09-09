@@ -17,6 +17,8 @@ public sealed class RaceBoothModel
     public string Description { get; init; } = string.Empty;
     public bool IsHidden { get; init; }
     public string Status { get; init; } = string.Empty;
+    public string Type { get; init; } = "other";
+    public int? MaximumScore { get; init; }
     public double? MapX { get; init; }
     public double? MapY { get; init; }
     public IReadOnlyCollection<Guid> OrganizerIds { get; init; } = [];

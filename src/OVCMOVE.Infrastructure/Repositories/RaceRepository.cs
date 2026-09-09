@@ -108,6 +108,8 @@ public class RaceRepository : IRaceRepository
             Description = booth.Description,
             IsHidden = booth.IsHidden,
             Status = booth.Status,
+            Type = booth.Type,
+            MaximumScore = booth.MaximumScore,
             MapX = booth.MapX,
             MapY = booth.MapY,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
@@ -344,6 +346,28 @@ public class RaceRepository : IRaceRepository
         return affectedRows >= 1;
     }
 
+    public Task<RaceTeamScoreMutation?> TryDebitRaceTeamScoreAsync(
+        Guid raceId,
+        Guid teamId,
+        int amount,
+        string modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _db.QueryFirstOrDefaultAsync<RaceTeamScoreMutation>(
+            RaceQueries.TryDebitRaceTeamScoreQuery(),
+            new
+            {
+                RaceId = raceId,
+                TeamId = teamId,
+                Amount = amount,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken);
+    }
+
     public async Task CreateScoringLogAsync(
         ScoringLog log,
         CancellationToken cancellationToken = default)
@@ -355,6 +379,19 @@ public class RaceRepository : IRaceRepository
             log,
             cancellationToken: cancellationToken);
         PersistenceWriteGuard.EnsureInserted(affectedRows, nameof(ScoringLog));
+    }
+
+    public async Task<IReadOnlyCollection<ScoringLog>> GetScoringLogsByEventIdAsync(
+        Guid raceId,
+        string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var logs = await _db.QueryAsync<ScoringLog>(
+            RaceQueries.GetScoringLogsByEventIdQuery(),
+            new { RaceId = raceId, EventId = eventId },
+            cancellationToken: cancellationToken);
+        return logs.ToArray();
     }
 
     public async Task CreateRaceMessageAsync(
@@ -443,6 +480,22 @@ public class RaceRepository : IRaceRepository
                 CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
             },
             cancellationToken) ?? new BoothProgressResultModel();
+    }
+
+    public async Task<IReadOnlyCollection<FinalizedBoothOutcome>> GetFinalizedBoothOutcomesAsync(
+        Guid raceId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var outcomes = await _db.QueryAsync<FinalizedBoothOutcome>(
+            RaceQueries.GetFinalizedBoothOutcomesQuery(),
+            new
+            {
+                RaceId = raceId,
+                CompletedReasonCode = ScoringLogConstants.ReasonCode.BoothCompleted
+            },
+            cancellationToken);
+        return outcomes.ToArray();
     }
 
     private static IReadOnlyCollection<string> ParseJsonArray(string? json)

@@ -265,6 +265,23 @@ public class DatabaseScriptContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CardEventReconciliationSchema_AddsIdempotentScoringEventKey()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "sql",
+            "008_CardEventReconciliation.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(repositoryRoot, "sql", "000_ResetDatabase.sql"));
+
+        Assert.Contains("[EventId] NVARCHAR(200) NULL", migrationScript);
+        Assert.Contains("UX_ScoringLog_Race_Event_Team_Code", migrationScript);
+        Assert.Contains("[EventId] NVARCHAR(200) NULL", resetScript);
+        Assert.Contains("UX_ScoringLog_Race_Event_Team_Code", resetScript);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

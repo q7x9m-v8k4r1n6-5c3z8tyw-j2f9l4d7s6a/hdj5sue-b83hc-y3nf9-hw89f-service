@@ -8,6 +8,8 @@ public record BoothListResultModel
     public string Description {get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public bool isHidden { get; init; } = false;
+    public string Type { get; init; } = "other";
+    public int? MaximumScore { get; init; }
     public double? MapX { get; init; }
     public double? MapY { get; init; }
     public string? CurrentTeamName { get; init; }

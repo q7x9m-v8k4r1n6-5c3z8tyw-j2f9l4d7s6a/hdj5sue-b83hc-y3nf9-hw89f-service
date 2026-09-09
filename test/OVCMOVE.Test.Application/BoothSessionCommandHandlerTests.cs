@@ -5,6 +5,7 @@ using OVCMOVE.Application.Features.Booths.Commands.RequestEntryToBooth;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE.Domain.Entities;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace OVCMOVE.Test.Application;
 
@@ -26,7 +27,9 @@ public sealed class BoothSessionCommandHandlerTests
             new ValidBoothRaceRepository(),
             notifications,
             new StubTeamUserRepository(team),
-            new NoopPluginHub());
+            new NoopPluginHub(),
+            new UnitOfWorkSpy(),
+            NullLogger<RequestEntryToBoothCommandHandler>.Instance);
 
         var result = await handler.Handle(
             new RequestEntryToBoothCommand
@@ -99,6 +102,102 @@ public sealed class BoothSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task SubmitScore_DispatchesFinalizedSnapshotBeforeCommit()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        booth.Type = BoothConstants.BoothType.Physical;
+        booth.MaximumScore = 20;
+        var repository = new InMemoryBoothRepository(booth);
+        var pluginHub = new CapturingPluginHub();
+        var handler = CreateSubmitHandler(
+            repository,
+            new BoothNotificationSpy(),
+            new UnitOfWorkSpy(),
+            pluginHub);
+
+        await handler.Handle(CreateSubmitCommand(booth, teamId, 20), CancellationToken.None);
+
+        var context = Assert.IsType<PluginEventContext>(pluginHub.LastContext);
+        Assert.Equal(PluginEventNames.BoothResultFinalized, context.Name);
+        Assert.Equal(booth.Id, context.BoothId);
+        Assert.Equal(BoothConstants.BoothType.Physical, context.BoothResult?.BoothType);
+        Assert.Equal(20, context.BoothResult?.BoothMaximumScore);
+        Assert.Equal(20, context.BoothResult?.SubmittedPoints);
+        Assert.Equal(BoothResultValues.Succeeded, context.BoothResult?.Result);
+    }
+
+    [Fact]
+    public async Task SubmitScore_CompletesPluginOnlyAfterSqlCommit()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        var unitOfWork = new UnitOfWorkSpy();
+        var execution = new PluginExecutionSpy(unitOfWork);
+        var pluginHub = new CapturingPluginHub { Execution = execution };
+        var handler = CreateSubmitHandler(
+            new InMemoryBoothRepository(booth),
+            new BoothNotificationSpy(),
+            unitOfWork,
+            pluginHub);
+
+        await handler.Handle(CreateSubmitCommand(booth, teamId, 10), CancellationToken.None);
+
+        Assert.Equal(1, execution.CompleteCount);
+        Assert.Equal(0, execution.AbortCount);
+        Assert.False(execution.TransactionWasActiveWhenCompleted);
+    }
+
+    [Fact]
+    public async Task SubmitScore_WhenSqlCommitOutcomeIsUnknown_DoesNotReleasePluginClaim()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        var unitOfWork = new UnitOfWorkSpy
+        {
+            CommitException = new InvalidOperationException("connection lost during commit")
+        };
+        var execution = new PluginExecutionSpy(unitOfWork);
+        var pluginHub = new CapturingPluginHub { Execution = execution };
+        var handler = CreateSubmitHandler(
+            new InMemoryBoothRepository(booth),
+            new BoothNotificationSpy(),
+            unitOfWork,
+            pluginHub);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(CreateSubmitCommand(booth, teamId, 10), CancellationToken.None));
+
+        Assert.Equal(0, execution.CompleteCount);
+        Assert.Equal(0, execution.AbortCount);
+        Assert.Equal(1, unitOfWork.RollbackCount);
+    }
+
+    [Fact]
+    public async Task SubmitScore_AboveBoothMaximum_IsRejectedAndRolledBack()
+    {
+        var teamId = Guid.NewGuid();
+        var booth = CreateBooth(teamId, BoothConstants.BoothStatus.Occupied);
+        booth.MaximumScore = 20;
+        var repository = new InMemoryBoothRepository(booth);
+        var unitOfWork = new UnitOfWorkSpy();
+        var handler = CreateSubmitHandler(
+            repository,
+            new BoothNotificationSpy(),
+            unitOfWork);
+
+        var exception = await Assert.ThrowsAsync<ApplicationValidationException>(() =>
+            handler.Handle(CreateSubmitCommand(booth, teamId, 21), CancellationToken.None));
+
+        Assert.Contains("20", exception.Message);
+        Assert.Equal(0, repository.SubmittedScoreCount);
+        Assert.Equal(0, unitOfWork.CommitCount);
+        Assert.Equal(1, unitOfWork.RollbackCount);
+        Assert.Equal(BoothConstants.BoothStatus.Occupied, booth.Status);
+        Assert.Equal(teamId, booth.TeamId);
+    }
+
+    [Fact]
     public async Task SubmitAndCancelConcurrently_OnlyOneTerminalActionSucceeds()
     {
         var teamId = Guid.NewGuid();
@@ -142,13 +241,51 @@ public sealed class BoothSessionCommandHandlerTests
     private static SubmitBoothScoreCommandHandler CreateSubmitHandler(
         InMemoryBoothRepository repository,
         BoothNotificationSpy notifications,
-        UnitOfWorkSpy unitOfWork) =>
+        UnitOfWorkSpy unitOfWork,
+        IPluginHub? pluginHub = null) =>
         new(
             repository,
             notifications,
             unitOfWork,
             new ValidBoothRaceRepository(),
-            new AssignedBoothOrganizerRepository());
+            new AssignedBoothOrganizerRepository(),
+            pluginHub ?? new NoopPluginHub(),
+            NullLogger<SubmitBoothScoreCommandHandler>.Instance);
+
+    private sealed class CapturingPluginHub : IPluginHub
+    {
+        public PluginEventContext? LastContext { get; private set; }
+        public IPluginEventExecution Execution { get; init; } = NoopPluginEventExecution.Instance;
+
+        public Task<IPluginEventExecution> DispatchAsync(
+            PluginEventContext context,
+            CancellationToken cancellationToken = default)
+        {
+            LastContext = context;
+            return Task.FromResult(Execution);
+        }
+    }
+
+    private sealed class PluginExecutionSpy(UnitOfWorkSpy unitOfWork) : IPluginEventExecution
+    {
+        public int CompleteCount { get; private set; }
+        public int AbortCount { get; private set; }
+        public bool TransactionWasActiveWhenCompleted { get; private set; }
+        public IReadOnlyCollection<PluginScoreAdjustment> ScoreAdjustments => [];
+
+        public Task CompleteAsync(CancellationToken cancellationToken = default)
+        {
+            CompleteCount++;
+            TransactionWasActiveWhenCompleted = unitOfWork.HasActiveTransaction;
+            return Task.CompletedTask;
+        }
+
+        public Task AbortAsync(CancellationToken cancellationToken = default)
+        {
+            AbortCount++;
+            return Task.CompletedTask;
+        }
+    }
 
     private static SubmitBoothScoreCommand CreateSubmitCommand(
         Booth booth,

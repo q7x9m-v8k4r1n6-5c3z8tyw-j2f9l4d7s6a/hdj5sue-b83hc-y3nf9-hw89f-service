@@ -13,6 +13,8 @@ public static class BoothContractMapping
             Name = result.Name,
             Place = result.Place,
             Description = result.Description,
+            Type = result.Type,
+            MaximumScore = result.MaximumScore,
             Status = result.Status,
             TeamId = result.TeamId,
             TeamName = result.TeamName

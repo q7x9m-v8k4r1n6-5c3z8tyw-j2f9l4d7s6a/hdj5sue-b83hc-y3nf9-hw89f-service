@@ -51,6 +51,8 @@ public static class RaceContract
             public string Place { get; set; } = string.Empty;
             public string? Description { get; set; }
             public bool IsHidden { get; set; }
+            public string Type { get; set; } = "other";
+            public int? MaximumScore { get; set; }
             public List<Guid> OrganizerIds { get; set; } = new();
         }
 
@@ -125,6 +127,8 @@ public static class RaceContract
             public string Place { get; set; } = string.Empty;
             public string? Description { get; set; }
             public bool IsHidden { get; set; }
+            public string Type { get; set; } = "other";
+            public int? MaximumScore { get; set; }
             public List<Guid> OrganizerIds { get; set; } = new();
         }
 
@@ -135,6 +139,8 @@ public static class RaceContract
             public string? Place { get; set; }
             public string? Description { get; set; }
             public bool? IsHidden { get; set; }
+            public string? Type { get; set; }
+            public int? MaximumScore { get; set; }
             public List<Guid>? OrganizerIds { get; set; }
         }
     }
@@ -194,6 +200,8 @@ public static class RaceContract
         public string Description { get; init; } = string.Empty;
         public bool IsHidden { get; init; }
         public string Status { get; init; } = string.Empty;
+        public string Type { get; init; } = "other";
+        public int? MaximumScore { get; init; }
         public double? MapX { get; init; }
         public double? MapY { get; init; }
         public string OrganizerID { get; init; } = string.Empty;
@@ -243,6 +251,8 @@ public static class RaceContract
         public string Description {get; init; } = string.Empty;
         public string Status { get; init; } = string.Empty;
         public bool isHidden { get; init; } = false;
+        public string Type { get; init; } = "other";
+        public int? MaximumScore { get; init; }
         public double? MapX { get; init; }
         public double? MapY { get; init; }
         public string? CurrentTeamName { get; init; }

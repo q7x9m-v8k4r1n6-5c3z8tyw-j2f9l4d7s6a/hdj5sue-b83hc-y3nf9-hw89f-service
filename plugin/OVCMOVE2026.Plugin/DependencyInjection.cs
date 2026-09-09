@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using System.Reflection; 
+using System.Reflection;
 using OVCMOVE.Application.Abstractions.Plugins;
 using OVCMOVE2026.Plugin.Models;
 using OVCMOVE2026.Plugin.Options;
@@ -48,10 +48,21 @@ public static class DependencyInjection
         });
         services.AddScoped<IRaceCardRepository, MongoRaceCardRepository>();
         services.AddScoped<IRaceCardService, RaceCardService>();
+        services.AddScoped<ICardShopService, CardShopService>();
+        services.AddScoped<IOverclockService, OverclockService>();
+        services.AddScoped<ICardEventReconciliationService, CardEventReconciliationService>();
+        services.AddScoped<CardUseHandlerResolver>();
+        services.AddScoped<ICardUseHandler, OverclockCardUseHandler>();
+        services.AddScoped<ICardUseHandler, CupidCardUseHandler>();
+        services.AddScoped<ICardUseHandler, EngineerCardUseHandler>();
+        services.AddScoped<ICardUseHandler, AthleteCardUseHandler>();
+        services.AddScoped<ICardUseHandler, ReviveCardUseHandler>();
+        services.AddScoped<ICardUseHandler, SwapCardUseHandler>();
+        services.AddScoped<ICardUseHandler, TrapCardUseHandler>();
         services.AddScoped<IPluginEventHandler, TrapBoothEntryRequestedHandler>();
+        services.AddScoped<IPluginEventHandler, BoothResultFinalizedCardHandler>();
         services.AddScoped<IPluginHub, Move2026PluginHub>();
-        services.AddHostedService<ScheduledRestockWorker>();
-
+        services.AddHostedService<CardMongoIndexInitializer>();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
         return services;

@@ -373,6 +373,7 @@ public sealed record CardInventoryResponse(
     string Description,
     decimal Price,
     int RemainingStock,
+    int MaxStock,
     string Usage,
     IReadOnlyCollection<CardInputDefinition> Inputs,
     IReadOnlyDictionary<string, object?> Config);

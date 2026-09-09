@@ -11,6 +11,33 @@ namespace OVCMOVE.Test.Application;
 public sealed class RaceCardServiceTests
 {
     [Fact]
+    public async Task GetAdminOverview_ReturnsMaximumStockForEveryCard()
+    {
+        var raceId = Guid.NewGuid();
+        var repository = new InMemoryRaceCardRepository(new RaceCardDocument
+        {
+            Id = raceId.ToString(),
+            RaceId = raceId.ToString(),
+            Inventory = CardCatalog.All
+                .Select(definition => new CardInventoryState
+                {
+                    CardId = definition.CardId,
+                    RemainingStock = 2,
+                    MaxStock = 5,
+                    Price = (int)definition.Price,
+                    CardConfig = definition.DefaultConfig.DeepClone().AsBsonDocument
+                })
+                .ToList()
+        });
+        var service = CreateService(repository, Guid.NewGuid());
+
+        var response = await service.GetAdminOverviewAsync(raceId);
+
+        Assert.NotEmpty(response.Cards);
+        Assert.All(response.Cards, card => Assert.Equal(5, card.MaxStock));
+    }
+
+    [Fact]
     public async Task Assign_UsesCanonicalTeamNameFromSqlUser()
     {
         var raceId = Guid.NewGuid();

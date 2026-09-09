@@ -58,6 +58,9 @@ public static class RaceContract
         {
             public bool IsToggledLeaderboard { get; set; }
             public bool IsHiddenPoint { get; set; }
+            public bool IsShowHiddenBooths { get; set; }
+            public bool IsHideBoothDescription { get; set; }
+            public bool IsDisabledBoothStatus { get; set; }
         }
     }
 
@@ -84,6 +87,9 @@ public static class RaceContract
         {
             public bool? IsToggledLeaderboard { get; set; }
             public bool? IsHiddenPoint { get; set; }
+            public bool? IsShowHiddenBooths { get; set; }
+            public bool? IsHideBoothDescription { get; set; }
+            public bool? IsDisabledBoothStatus { get; set; }
         }
 
         public class OrganizerPatchModel
@@ -156,6 +162,9 @@ public static class RaceContract
     {
         public bool IsToggledLeaderboard { get; init; }
         public bool IsHiddenPoint { get; init; }
+        public bool IsShowHiddenBooths { get; init; }
+        public bool IsHideBoothDescription { get; init; }
+        public bool IsDisabledBoothStatus { get; init; }
         public IReadOnlyCollection<Guid> OrganizerId { get; init; } = [];
         public IReadOnlyCollection<OrganizerResponse> Organizers { get; init; } = [];
         public IReadOnlyCollection<TeamResponse> RaceTeam { get; init; } = [];

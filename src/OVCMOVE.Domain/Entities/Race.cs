@@ -18,4 +18,7 @@ public class Race : BaseEntity
 
     public bool IsToggledLeaderboard { get; set; }
     public bool IsHiddenPoint { get; set; }
+    public bool IsShowHiddenBooths { get; set; } = false;
+    public bool IsHideBoothDescription { get; set; } = false;
+    public bool IsDisabledBoothStatus { get; set; } = false;
 }

@@ -128,4 +128,29 @@ public class QueryContractTests
         var raceBoothsSql = RaceQueries.GetRaceBoothsQuery();
         Assert.Contains("[Status]", raceBoothsSql);
     }
+
+    [Fact]
+    public void RaceQueries_IncludeMapSettingsInReadAndWriteContracts()
+    {
+        var createSql = RaceQueries.CreateRaceQuery();
+        var updateSql = RaceQueries.UpdateRaceQuery();
+        var getByIdSql = RaceQueries.GetRaceByIdQuery();
+        var getDetailSql = RaceQueries.GetRaceDetailQuery();
+
+        Assert.Contains("[IsShowHiddenBooths]", createSql);
+        Assert.Contains("[IsHideBoothDescription]", createSql);
+        Assert.Contains("[IsDisabledBoothStatus]", createSql);
+
+        Assert.Contains("[IsShowHiddenBooths] = @IsShowHiddenBooths", updateSql);
+        Assert.Contains("[IsHideBoothDescription] = @IsHideBoothDescription", updateSql);
+        Assert.Contains("[IsDisabledBoothStatus] = @IsDisabledBoothStatus", updateSql);
+
+        Assert.Contains("[IsShowHiddenBooths]", getByIdSql);
+        Assert.Contains("[IsHideBoothDescription]", getByIdSql);
+        Assert.Contains("[IsDisabledBoothStatus]", getByIdSql);
+
+        Assert.Contains("[IsShowHiddenBooths]", getDetailSql);
+        Assert.Contains("[IsHideBoothDescription]", getDetailSql);
+        Assert.Contains("[IsDisabledBoothStatus]", getDetailSql);
+    }
 }

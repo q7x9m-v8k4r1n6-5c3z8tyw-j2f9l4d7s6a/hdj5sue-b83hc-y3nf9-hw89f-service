@@ -25,7 +25,7 @@ public static class CardIds
 public sealed class RaceCardDocument
 {
     [BsonId]
-    [BsonRepresentation(BsonType.String)]
+    [BsonSerializer(typeof(FlexibleStringOrObjectIdSerializer))]
     public string Id { get; set; } = string.Empty;
 
     [BsonElement("raceid")]
@@ -201,7 +201,7 @@ public static class CardEffectStatus
 public sealed class CardEffectDocument
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
+    [BsonSerializer(typeof(FlexibleStringOrObjectIdSerializer))]
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
     [BsonElement("raceId")]

@@ -72,3 +72,46 @@ public sealed class FlexibleNullableDateTimeSerializer : SerializerBase<DateTime
         }
     }
 }
+
+public sealed class FlexibleStringOrObjectIdSerializer : SerializerBase<string>
+{
+    public override string Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+    {
+        var type = context.Reader.CurrentBsonType;
+        switch (type)
+        {
+            case BsonType.ObjectId:
+                return context.Reader.ReadObjectId().ToString();
+            case BsonType.String:
+                return context.Reader.ReadString();
+            case BsonType.Symbol:
+                return context.Reader.ReadSymbol();
+            case BsonType.Int32:
+                return context.Reader.ReadInt32().ToString();
+            case BsonType.Int64:
+                return context.Reader.ReadInt64().ToString();
+            case BsonType.Null:
+                context.Reader.ReadNull();
+                return string.Empty;
+            default:
+                context.Reader.SkipValue();
+                return string.Empty;
+        }
+    }
+
+    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            context.Writer.WriteString(string.Empty);
+        }
+        else if (ObjectId.TryParse(value, out var objectId))
+        {
+            context.Writer.WriteObjectId(objectId);
+        }
+        else
+        {
+            context.Writer.WriteString(value);
+        }
+    }
+}

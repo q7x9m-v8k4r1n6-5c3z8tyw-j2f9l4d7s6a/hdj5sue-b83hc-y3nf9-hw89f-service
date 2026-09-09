@@ -30,6 +30,9 @@ public class PatchRaceCommand : AuditedRequest, IRequest<RaceDetailResultModel?>
     {
         public bool? IsToggledLeaderboard { get; set; }
         public bool? IsHiddenPoint { get; set; }
+        public bool? IsShowHiddenBooths { get; set; }
+        public bool? IsHideBoothDescription { get; set; }
+        public bool? IsDisabledBoothStatus { get; set; }
     }
 
     public class OrganizerPatchModel

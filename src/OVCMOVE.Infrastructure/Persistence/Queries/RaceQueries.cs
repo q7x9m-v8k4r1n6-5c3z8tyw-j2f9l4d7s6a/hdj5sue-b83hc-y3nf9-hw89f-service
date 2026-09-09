@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [MapImageUrl], [Rules],
+            [IsToggledLeaderboard], [IsHiddenPoint], [IsShowHiddenBooths], [IsHideBoothDescription], [IsDisabledBoothStatus], [CoverUrl], [MapImageUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @MapImageUrl, @Rules,
+            @IsToggledLeaderboard, @IsHiddenPoint, @IsShowHiddenBooths, @IsHideBoothDescription, @IsDisabledBoothStatus, @CoverUrl, @MapImageUrl, @Rules,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -26,6 +26,9 @@ public static class RaceQueries
             [Status] = @Status,
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
+            [IsShowHiddenBooths] = @IsShowHiddenBooths,
+            [IsHideBoothDescription] = @IsHideBoothDescription,
+            [IsDisabledBoothStatus] = @IsDisabledBoothStatus,
             [CoverUrl] = @CoverUrl,
             [MapImageUrl] = @MapImageUrl,
             [Rules] = @Rules,
@@ -48,7 +51,7 @@ public static class RaceQueries
     SELECT
         [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
         [Status], [Rules],
-        [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [MapImageUrl],
+        [IsToggledLeaderboard], [IsHiddenPoint], [IsShowHiddenBooths], [IsHideBoothDescription], [IsDisabledBoothStatus], [CoverUrl], [MapImageUrl],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
@@ -149,6 +152,9 @@ public static class RaceQueries
             [MapImageUrl],
             [IsToggledLeaderboard],
             [IsHiddenPoint],
+            [IsShowHiddenBooths],
+            [IsHideBoothDescription],
+            [IsDisabledBoothStatus],
             [ModifiedAt]
         FROM [dbo].[Race]
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OVCMOVE.Application.Common;
 
 namespace OVCMOVE.Application.Features.Races.Command.CreateRace;
@@ -13,6 +13,9 @@ public class CreateRaceCommand : AuditedRequest, IRequest<Guid>
     public string Rules { get; set; } = string.Empty;
     public bool IsToggledLeaderboard { get; set; }
     public bool IsHiddenPoint { get; set; }
+    public bool IsShowHiddenBooths { get; set; }
+    public bool IsHideBoothDescription { get; set; }
+    public bool IsDisabledBoothStatus { get; set; }
     public List<Guid> OrganizerIds { get; set; } = new();
     public List<Guid> TeamIds { get; set; } = new();
     public List<CreateBoothModel> Booths { get; set; } = new();

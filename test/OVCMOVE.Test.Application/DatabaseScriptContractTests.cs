@@ -219,6 +219,52 @@ public class DatabaseScriptContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AddRaceMapSettingsMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "009_AddRaceMapSettings.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Race', N'IsShowHiddenBooths') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsShowHiddenBooths] BIT NOT NULL CONSTRAINT DF_Race_IsShowHiddenBooths DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsHideBoothDescription] BIT NOT NULL CONSTRAINT DF_Race_IsHideBoothDescription DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsDisabledBoothStatus] BIT NOT NULL CONSTRAINT DF_Race_IsDisabledBoothStatus DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "[IsShowHiddenBooths] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsHideBoothDescription] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsDisabledBoothStatus] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

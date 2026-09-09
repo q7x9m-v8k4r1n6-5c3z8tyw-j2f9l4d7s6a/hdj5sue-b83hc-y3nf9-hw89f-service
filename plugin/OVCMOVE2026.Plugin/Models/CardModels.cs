@@ -121,6 +121,9 @@ public sealed class CardInventoryState
     [BsonElement("remainingStock")]
     public int RemainingStock { get; set; }
 
+    [BsonElement("maxStock")]
+    public int MaxStock { get; set; }
+
     // -1 distinguishes a legacy document with no price from an intentional free card.
     [BsonElement("price")]
     public int Price { get; set; } = -1;

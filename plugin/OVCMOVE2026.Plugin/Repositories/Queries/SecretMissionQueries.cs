@@ -124,4 +124,39 @@ public static class SecretMissionQueries
         [ModifiedBy] = 'admin-delete-mission',
         [ModifiedAt] = SYSUTCDATETIME()
     WHERE [Id] = @Id;";
+
+    public static string AssignRandomTechCacheQuery() => @"
+        DECLARE @ExistingId UNIQUEIDENTIFIER;
+
+        SELECT TOP (1) @ExistingId = [Id]
+        FROM [dbo].[SecretMission]
+        WHERE [RaceId] = @RaceId
+          AND [ModifiedBy] = @OperationId
+          AND [IsDeleted] = 0;
+
+        IF @ExistingId IS NOT NULL
+        BEGIN
+            SELECT TOP (1) *
+            FROM [dbo].[SecretMission]
+            WHERE [Id] = @ExistingId;
+            RETURN;
+        END;
+
+        ;WITH Candidate AS
+        (
+            SELECT TOP (1) *
+            FROM [dbo].[SecretMission] WITH (UPDLOCK, READPAST, ROWLOCK)
+            WHERE [RaceId] = @RaceId
+              AND [IsAssigned] = 0
+              AND [TeamId] IS NULL
+              AND [IsDeleted] = 0
+            ORDER BY NEWID()
+        )
+        UPDATE Candidate
+        SET [TeamId] = @TeamId,
+            [ReceivedBy] = @TeamId,
+            [ReceivedTime] = @ReceivedAt,
+            [ModifiedBy] = @OperationId,
+            [ModifiedAt] = @ReceivedAt
+        OUTPUT INSERTED.*;";
 }

@@ -22,11 +22,17 @@ public static class CardUseStatus
 
 public static class CardIds
 {
+    public const string Blackout = "BLACKOUT";
+    public const string Taxman = "TAXMAN";
+    public const string Firewall = "FIREWALL";
     public const string Overclock = "OVERCLOCK";
     public const string Cupid = "CUPID";
+    public const string Shield = "SHIELD";
     public const string Engineer = "ENGINEER";
     public const string Athlete = "ATHLETE";
     public const string Revive = "REVIVE";
+    public const string Scout = "SCOUT";
+    public const string Insight = "INSIGHT";
     public const string Swap = "SWAP";
     public const string Trap = "TRAP";
 }
@@ -41,6 +47,7 @@ public static class CardEffectEventCodes
 {
     public const string BoothEntryRequested = "booth.entry.requested";
     public const string BoothResultFinalized = "booth.result.finalized";
+    public const string DefenseDecision = "card.defense.decision";
     public const string ReviveOperatorConfirmation = "booth.revive.operator-confirmed";
     public const string OverclockResolution = "race.overclock.resolve";
 }

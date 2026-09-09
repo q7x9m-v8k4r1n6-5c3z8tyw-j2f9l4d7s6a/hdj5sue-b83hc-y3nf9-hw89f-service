@@ -25,4 +25,10 @@ public interface ISecretMissionRepository
     Task UpdateMissionAsync(Guid missionId, Guid teamId, string name, string description, CancellationToken cancellationToken = default);
     Task SoftDeleteAsync(Guid missionId, CancellationToken cancellationToken = default);
     Task<SecretMissionAdminDetailDto?> GetAdminDetailAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<SecretMission?> TryAssignRandomTechCacheAsync(
+        Guid raceId,
+        Guid teamId,
+        string operationId,
+        DateTime receivedAt,
+        CancellationToken cancellationToken = default);
 }

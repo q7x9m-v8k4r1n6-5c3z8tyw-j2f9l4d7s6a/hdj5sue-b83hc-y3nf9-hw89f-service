@@ -36,7 +36,7 @@ public sealed class BoothResultFinalizedCardHandler(
                 context.BoothId.Value,
                 cancellationToken))
             throw new ApplicationConflictException(
-                "Đội đang chờ quản trạm xử lý Revive. Hãy xác nhận hoặc từ chối Revive trước khi kết thúc booth.");
+                "Đội đang chờ quản trạm xác nhận Revive. Hãy xác nhận trước khi kết thúc booth.");
 
         var effects = await repository.GetActiveBoothResultEffectsAsync(
             context.RaceId,
@@ -59,9 +59,17 @@ public sealed class BoothResultFinalizedCardHandler(
         var cupidEffects = effects
             .Where(effect => effect.CardId == CardIds.Cupid)
             .ToArray();
+        var firewallEffect = effects
+            .Where(effect => effect.CardId == CardIds.Firewall)
+            .Where(effect => effect.TargetBoothId == context.BoothId.Value.ToString())
+            .OrderBy(effect => effect.StartAt)
+            .ThenBy(effect => effect.Id, StringComparer.Ordinal)
+            .FirstOrDefault();
         var claimedEffectIds = cupidEffects.Select(effect => effect.Id).ToList();
         if (bonusEffect is not null)
             claimedEffectIds.Add(bonusEffect.Id);
+        if (firewallEffect is not null)
+            claimedEffectIds.Add(firewallEffect.Id);
         if (claimedEffectIds.Count == 0) return null;
 
         try
@@ -116,6 +124,41 @@ public sealed class BoothResultFinalizedCardHandler(
             }
 
             boothResult.FinalAwardedPoints = finalAwardedPoints;
+
+            if (firewallEffect is not null)
+            {
+                var wasAttacked = firewallEffect.Data.TryGetValue("wasAttacked", out var attacked) &&
+                                  attacked.IsBoolean && attacked.AsBoolean;
+                var firewallBonus = wasAttacked
+                    ? 0
+                    : firewallEffect.Data.GetInt("bonusPoints", 25);
+                if (firewallBonus > 0)
+                {
+                    await AdjustScoreAsync(
+                        context,
+                        context.TeamId,
+                        firewallBonus,
+                        $"Firewall bảo vệ thành công tại booth {context.BoothId.Value:D}",
+                        cancellationToken,
+                        $"{context.EventId}:firewall");
+                    boothResult.ScoreAdjustments.Add(
+                        new PluginScoreAdjustment(context.TeamId, firewallBonus));
+                }
+
+                resolutions.Add(new CardEffectResolution(
+                    firewallEffect.Id,
+                    wasAttacked ? "attack_blocked" : "protection_bonus_applied",
+                    new BsonDocument
+                    {
+                        ["boothId"] = context.BoothId.Value.ToString(),
+                        ["boothCompletionId"] = boothResult.BoothCompletionId.ToString(),
+                        ["wasAttacked"] = wasAttacked,
+                        ["bonusPoints"] = firewallBonus,
+                        ["resolvedByEventId"] = context.EventId
+                    },
+                    context.OccurredAt.AddMinutes(
+                        firewallEffect.Data.GetInt("timeBetweenUseMinutes", 20))));
+            }
 
             foreach (var cupid in cupidEffects)
             {
@@ -215,13 +258,14 @@ public sealed class BoothResultFinalizedCardHandler(
         Guid teamId,
         int delta,
         string reason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? eventId = null)
     {
         var result = await sender.Send(new UpdateTeamScoreCommand
         {
             RaceId = context.RaceId,
             TeamId = teamId,
-            EventId = context.EventId,
+            EventId = eventId ?? context.EventId,
             Delta = delta,
             Reason = reason,
             PublishRealtimeNotification = false

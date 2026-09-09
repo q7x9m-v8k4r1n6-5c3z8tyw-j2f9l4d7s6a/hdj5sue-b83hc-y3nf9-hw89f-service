@@ -278,7 +278,8 @@ public sealed class RaceCardService(
             throw new ApplicationConflictException(
                 $"Card đang hồi; có thể dùng lại sau {card.NextTimeAvailable.Value:O}.");
 
-        if (definition.CardId is CardIds.Engineer or CardIds.Athlete or CardIds.Swap)
+        if (definition.CardId is CardIds.Engineer or CardIds.Athlete or CardIds.Swap or
+            CardIds.Scout or CardIds.Insight)
         {
             var activeBooth = await boothRepository.GetActiveByTeamAndRaceAsync(
                 teamId,
@@ -289,7 +290,7 @@ public sealed class RaceCardService(
                     "Card này chỉ được dùng khi đội đang ở giữa hai booth.");
         }
 
-        if (definition.CardId is CardIds.Cupid or CardIds.Swap)
+        if (definition.CardId is CardIds.Cupid or CardIds.Swap or CardIds.Insight or CardIds.Blackout)
         {
             var targetTeamId = GetRequiredGuidInput(
                 inputs,
@@ -315,11 +316,27 @@ public sealed class RaceCardService(
                     "Đội đã có yêu cầu Revive đang chờ quản trạm xác nhận tại booth này.");
         }
 
-        if (definition.CardId == CardIds.Trap)
+        if (definition.CardId is CardIds.Trap or CardIds.Taxman or CardIds.Firewall)
         {
-            var boothId = GetRequiredGuidInput(inputs, "boothId", "Trap cần input boothId hợp lệ.");
-            if (await repository.HasActiveTrapAsync(raceId, boothId, cancellationToken))
+            var boothId = GetRequiredGuidInput(
+                inputs,
+                "boothId",
+                $"{definition.CardName} cần input boothId hợp lệ.");
+            var targetBooth = await boothRepository.GetByIdAsync(boothId, cancellationToken);
+            if (targetBooth is null || targetBooth.RaceId != raceId)
+                throw new ApplicationValidationException("Booth được chọn không thuộc race này.");
+
+            if (definition.CardId == CardIds.Trap &&
+                await repository.HasActiveTrapAsync(raceId, boothId, cancellationToken))
                 throw new ApplicationConflictException("Booth này đã có Trap đang hoạt động.");
+            if (definition.CardId == CardIds.Taxman &&
+                await repository.HasActiveBoothEffectAsync(
+                    raceId,
+                    boothId,
+                    CardIds.Taxman,
+                    now,
+                    cancellationToken))
+                throw new ApplicationConflictException("Booth này đã có Taxman đang hoạt động.");
         }
 
         var inventory = FindInventory(document, definition.CardId);
@@ -469,6 +486,7 @@ public sealed class RaceCardService(
             throw new ApplicationNotFoundException("Không tìm thấy race.");
         try
         {
+            await repository.ExpireTimedEffectsAsync(raceId, DateTime.UtcNow, cancellationToken);
             return await repository.GetOrCreateAsync(raceId, cancellationToken);
         }
         catch (MongoAuthenticationException exception)
@@ -572,7 +590,10 @@ public sealed class RaceCardService(
         if (definition.CardId == CardIds.Revive &&
             (activeBooth is null || activeBooth.Status != BoothConstants.BoothStatus.Occupied))
             return new(false, "not_in_booth", "Revive chỉ dùng khi đội đang chơi booth.", null);
-        if (definition.CardId is CardIds.Engineer or CardIds.Athlete or CardIds.Swap &&
+        if (definition.CardId == CardIds.Shield)
+            return new(false, "awaiting_threat", "Shield chỉ dùng từ thông báo phòng thủ.", null);
+        if (definition.CardId is CardIds.Engineer or CardIds.Athlete or CardIds.Swap or
+                CardIds.Scout or CardIds.Insight &&
             activeBooth is not null)
             return new(false, "not_between_booths", "Card chỉ dùng giữa hai booth.", null);
         return new(true, "available", "Card có thể sử dụng.", null);

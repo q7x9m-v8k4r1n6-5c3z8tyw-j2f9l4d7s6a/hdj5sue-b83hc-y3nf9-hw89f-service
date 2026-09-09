@@ -179,11 +179,14 @@ public sealed class BoothResultFinalizedCardHandlerTests
             CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task EnsureIndexesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task ExpireTimedEffectsAsync(Guid raceId, DateTime occurredAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RaceCardDocument> GetOrCreateAsync(Guid raceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ReplaceAsync(RaceCardDocument document, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ReplaceWithEffectAsync(RaceCardDocument document, CardEffectDocument effect, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> HasActiveTrapAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> HasActiveBoothEffectAsync(Guid raceId, Guid boothId, string cardId, DateTime occurredAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> TryClaimTrapAsync(Guid raceId, Guid boothId, Guid triggeringTeamId, DateTime triggeredAt, string resolvedByEventCode, string resolvedByEventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> TryClaimTaxmanAsync(Guid raceId, Guid boothId, Guid triggeringTeamId, DateTime triggeredAt, string resolvedByEventCode, string resolvedByEventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> GetPendingReviveAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> GetEffectAsync(Guid raceId, string effectId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

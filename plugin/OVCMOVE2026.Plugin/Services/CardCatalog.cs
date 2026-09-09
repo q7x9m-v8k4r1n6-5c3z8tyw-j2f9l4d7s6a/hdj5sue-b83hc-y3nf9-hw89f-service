@@ -13,6 +13,58 @@ public static class CardCatalog
     public static IReadOnlyCollection<CardDefinition> All { get; } =
     [
         new(
+            CardIds.Blackout,
+            "Blackout",
+            CardTypes.CoreChip,
+            "Cướp CD từ một đội ở nhóm đã chọn và phân phối CD cho nhóm đối diện.",
+            0,
+            "Chọn nhóm cao hơn/thấp hơn và một đội hợp lệ trong nhóm đó.",
+            [
+                new("targetGroup", "Nhóm mục tiêu", "score_group", true, "higher hoặc lower so với đội sử dụng."),
+                new("targetTeamId", "Đội bị cướp", "opponent_team", true, "Đội hợp lệ thuộc nhóm đã chọn.")
+            ],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 1,
+                ["stealPoints"] = 15,
+                ["redistributionPoints"] = 5
+            }),
+        new(
+            CardIds.Taxman,
+            "Taxman",
+            CardTypes.CoreChip,
+            "Đặt thuế tại một booth trong thời gian giới hạn và cướp CD của đội đối thủ đầu tiên đi vào.",
+            0,
+            "Chọn một booth; chủ Taxman không kích hoạt Taxman của chính mình.",
+            [new("boothId", "Booth đặt Taxman", "booth", true, "Booth được đặt Taxman.")],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 2,
+                ["durationMinutes"] = 30,
+                ["timeBetweenUseMinutes"] = 20,
+                ["stealPoints"] = 20
+            }),
+        new(
+            CardIds.Firewall,
+            "Firewall",
+            CardTypes.CoreChip,
+            "Bảo vệ một booth đã chọn khỏi Trap, Taxman và Blackout; nhận thưởng nếu không bị tấn công.",
+            0,
+            "Kích hoạt trước khi vào booth được chọn.",
+            [new("boothId", "Booth được bảo vệ", "booth", true, "Mỗi lượt Firewall bảo vệ một booth.")],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 2,
+                ["timeBetweenUseMinutes"] = 20,
+                ["bonusPoints"] = 25,
+                ["blockedCardIds"] = new BsonArray
+                {
+                    CardIds.Trap,
+                    CardIds.Taxman,
+                    CardIds.Blackout
+                }
+            }),
+        new(
             CardIds.Overclock,
             "Overclock",
             CardTypes.CoreChip,
@@ -41,6 +93,26 @@ public static class CardCatalog
                 ["timeBetweenUseMinutes"] = 15,
                 ["rewardMultiplier"] = 1.0,
                 ["failurePenalty"] = 5
+            }),
+        new(
+            CardIds.Shield,
+            "Shield",
+            CardTypes.DataPatch,
+            "Chặn một hậu quả từ Trap, Taxman, Blackout hoặc Cupid trong thời gian phản hồi.",
+            15,
+            "Dùng từ thông báo phòng thủ khi một effect hợp lệ đang chờ xử lý.",
+            [],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 1,
+                ["decisionSeconds"] = 30,
+                ["blockedCardIds"] = new BsonArray
+                {
+                    CardIds.Trap,
+                    CardIds.Taxman,
+                    CardIds.Blackout,
+                    CardIds.Cupid
+                }
             }),
         new(
             CardIds.Engineer,
@@ -83,6 +155,31 @@ public static class CardCatalog
             {
                 ["card_use_count_max"] = 1,
                 ["consumeWhen"] = "operator_confirmed"
+            }),
+        new(
+            CardIds.Scout,
+            "Scout",
+            CardTypes.DataPatch,
+            "Nhận ngẫu nhiên một Tech Cache chưa được đội nào nhận.",
+            10,
+            "Kích hoạt giữa hai booth; thẻ vẫn mất nếu không còn Tech Cache phù hợp.",
+            [],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 1
+            }),
+        new(
+            CardIds.Insight,
+            "Insight",
+            CardTypes.DataPatch,
+            "Xem CD hiện tại của một đội; nhận thêm CD nếu đội sử dụng đang có ít CD hơn.",
+            10,
+            "Chọn một đội đối thủ giữa hai booth.",
+            [new("targetTeamId", "Đội được xem", "opponent_team", true, "Đội cần xem CD.")],
+            new BsonDocument
+            {
+                ["card_use_count_max"] = 1,
+                ["bonusPoints"] = 25
             }),
         new(
             CardIds.Swap,

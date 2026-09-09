@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using OVCMOVE.Application.Abstractions.Plugins;
+using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE2026.Plugin.Models;
@@ -223,5 +224,118 @@ public sealed class TrapBoothEntryRequestedHandler(
                 CancellationToken.None);
             throw;
         }
+    }
+}
+
+public sealed class TaxmanBoothEntryRequestedHandler(
+    IRaceCardRepository repository,
+    IRaceRepository raceRepository,
+    ISender sender) : IPluginEventHandler
+{
+    public string EventName => PluginEventNames.BoothEntryRequested;
+
+    public async Task<IPluginEventExecution?> PrepareAsync(
+        PluginEventContext context,
+        CancellationToken cancellationToken)
+    {
+        if (!context.BoothId.HasValue) return null;
+        var taxman = await repository.TryClaimTaxmanAsync(
+            context.RaceId,
+            context.BoothId.Value,
+            context.TeamId,
+            context.OccurredAt,
+            context.Name,
+            context.EventId,
+            cancellationToken);
+        if (taxman is null) return null;
+
+        try
+        {
+            if (!Guid.TryParse(taxman.OwnerTeamId, out var ownerTeamId))
+                throw new ApplicationValidationException("Taxman có ownerTeamId không hợp lệ.");
+            var targetScore = await raceRepository.GetRaceTeamScoreAsync(
+                context.RaceId,
+                context.TeamId,
+                cancellationToken)
+                ?? throw new ApplicationValidationException("Không tìm thấy đội kích hoạt Taxman.");
+            var configuredAmount = taxman.Data.GetInt("stealPoints", 20);
+            var transferredAmount = Math.Min(Math.Max(0, targetScore), configuredAmount);
+            var adjustments = new List<PluginScoreAdjustment>();
+
+            if (transferredAmount > 0)
+            {
+                await AdjustAsync(
+                    context,
+                    context.TeamId,
+                    -transferredAmount,
+                    $"Taxman tại booth {context.BoothId.Value:D}",
+                    cancellationToken);
+                await AdjustAsync(
+                    context,
+                    ownerTeamId,
+                    transferredAmount,
+                    $"Nhận CD từ Taxman tại booth {context.BoothId.Value:D}",
+                    cancellationToken);
+                adjustments.Add(new PluginScoreAdjustment(context.TeamId, -transferredAmount));
+                adjustments.Add(new PluginScoreAdjustment(ownerTeamId, transferredAmount));
+            }
+
+            var resolution = new CardEffectResolution(
+                taxman.Id,
+                "triggered",
+                new BsonDocument
+                {
+                    ["boothId"] = context.BoothId.Value.ToString(),
+                    ["targetTeamId"] = context.TeamId.ToString(),
+                    ["configuredAmount"] = configuredAmount,
+                    ["transferredAmount"] = transferredAmount,
+                    ["resolvedByEventId"] = context.EventId
+                },
+                context.OccurredAt.AddMinutes(taxman.Data.GetInt("timeBetweenUseMinutes", 20)));
+            return new DeferredPluginEventExecution(
+                token => repository.CompleteClaimedEffectsAsync(
+                    context.RaceId,
+                    context.Name,
+                    context.EventId,
+                    context.TeamId,
+                    context.OccurredAt,
+                    [resolution],
+                    token),
+                token => repository.ReleaseClaimedEffectsAsync(
+                    context.RaceId,
+                    context.EventId,
+                    DateTime.UtcNow,
+                    token),
+                adjustments);
+        }
+        catch
+        {
+            await repository.ReleaseClaimedEffectsAsync(
+                context.RaceId,
+                context.EventId,
+                DateTime.UtcNow,
+                CancellationToken.None);
+            throw;
+        }
+    }
+
+    private async Task AdjustAsync(
+        PluginEventContext context,
+        Guid teamId,
+        int delta,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new UpdateTeamScoreCommand
+        {
+            RaceId = context.RaceId,
+            TeamId = teamId,
+            EventId = context.EventId,
+            Delta = delta,
+            Reason = reason,
+            PublishRealtimeNotification = false
+        }, cancellationToken);
+        if (result is null)
+            throw new ApplicationValidationException($"Không tìm thấy team '{teamId}' để xử lý Taxman.");
     }
 }

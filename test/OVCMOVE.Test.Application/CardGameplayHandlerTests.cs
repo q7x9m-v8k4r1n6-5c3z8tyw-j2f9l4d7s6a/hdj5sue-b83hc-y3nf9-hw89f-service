@@ -8,18 +8,54 @@ namespace OVCMOVE.Test.Application;
 public sealed class CardGameplayHandlerTests
 {
     [Fact]
-    public void Catalog_contains_only_the_current_gameplay_scope()
+    public void Catalog_contains_the_full_confirmed_gameplay_scope()
     {
         var ids = CardCatalog.All.Select(item => item.CardId).ToHashSet();
 
-        Assert.Equal(7, ids.Count);
+        Assert.Equal(13, ids.Count);
+        Assert.Contains(CardIds.Blackout, ids);
+        Assert.Contains(CardIds.Taxman, ids);
+        Assert.Contains(CardIds.Firewall, ids);
         Assert.Contains(CardIds.Overclock, ids);
         Assert.Contains(CardIds.Cupid, ids);
+        Assert.Contains(CardIds.Shield, ids);
         Assert.Contains(CardIds.Engineer, ids);
         Assert.Contains(CardIds.Athlete, ids);
         Assert.Contains(CardIds.Revive, ids);
+        Assert.Contains(CardIds.Scout, ids);
+        Assert.Contains(CardIds.Insight, ids);
         Assert.Contains(CardIds.Swap, ids);
         Assert.Contains(CardIds.Trap, ids);
+    }
+
+    [Fact]
+    public async Task Taxman_creates_a_timed_booth_effect()
+    {
+        var handler = new TaxmanCardUseHandler();
+        var startedAt = DateTime.UtcNow;
+        var context = Context(
+            CardIds.Taxman,
+            new BsonDocument("boothId", Guid.NewGuid().ToString()),
+            startedAt);
+
+        var plan = await handler.PrepareAsync(context, CancellationToken.None);
+
+        Assert.Equal(CardUseStatus.Active, plan.Status);
+        Assert.Equal(startedAt.AddMinutes(30), plan.Effect?.LimitEndAt);
+        Assert.Equal(20, plan.Effect?.Data["stealPoints"].AsInt32);
+    }
+
+    [Fact]
+    public async Task Firewall_blocks_only_the_three_confirmed_attack_cards()
+    {
+        var plan = await new FirewallCardUseHandler().PrepareAsync(
+            Context(CardIds.Firewall, new BsonDocument("boothId", Guid.NewGuid().ToString())),
+            CancellationToken.None);
+
+        var blocked = plan.Effect!.Data["blockedCardIds"].AsBsonArray
+            .Select(item => item.AsString)
+            .ToArray();
+        Assert.Equal([CardIds.Trap, CardIds.Taxman, CardIds.Blackout], blocked);
     }
 
     [Fact]
@@ -87,7 +123,10 @@ public sealed class CardGameplayHandlerTests
         Assert.Equal(2, plan.Notifications?.Count);
     }
 
-    private static CardUseContext Context(string cardId, BsonDocument? inputs = null)
+    private static CardUseContext Context(
+        string cardId,
+        BsonDocument? inputs = null,
+        DateTime? occurredAt = null)
     {
         var definition = CardCatalog.Get(cardId);
         return new CardUseContext(
@@ -109,7 +148,7 @@ public sealed class CardGameplayHandlerTests
             },
             Guid.NewGuid().ToString(),
             inputs ?? new BsonDocument(),
-            DateTime.UtcNow);
+            occurredAt ?? DateTime.UtcNow);
     }
 
     private static BsonDocument Prediction(Guid teamId, Guid boothId) => new()

@@ -1,8 +1,11 @@
 using MongoDB.Bson;
+using MediatR;
 using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Common;
+using OVCMOVE.Application.Features.Races.Command.UpdateTeamScore;
 using OVCMOVE.Domain.Constants;
 using OVCMOVE2026.Plugin.Models;
+using OVCMOVE2026.Plugin.Repositories;
 
 namespace OVCMOVE2026.Plugin.Services;
 
@@ -54,7 +57,8 @@ public abstract class EffectCardUseHandler : ICardUseHandler
         string triggerEventCode,
         string? targetTeamId = null,
         string? targetBoothId = null,
-        BsonDocument? data = null) => new()
+        BsonDocument? data = null,
+        DateTime? limitEndAt = null) => new()
         {
             RaceId = context.RaceId.ToString(),
             CardId = context.TeamCard.CardInfo.CardId,
@@ -66,6 +70,7 @@ public abstract class EffectCardUseHandler : ICardUseHandler
             TriggerEventCode = triggerEventCode,
             Status = CardEffectStatus.Active,
             StartAt = context.OccurredAt,
+            LimitEndAt = limitEndAt,
             CreatedAt = context.OccurredAt,
             CreatedBy = context.TeamId.ToString(),
             ModifiedAt = context.OccurredAt,
@@ -82,6 +87,116 @@ public abstract class EffectCardUseHandler : ICardUseHandler
     }
 
     protected static Task<CardUsePlan> Result(CardUsePlan plan) => Task.FromResult(plan);
+}
+
+public sealed class BlackoutCardUseHandler : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Blackout;
+
+    public override Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken)
+    {
+        var targetTeamId = RequireGuid(
+            context.Inputs,
+            "targetTeamId",
+            "Blackout cần targetTeamId hợp lệ.");
+        if (targetTeamId == context.TeamId)
+            throw new ApplicationValidationException("Blackout chỉ được chọn đội đối thủ.");
+        var targetGroup = context.Inputs.GetString("targetGroup").Trim().ToLowerInvariant();
+        if (targetGroup is not ("higher" or "lower"))
+            throw new ApplicationValidationException("targetGroup của Blackout phải là higher hoặc lower.");
+
+        var effect = CreateEffect(
+            context,
+            CardEffectEventCodes.DefenseDecision,
+            targetTeamId: targetTeamId.ToString(),
+            data: new BsonDocument
+            {
+                ["targetGroup"] = targetGroup,
+                ["stealPoints"] = context.Inventory.CardConfig.GetInt("stealPoints", 15),
+                ["redistributionPoints"] = context.Inventory.CardConfig.GetInt("redistributionPoints", 5)
+            });
+        return Result(new CardUsePlan(
+            CardUseStatus.Active,
+            true,
+            "Blackout đang chờ xử lý phòng thủ của đội mục tiêu.",
+            effect));
+    }
+}
+
+public sealed class TaxmanCardUseHandler : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Taxman;
+
+    public override Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.TeamCard.CardUses.Any(use => use.Status == CardUseStatus.Active))
+            throw new ApplicationConflictException("Lượt Taxman trước vẫn còn hiệu lực.");
+        var boothId = RequireGuid(context.Inputs, "boothId", "Taxman cần boothId hợp lệ.");
+        var durationMinutes = context.Inventory.CardConfig.GetInt("durationMinutes", 30);
+        var effect = CreateEffect(
+            context,
+            CardEffectEventCodes.BoothEntryRequested,
+            targetBoothId: boothId.ToString(),
+            data: new BsonDocument
+            {
+                ["stealPoints"] = context.Inventory.CardConfig.GetInt("stealPoints", 20),
+                ["timeBetweenUseMinutes"] = context.Inventory.CardConfig.GetInt("timeBetweenUseMinutes", 20)
+            },
+            limitEndAt: context.OccurredAt.AddMinutes(durationMinutes));
+        return Result(new CardUsePlan(
+            CardUseStatus.Active,
+            true,
+            $"Đã đặt Taxman trong {durationMinutes} phút.",
+            effect));
+    }
+}
+
+public sealed class FirewallCardUseHandler : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Firewall;
+
+    public override Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.TeamCard.CardUses.Any(use => use.Status == CardUseStatus.Active))
+            throw new ApplicationConflictException("Lượt Firewall trước vẫn đang bảo vệ một booth.");
+        var boothId = RequireGuid(context.Inputs, "boothId", "Firewall cần boothId hợp lệ.");
+        var effect = CreateEffect(
+            context,
+            CardEffectEventCodes.BoothResultFinalized,
+            targetTeamId: context.TeamId.ToString(),
+            targetBoothId: boothId.ToString(),
+            data: new BsonDocument
+            {
+                ["bonusPoints"] = context.Inventory.CardConfig.GetInt("bonusPoints", 25),
+                ["timeBetweenUseMinutes"] = context.Inventory.CardConfig.GetInt("timeBetweenUseMinutes", 20),
+                ["blockedCardIds"] = context.Inventory.CardConfig.TryGetValue("blockedCardIds", out var blocked)
+                    ? blocked.DeepClone()
+                    : new BsonArray { CardIds.Trap, CardIds.Taxman, CardIds.Blackout },
+                ["wasAttacked"] = false
+            });
+        return Result(new CardUsePlan(
+            CardUseStatus.Active,
+            true,
+            "Firewall đang bảo vệ booth đã chọn.",
+            effect));
+    }
+}
+
+public sealed class ShieldCardUseHandler : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Shield;
+
+    public override Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken) =>
+        throw new ApplicationConflictException(
+            "Shield chỉ được sử dụng từ thông báo phòng thủ của một effect đang chờ.");
 }
 
 public sealed class OverclockCardUseHandler : EffectCardUseHandler
@@ -229,6 +344,119 @@ public sealed class ReviveCardUseHandler(IBoothRepository boothRepository) : Eff
                     null,
                     "Có đội vừa gửi yêu cầu sử dụng Revive. Quản trạm phụ trách vui lòng xác nhận trên màn chấm điểm.")
             ]);
+    }
+}
+
+public sealed class ScoutCardUseHandler(ISecretMissionRepository missionRepository) : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Scout;
+
+    public override async Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken)
+    {
+        var operationId = $"card-scout:{context.TeamCard.CardInfo.CardInstanceId}";
+        var mission = await missionRepository.TryAssignRandomTechCacheAsync(
+            context.RaceId,
+            context.TeamId,
+            operationId,
+            context.OccurredAt,
+            cancellationToken);
+        if (mission is null)
+        {
+            return new CardUsePlan(
+                CardUseStatus.Resolved,
+                true,
+                "Không còn Tech Cache nào chưa được nhận; Scout vẫn đã được sử dụng.",
+                Result: new BsonDocument("missionAvailable", false));
+        }
+
+        var result = new BsonDocument
+        {
+            ["missionAvailable"] = true,
+            ["missionId"] = mission.Id.ToString(),
+            ["missionName"] = mission.Name,
+            ["location"] = mission.Location ?? string.Empty
+        };
+        return new CardUsePlan(
+            CardUseStatus.Resolved,
+            true,
+            $"Đã nhận Tech Cache: {mission.Name}. Vị trí: {mission.Location ?? "chưa có mô tả"}.",
+            Result: result,
+            Notifications:
+            [
+                new(
+                    "team",
+                    context.TeamId,
+                    $"Scout đã tìm thấy Tech Cache '{mission.Name}' tại: {mission.Location ?? "chưa có mô tả"}.")
+            ]);
+    }
+}
+
+public sealed class InsightCardUseHandler(
+    IRaceRepository raceRepository,
+    ISender sender) : EffectCardUseHandler
+{
+    public override string CardId => CardIds.Insight;
+
+    public override async Task<CardUsePlan> PrepareAsync(
+        CardUseContext context,
+        CancellationToken cancellationToken)
+    {
+        var targetTeamId = RequireGuid(
+            context.Inputs,
+            "targetTeamId",
+            "Insight cần targetTeamId hợp lệ.");
+        if (targetTeamId == context.TeamId)
+            throw new ApplicationValidationException("Insight chỉ được chọn đội đối thủ.");
+
+        var ownerScore = await raceRepository.GetRaceTeamScoreAsync(
+            context.RaceId,
+            context.TeamId,
+            cancellationToken)
+            ?? throw new ApplicationValidationException("Không tìm thấy điểm của đội sử dụng Insight.");
+        var targetScore = await raceRepository.GetRaceTeamScoreAsync(
+            context.RaceId,
+            targetTeamId,
+            cancellationToken)
+            ?? throw new ApplicationValidationException("Không tìm thấy điểm của đội mục tiêu.");
+        var bonusPoints = context.Inventory.CardConfig.GetInt("bonusPoints", 25);
+        var eventId = $"card-insight:{context.TeamCard.CardInfo.CardInstanceId}";
+        var existingLogs = await raceRepository.GetScoringLogsByEventIdAsync(
+            context.RaceId,
+            eventId,
+            cancellationToken);
+        var existing = existingLogs.FirstOrDefault(log => log.TeamId == context.TeamId);
+        var appliedBonus = existing?.Delta ?? 0;
+
+        if (existing is null && ownerScore < targetScore)
+        {
+            var mutation = await sender.Send(new UpdateTeamScoreCommand
+            {
+                RaceId = context.RaceId,
+                TeamId = context.TeamId,
+                EventId = eventId,
+                Delta = bonusPoints,
+                Reason = $"Insight so sánh điểm với đội {targetTeamId:D}"
+            }, cancellationToken);
+            appliedBonus = mutation?.Delta
+                ?? throw new ApplicationValidationException("Không thể cộng điểm Insight cho đội.");
+        }
+
+        return new CardUsePlan(
+            CardUseStatus.Resolved,
+            true,
+            appliedBonus > 0
+                ? $"Đội mục tiêu có {targetScore} CD; đội bạn được cộng {appliedBonus} CD."
+                : $"Đội mục tiêu có {targetScore} CD; đội bạn không nhận thêm CD.",
+            Result: new BsonDocument
+            {
+                ["targetTeamId"] = targetTeamId.ToString(),
+                ["targetScore"] = targetScore,
+                ["ownerScoreBefore"] = ownerScore,
+                ["bonusApplied"] = appliedBonus > 0,
+                ["bonusPoints"] = appliedBonus
+            });
     }
 }
 

@@ -10,6 +10,54 @@ public sealed class MongoRaceCardRepository(
     IMongoCollection<RaceCardDocument> collection,
     IMongoCollection<CardEffectDocument> effectCollection) : IRaceCardRepository
 {
+    public async Task ExpireTimedEffectsAsync(
+        Guid raceId,
+        DateTime occurredAt,
+        CancellationToken cancellationToken = default)
+    {
+        var expiredEffects = await effectCollection.Find(effect =>
+                effect.RaceId == raceId.ToString() &&
+                effect.Status == CardEffectStatus.Active &&
+                effect.ClaimedByEventId == null &&
+                effect.LimitEndAt != null &&
+                effect.LimitEndAt <= occurredAt)
+            .SortBy(effect => effect.LimitEndAt)
+            .ThenBy(effect => effect.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var effect in expiredEffects)
+        {
+            if (!Guid.TryParse(effect.OwnerTeamId, out var ownerTeamId)) continue;
+            var eventId = $"card-effect-expired:{effect.Id}";
+            await ClaimEffectsAsync(
+                raceId,
+                [effect.Id],
+                eventId,
+                occurredAt,
+                cancellationToken);
+            var expiredAt = effect.LimitEndAt ?? occurredAt;
+            DateTime? nextTimeAvailable = effect.CardId == CardIds.Taxman
+                ? expiredAt.AddMinutes(effect.Data.GetInt("timeBetweenUseMinutes", 20))
+                : null;
+            await CompleteClaimedEffectsAsync(
+                raceId,
+                "card.effect.expired",
+                eventId,
+                ownerTeamId,
+                expiredAt,
+                [new CardEffectResolution(
+                    effect.Id,
+                    "expired",
+                    new BsonDocument
+                    {
+                        ["expiredAt"] = expiredAt,
+                        ["triggered"] = false
+                    },
+                    nextTimeAvailable)],
+                cancellationToken);
+        }
+    }
+
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken = default)
     {
         await collection.Indexes.CreateOneAsync(
@@ -30,6 +78,23 @@ public sealed class MongoRaceCardRepository(
                     PartialFilterExpression = new BsonDocument
                     {
                         ["cardId"] = CardIds.Trap,
+                        ["status"] = CardEffectStatus.Active
+                    }
+                }),
+            cancellationToken: cancellationToken);
+
+        await effectCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<CardEffectDocument>(
+                Builders<CardEffectDocument>.IndexKeys
+                    .Ascending(item => item.RaceId)
+                    .Ascending(item => item.TargetBoothId),
+                new CreateIndexOptions<CardEffectDocument>
+                {
+                    Unique = true,
+                    Name = "ux_active_taxman_per_booth",
+                    PartialFilterExpression = new BsonDocument
+                    {
+                        ["cardId"] = CardIds.Taxman,
                         ["status"] = CardEffectStatus.Active
                     }
                 }),
@@ -246,6 +311,41 @@ public sealed class MongoRaceCardRepository(
             cancellationToken);
     }
 
+    public async Task<CardEffectDocument?> TryClaimTaxmanAsync(
+        Guid raceId,
+        Guid boothId,
+        Guid triggeringTeamId,
+        DateTime triggeredAt,
+        string resolvedByEventCode,
+        string resolvedByEventId,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<CardEffectDocument>.Filter.And(
+            Builders<CardEffectDocument>.Filter.Eq(item => item.RaceId, raceId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.CardId, CardIds.Taxman),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.TargetBoothId, boothId.ToString()),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.TriggerEventCode, resolvedByEventCode),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.Status, CardEffectStatus.Active),
+            Builders<CardEffectDocument>.Filter.Eq(item => item.ClaimedByEventId, null),
+            Builders<CardEffectDocument>.Filter.Ne(item => item.OwnerTeamId, triggeringTeamId.ToString()),
+            Builders<CardEffectDocument>.Filter.Gt(item => item.LimitEndAt, triggeredAt));
+        var update = Builders<CardEffectDocument>.Update
+            .Set(item => item.ClaimedAt, triggeredAt)
+            .Set(item => item.ClaimedByEventId, resolvedByEventId)
+            .Set(item => item.TriggeredByTeamId, triggeringTeamId.ToString())
+            .Set(item => item.ModifiedAt, triggeredAt)
+            .Inc(item => item.Version, 1);
+
+        return await effectCollection.FindOneAndUpdateAsync(
+            filter,
+            update,
+            new FindOneAndUpdateOptions<CardEffectDocument>
+            {
+                ReturnDocument = ReturnDocument.After
+            },
+            cancellationToken);
+    }
+
     public Task<bool> HasPendingReviveAsync(
         Guid raceId,
         Guid teamId,
@@ -257,6 +357,20 @@ public sealed class MongoRaceCardRepository(
                 effect.OwnerTeamId == teamId.ToString() &&
                 effect.TargetBoothId == boothId.ToString() &&
                 effect.Status == CardEffectStatus.Active)
+            .AnyAsync(cancellationToken);
+
+    public Task<bool> HasActiveBoothEffectAsync(
+        Guid raceId,
+        Guid boothId,
+        string cardId,
+        DateTime occurredAt,
+        CancellationToken cancellationToken = default) =>
+        effectCollection.Find(effect =>
+                effect.RaceId == raceId.ToString() &&
+                effect.CardId == cardId &&
+                effect.TargetBoothId == boothId.ToString() &&
+                effect.Status == CardEffectStatus.Active &&
+                (effect.LimitEndAt == null || effect.LimitEndAt > occurredAt))
             .AnyAsync(cancellationToken);
 
     public async Task<CardEffectDocument?> GetPendingReviveAsync(

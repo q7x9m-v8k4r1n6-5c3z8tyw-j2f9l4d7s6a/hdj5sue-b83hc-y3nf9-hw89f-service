@@ -139,4 +139,15 @@ public class SecretMissionRepository : ISecretMissionRepository
 
         return mission;
     }
+
+    public Task<SecretMission?> TryAssignRandomTechCacheAsync(
+        Guid raceId,
+        Guid teamId,
+        string operationId,
+        DateTime receivedAt,
+        CancellationToken cancellationToken = default) =>
+        _db.QueryFirstOrDefaultAsync<SecretMission>(
+            SecretMissionQueries.AssignRandomTechCacheQuery(),
+            new { RaceId = raceId, TeamId = teamId, OperationId = operationId, ReceivedAt = receivedAt },
+            cancellationToken);
 }

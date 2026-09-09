@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text.Json;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -107,8 +107,11 @@ public class RaceRepository : IRaceRepository
             Place = booth.Place,
             Description = booth.Description,
             IsHidden = booth.IsHidden,
+            Status = booth.Status,
             Type = booth.Type,
             MaximumScore = booth.MaximumScore,
+            MapX = booth.MapX,
+            MapY = booth.MapY,
             OrganizerIds = organizerIdsByBooth.GetValueOrDefault(
                 booth.Id,
                 Array.Empty<Guid>())
@@ -139,9 +142,13 @@ public class RaceRepository : IRaceRepository
             Place = race.Place,
             Status = race.Status,
             CoverUrl = race.CoverUrl,
+            MapImageUrl = race.MapImageUrl,
             ModifiedAt = race.ModifiedAt,
             IsToggledLeaderboard = race.IsToggledLeaderboard,
             IsHiddenPoint = race.IsHiddenPoint,
+            IsShowHiddenBooths = race.IsShowHiddenBooths,
+            IsHideBoothDescription = race.IsHideBoothDescription,
+            IsDisabledBoothStatus = race.IsDisabledBoothStatus,
             Booth = booths,
             RaceTeam = teams.ToArray(),
             OrganizerId = organizerIds.ToArray(),
@@ -177,7 +184,11 @@ public class RaceRepository : IRaceRepository
             race.Rules,
             race.IsToggledLeaderboard,
             race.IsHiddenPoint,
+            race.IsShowHiddenBooths,
+            race.IsHideBoothDescription,
+            race.IsDisabledBoothStatus,
             race.CoverUrl,
+            race.MapImageUrl,
             race.ModifiedBy,
             race.ModifiedAt
         });
@@ -190,6 +201,29 @@ public class RaceRepository : IRaceRepository
             RaceQueries.UpdateRaceQuery(),
             parameters,
             cancellationToken: cancellationToken);
+        return affectedRows >= 1;
+    }
+
+    public async Task<bool> UpdateMapImageUrlAsync(
+        Guid raceId,
+        string mapImageUrl,
+        string? modifiedBy,
+        DateTime modifiedAt,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var affectedRows = await _db.ExecuteAsync(
+            RaceQueries.UpdateRaceMapImageUrlQuery(),
+            new
+            {
+                RaceId = raceId,
+                MapImageUrl = mapImageUrl,
+                ModifiedBy = modifiedBy,
+                ModifiedAt = modifiedAt
+            },
+            cancellationToken: cancellationToken);
+
         return affectedRows >= 1;
     }
 

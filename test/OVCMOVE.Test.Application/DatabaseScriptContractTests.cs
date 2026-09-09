@@ -150,6 +150,122 @@ public class DatabaseScriptContractTests
     }
 
     [Fact]
+    public void AddRaceMapImageUrlMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "007_AddRaceMapImageUrl.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Race', N'MapImageUrl') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapImageUrl] NVARCHAR(2048) NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapImageUrl] NVARCHAR(2048) NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddBoothCoordinatesMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "008_AddBoothCoordinates.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Booth', N'MapX') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Booth', N'MapY') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapX] FLOAT NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapY] FLOAT NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapX] FLOAT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[MapY] FLOAT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddRaceMapSettingsMigration_IsRerunnableAndMatchesResetSchema()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var migrationScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "009_AddRaceMapSettings.sql"));
+        var resetScript = File.ReadAllText(
+            Path.Combine(
+                repositoryRoot,
+                "sql",
+                "000_ResetDatabase.sql"));
+
+        Assert.Contains(
+            "IF COL_LENGTH(N'dbo.Race', N'IsShowHiddenBooths') IS NULL",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsShowHiddenBooths] BIT NOT NULL CONSTRAINT DF_Race_IsShowHiddenBooths DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsHideBoothDescription] BIT NOT NULL CONSTRAINT DF_Race_IsHideBoothDescription DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsDisabledBoothStatus] BIT NOT NULL CONSTRAINT DF_Race_IsDisabledBoothStatus DEFAULT 0",
+            migrationScript,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "[IsShowHiddenBooths] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsHideBoothDescription] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "[IsDisabledBoothStatus] BIT NOT NULL",
+            resetScript,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CardEventReconciliationSchema_AddsIdempotentScoringEventKey()
     {
         var repositoryRoot = FindRepositoryRoot();

@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using OVCMOVE2026.Plugin.Common;
 
 namespace OVCMOVE2026.Plugin.Models;
 
@@ -56,7 +57,7 @@ public static class OverclockWindowStatus
 public sealed class RaceCardDocument
 {
     [BsonId]
-    [BsonRepresentation(BsonType.String)]
+    [BsonSerializer(typeof(FlexibleStringOrObjectIdSerializer))]
     public string Id { get; set; } = string.Empty;
 
     [BsonElement("raceid")]
@@ -78,6 +79,7 @@ public sealed class RaceCardDocument
     public OverclockWindowState OverclockWindow { get; set; } = new();
 
     [BsonElement("modifiedAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime ModifiedAt { get; set; }
 
     [BsonElement("version")]
@@ -154,6 +156,7 @@ public sealed class TeamCardState
     public List<CardUseState> CardUses { get; set; } = [];
 
     [BsonElement("receivedAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime ReceivedAt { get; set; }
 
     [BsonElement("receiveReason")]
@@ -172,6 +175,7 @@ public sealed class TeamCardState
     public DateTime? NextTimeAvailable { get; set; }
 
     [BsonElement("disabledAt")]
+    [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
     public DateTime? DisabledAt { get; set; }
 
     [BsonElement("disabledReason")]
@@ -211,9 +215,11 @@ public sealed class CardUseState
     public BsonDocument Inputs { get; set; } = new();
 
     [BsonElement("useAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime UseAt { get; set; }
 
     [BsonElement("endAt")]
+    [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
     public DateTime? EndAt { get; set; }
 
     [BsonElement("failureReason")]
@@ -249,7 +255,7 @@ public static class CardEffectResolutionCodes
 public sealed class CardEffectDocument
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
+    [BsonSerializer(typeof(FlexibleStringOrObjectIdSerializer))]
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
     [BsonElement("raceId")]
@@ -286,12 +292,15 @@ public sealed class CardEffectDocument
     public int RemainingTriggers { get; set; } = 1;
 
     [BsonElement("startAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime StartAt { get; set; }
 
     [BsonElement("limitEndAt")]
+    [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
     public DateTime? LimitEndAt { get; set; }
 
     [BsonElement("triggerAt")]
+    [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
     public DateTime? TriggerAt { get; set; }
 
     [BsonElement("claimedAt")]
@@ -312,18 +321,21 @@ public sealed class CardEffectDocument
     public string? TriggeredByTeamId { get; set; }
 
     [BsonElement("resolvedAt")]
+    [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
     public DateTime? ResolvedAt { get; set; }
 
     [BsonElement("data")]
     public BsonDocument Data { get; set; } = new();
 
     [BsonElement("createdAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime CreatedAt { get; set; }
 
     [BsonElement("createdBy")]
     public string CreatedBy { get; set; } = string.Empty;
 
     [BsonElement("modifiedAt")]
+    [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
     public DateTime ModifiedAt { get; set; }
 
     [BsonElement("modifiedBy")]

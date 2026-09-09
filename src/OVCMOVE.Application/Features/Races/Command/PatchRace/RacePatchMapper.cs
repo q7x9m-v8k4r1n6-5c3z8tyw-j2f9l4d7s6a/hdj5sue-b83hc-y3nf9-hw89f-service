@@ -26,6 +26,21 @@ internal static class RacePatchMapper
             race.IsHiddenPoint = hiddenPoint;
         }
 
+        if (request.RaceSettings?.IsShowHiddenBooths is bool showHiddenBooths)
+        {
+            race.IsShowHiddenBooths = showHiddenBooths;
+        }
+
+        if (request.RaceSettings?.IsHideBoothDescription is bool hideBoothDescription)
+        {
+            race.IsHideBoothDescription = hideBoothDescription;
+        }
+
+        if (request.RaceSettings?.IsDisabledBoothStatus is bool disabledBoothStatus)
+        {
+            race.IsDisabledBoothStatus = disabledBoothStatus;
+        }
+
         race.ModifiedAt = now;
         race.ModifiedBy = actor;
         RaceInputRules.ValidateRace(

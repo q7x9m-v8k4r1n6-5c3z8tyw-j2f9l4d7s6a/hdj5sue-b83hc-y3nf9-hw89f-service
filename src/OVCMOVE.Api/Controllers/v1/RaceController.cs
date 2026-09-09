@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,6 +11,8 @@ using OVCMOVE.Application.Common;
 using OVCMOVE.Application.Features.Races.Command.CreateRace;
 using OVCMOVE.Application.Features.Races.Command.PatchRace;
 using OVCMOVE.Application.Features.Races.Command.SendRaceMessage;
+using OVCMOVE.Application.Features.Races.Command.UploadRaceMap;
+using OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates;
 using OVCMOVE.Application.Features.Races.Common;
 using OVCMOVE.Application.Features.Races.Query.GetAllRaces;
 using OVCMOVE.Application.Features.Races.Query.GetRaceDetail;
@@ -63,13 +65,18 @@ public class RaceController : BaseController
     public async Task<IActionResult> GetRaceDetail([FromRoute] Guid raceId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var isTeam = IsCurrentUserTeam();
+        var hasManagePermission = HasPermission(PermissionCodes.RaceManage);
+        var isParticipantView = isTeam || !hasManagePermission;
+
         var result = await _mediator.Send(
             new GetRaceDetailQuery
             {
                 RaceId = raceId,
-                TeamId = IsCurrentUserTeam()
+                TeamId = isTeam
                     ? GetCurrentUserId() ?? Guid.Empty
-                    : null
+                    : null,
+                IsParticipantView = isParticipantView
             },
             cancellationToken);
         if (result is null)
@@ -159,6 +166,56 @@ public class RaceController : BaseController
         }
 
         return Ok(ApiResponse.Success(result.ToResponse()));
+    }
+
+    [HttpPost("{raceId:guid}/map")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> UploadRaceMap(
+        [FromRoute] Guid raceId,
+        IFormFile? mapImage,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileToUpload = mapImage ?? Request.Form.Files.FirstOrDefault();
+        var validationError = await ImageFileValidator.ValidateAsync(
+            fileToUpload,
+            cancellationToken);
+        if (validationError is not null)
+        {
+            return BadRequest(ApiResponse.Error(
+                ApiStatus.Codes.BadRequest,
+                ApiStatus.Messages.BadRequest,
+                validationError));
+        }
+
+        await using var stream = fileToUpload!.OpenReadStream();
+        var command = new UploadRaceMapCommand
+        {
+            RaceId = raceId,
+            File = new FileUploadModel(
+                stream,
+                fileToUpload.FileName,
+                fileToUpload.ContentType)
+        };
+
+        var mapUrl = await _mediator.Send(command, cancellationToken);
+        return Ok(ApiResponse.Success(new UploadRaceMapResponse { MapImageUrl = mapUrl }));
+    }
+
+    [HttpPut("{raceId:guid}/booths/coordinates")]
+    [RequirePermission(PermissionCodes.RaceManage)]
+    public async Task<IActionResult> UpdateBoothCoordinates(
+        [FromRoute] Guid raceId,
+        [FromBody] UpdateBoothCoordinatesRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var command = request.ToCommand(raceId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(ApiResponse.Success(result));
     }
 
     [HttpGet("leaderboard")]

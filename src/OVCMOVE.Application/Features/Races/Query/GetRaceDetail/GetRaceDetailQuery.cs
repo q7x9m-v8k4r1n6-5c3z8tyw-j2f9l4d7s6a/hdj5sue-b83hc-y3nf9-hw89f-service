@@ -7,4 +7,5 @@ public class GetRaceDetailQuery : IRequest<RaceDetailResultModel?>
 {
     public Guid RaceId { get; init; }
     public Guid? TeamId { get; init; }
+    public bool IsParticipantView { get; init; }
 }

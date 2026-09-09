@@ -1,4 +1,4 @@
-﻿namespace OVCMOVE.Infrastructure.Persistence.Queries;
+namespace OVCMOVE.Infrastructure.Persistence.Queries;
 
 public static class RaceQueries
 {
@@ -6,13 +6,13 @@ public static class RaceQueries
         INSERT INTO [dbo].[Race]
         (
             [Id], [RaceName], [TimeStart], [TimeEnd], [Place], [Status],
-            [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl], [Rules],
+            [IsToggledLeaderboard], [IsHiddenPoint], [IsShowHiddenBooths], [IsHideBoothDescription], [IsDisabledBoothStatus], [CoverUrl], [MapImageUrl], [Rules],
             [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
         )
         VALUES
         (
             @Id, @RaceName, @TimeStart, @TimeEnd, @Place, @Status,
-            @IsToggledLeaderboard, @IsHiddenPoint, @CoverUrl, @Rules,
+            @IsToggledLeaderboard, @IsHiddenPoint, @IsShowHiddenBooths, @IsHideBoothDescription, @IsDisabledBoothStatus, @CoverUrl, @MapImageUrl, @Rules,
             @CreatedBy, @CreatedAt, @ModifiedBy, @ModifiedAt, @IsDeleted
         );";
 
@@ -26,7 +26,11 @@ public static class RaceQueries
             [Status] = @Status,
             [IsToggledLeaderboard] = @IsToggledLeaderboard,
             [IsHiddenPoint] = @IsHiddenPoint,
+            [IsShowHiddenBooths] = @IsShowHiddenBooths,
+            [IsHideBoothDescription] = @IsHideBoothDescription,
+            [IsDisabledBoothStatus] = @IsDisabledBoothStatus,
             [CoverUrl] = @CoverUrl,
+            [MapImageUrl] = @MapImageUrl,
             [Rules] = @Rules,
             [ModifiedBy] = @ModifiedBy,
             [ModifiedAt] = @ModifiedAt
@@ -34,12 +38,20 @@ public static class RaceQueries
           AND [IsDeleted] = 0
           AND [ModifiedAt] = @ExpectedModifiedAt;";
 
+    public static string UpdateRaceMapImageUrlQuery() => @"
+        UPDATE [dbo].[Race]
+        SET
+            [MapImageUrl] = @MapImageUrl,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        WHERE [Id] = @RaceId
+          AND [IsDeleted] = 0;";
 
     public static string GetRaceByIdQuery() => @"
     SELECT
         [Id], [RaceName], [TimeStart], [TimeEnd], [Place],
         [Status], [Rules],
-        [IsToggledLeaderboard], [IsHiddenPoint], [CoverUrl],
+        [IsToggledLeaderboard], [IsHiddenPoint], [IsShowHiddenBooths], [IsHideBoothDescription], [IsDisabledBoothStatus], [CoverUrl], [MapImageUrl],
         [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [IsDeleted]
     FROM [dbo].[Race]
     WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
@@ -54,6 +66,7 @@ public static class RaceQueries
         R.[Place],
         R.[Status],
         R.[CoverUrl],
+        R.[MapImageUrl],
         R.[ModifiedAt]
     FROM [dbo].[Race] R
     WHERE R.[IsDeleted] = 0
@@ -136,15 +149,19 @@ public static class RaceQueries
             [Place],
             [Status],
             [CoverUrl],
+            [MapImageUrl],
             [IsToggledLeaderboard],
             [IsHiddenPoint],
+            [IsShowHiddenBooths],
+            [IsHideBoothDescription],
+            [IsDisabledBoothStatus],
             [ModifiedAt]
         FROM [dbo].[Race]
         WHERE [Id] = @RaceId AND [IsDeleted] = 0;";
 
     public static string GetRaceBoothsQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore]
+            [Id], [Name], [Place], [Description], [IsHidden], [Status], [Type], [MaximumScore], [MapX], [MapY]
         FROM [dbo].[Booth] B
         WHERE B.[RaceID] = @RaceId AND B.[IsDeleted] = 0;";
 
@@ -160,7 +177,7 @@ public static class RaceQueries
 
     public static string GetBoothsByRaceIdQuery() => @"
         SELECT
-            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore],
+            [Id], [Name], [Place], [Description], [IsHidden], [Type], [MaximumScore], [MapX], [MapY],
             [RaceID] AS [RaceId]
         FROM [dbo].[Booth]
         WHERE [RaceID] = @RaceId AND [IsDeleted] = 0;";
@@ -296,6 +313,8 @@ public static class RaceQueries
             b.IsHidden,
             b.[Type],
             b.[MaximumScore],
+            b.MapX,
+            b.MapY,
             tu.DisplayName AS CurrentTeamName,
             ou.DisplayName AS CurrentOrganizerName
         FROM [dbo].[Booth] b

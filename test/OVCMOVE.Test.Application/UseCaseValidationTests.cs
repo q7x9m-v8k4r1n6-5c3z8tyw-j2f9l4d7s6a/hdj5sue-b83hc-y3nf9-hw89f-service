@@ -97,6 +97,63 @@ public class UseCaseValidationTests
                 DateTime.UtcNow));
     }
 
+    [Fact]
+    public void PatchRace_AppliesMapSettings()
+    {
+        var race = ValidRace();
+        Assert.False(race.IsShowHiddenBooths);
+        Assert.False(race.IsHideBoothDescription);
+        Assert.False(race.IsDisabledBoothStatus);
+
+        var command = new PatchRaceCommand
+        {
+            RaceSettings = new PatchRaceCommand.RaceSettingsPatchModel
+            {
+                IsShowHiddenBooths = true,
+                IsHideBoothDescription = true,
+                IsDisabledBoothStatus = true
+            }
+        };
+
+        RacePatchMapper.Apply(
+            race,
+            command,
+            "tester",
+            DateTime.UtcNow);
+
+        Assert.True(race.IsShowHiddenBooths);
+        Assert.True(race.IsHideBoothDescription);
+        Assert.True(race.IsDisabledBoothStatus);
+    }
+
+    [Fact]
+    public void PatchRace_PreservesExistingMapSettingsWhenNotProvided()
+    {
+        var race = ValidRace();
+        race.IsShowHiddenBooths = true;
+        race.IsHideBoothDescription = false;
+        race.IsDisabledBoothStatus = true;
+
+        var command = new PatchRaceCommand
+        {
+            RaceSettings = new PatchRaceCommand.RaceSettingsPatchModel
+            {
+                IsHideBoothDescription = true
+                // IsShowHiddenBooths and IsDisabledBoothStatus are null
+            }
+        };
+
+        RacePatchMapper.Apply(
+            race,
+            command,
+            "tester",
+            DateTime.UtcNow);
+
+        Assert.True(race.IsShowHiddenBooths);
+        Assert.True(race.IsHideBoothDescription);
+        Assert.True(race.IsDisabledBoothStatus);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

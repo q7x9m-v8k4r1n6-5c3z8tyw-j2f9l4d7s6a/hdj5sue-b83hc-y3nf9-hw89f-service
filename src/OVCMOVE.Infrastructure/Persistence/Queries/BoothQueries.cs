@@ -1,4 +1,4 @@
-﻿namespace OVCMOVE.Infrastructure.Persistence.Queries;
+namespace OVCMOVE.Infrastructure.Persistence.Queries;
 
 public static class BoothQueries
 {
@@ -19,6 +19,8 @@ public static class BoothQueries
                 [Type],
                 [MaximumScore],
                 Status,
+                MapX,
+                MapY,
                 CreatedBy,
                 CreatedAt,
                 ModifiedBy,
@@ -41,6 +43,8 @@ public static class BoothQueries
             [Type],
             [MaximumScore],
             [Status],
+            [MapX],
+            [MapY],
             [CreatedBy],
             [CreatedAt],
             [ModifiedBy],
@@ -158,4 +162,18 @@ public static class BoothQueries
             );
         ";
     }
+
+    /// <summary>
+    /// Query cập nhật tọa độ phần trăm MapX, MapY cho Trạm
+    /// </summary>
+    public static string UpdateBoothCoordinatesQuery() => @"
+        UPDATE [dbo].[Booth]
+        SET
+            [MapX] = @MapX,
+            [MapY] = @MapY,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedAt] = @ModifiedAt
+        WHERE [Id] = @BoothId
+          AND [RaceID] = @RaceId
+          AND [IsDeleted] = 0;";
 }

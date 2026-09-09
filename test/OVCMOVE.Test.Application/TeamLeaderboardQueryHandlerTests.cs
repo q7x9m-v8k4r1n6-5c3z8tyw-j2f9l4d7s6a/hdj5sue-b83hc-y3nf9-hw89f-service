@@ -235,6 +235,14 @@ public class TeamLeaderboardQueryHandlerTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<bool> UpdateMapImageUrlAsync(
+            Guid raceId,
+            string mapImageUrl,
+            string? modifiedBy,
+            DateTime modifiedAt,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<List<BoothListResultModel>> GetBoothListAsync(
             Guid? raceId,
             CancellationToken cancellationToken = default) =>

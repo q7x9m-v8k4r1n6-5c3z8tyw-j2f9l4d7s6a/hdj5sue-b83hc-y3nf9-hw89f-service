@@ -11,6 +11,7 @@ using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
 using OVCMOVE.Application.Features.Races.Query.ScoringLog;
+using OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates;
 
 namespace OVCMOVE.Api.Mapping;
 
@@ -45,6 +46,9 @@ public static class RaceContractMapping
             Rules = basicInfo.Rules ?? string.Empty,
             IsToggledLeaderboard = settings.IsToggledLeaderboard,
             IsHiddenPoint = settings.IsHiddenPoint,
+            IsShowHiddenBooths = settings.IsShowHiddenBooths,
+            IsHideBoothDescription = settings.IsHideBoothDescription,
+            IsDisabledBoothStatus = settings.IsDisabledBoothStatus,
             OrganizerIds = request.OrganizerId ?? [],
             TeamIds = request.RaceTeam ?? [],
             Booths = (request.Booths ?? [])
@@ -86,7 +90,10 @@ public static class RaceContractMapping
             {
                 IsToggledLeaderboard =
                     request.RaceSettings.IsToggledLeaderboard,
-                IsHiddenPoint = request.RaceSettings.IsHiddenPoint
+                IsHiddenPoint = request.RaceSettings.IsHiddenPoint,
+                IsShowHiddenBooths = request.RaceSettings.IsShowHiddenBooths,
+                IsHideBoothDescription = request.RaceSettings.IsHideBoothDescription,
+                IsDisabledBoothStatus = request.RaceSettings.IsDisabledBoothStatus
             },
             Organizers = MapRelations(request.Organizers),
             RaceTeams = MapRelations(request.RaceTeams),
@@ -171,9 +178,13 @@ public static class RaceContractMapping
             Place = result.Place,
             Status = result.Status,
             CoverUrl = result.CoverUrl,
+            MapImageUrl = result.MapImageUrl,
             ModifiedAt = result.ModifiedAt,
             IsToggledLeaderboard = result.IsToggledLeaderboard,
             IsHiddenPoint = result.IsHiddenPoint,
+            IsShowHiddenBooths = result.IsShowHiddenBooths,
+            IsHideBoothDescription = result.IsHideBoothDescription,
+            IsDisabledBoothStatus = result.IsDisabledBoothStatus,
             OrganizerId = result.OrganizerId,
             Organizers = result.Organizers
             .Select(MapOrganizer)
@@ -197,6 +208,7 @@ public static class RaceContractMapping
             Place = result.Place,
             Status = result.Status,
             CoverUrl = result.CoverUrl,
+            MapImageUrl = result.MapImageUrl,
             ModifiedAt = result.ModifiedAt
         };
 
@@ -225,8 +237,11 @@ public static class RaceContractMapping
             Place = result.Place,
             Description = result.Description,
             IsHidden = result.IsHidden,
+            Status = result.Status,
             Type = result.Type,
             MaximumScore = result.MaximumScore,
+            MapX = result.MapX,
+            MapY = result.MapY,
             OrganizerID = string.Join(',', result.OrganizerIds)
         };
 
@@ -312,6 +327,8 @@ public static class RaceContractMapping
             isHidden = result.isHidden,
             Type = result.Type,
             MaximumScore = result.MaximumScore,
+            MapX = result.MapX,
+            MapY = result.MapY,
             CurrentTeamName = result.CurrentTeamName,
             CurrentOrganizerName = result.CurrentOrganizerName
         };
@@ -344,4 +361,19 @@ public static class RaceContractMapping
     public static CommonContract.PagedResponse<RaceContract.ScoringLogResponse> ToResponse(
         this PagedResult<ScoringLogResultModel> result) =>
         result.ToResponse(item => item.ToResponse());
+
+    public static UpdateBoothCoordinatesCommand ToCommand(
+        this RaceContract.UpdateBoothCoordinatesRequest request,
+        Guid raceId) => new()
+        {
+            RaceId = raceId,
+            Coordinates = request.Coordinates
+                .Select(item => new BoothCoordinateItemModel
+                {
+                    BoothId = item.BoothId,
+                    MapX = item.MapX,
+                    MapY = item.MapY
+                })
+                .ToArray()
+        };
 }

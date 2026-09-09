@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Domain.Common;
+using OVCMOVE.Domain.Common;
 using static OVCMOVE.Domain.Constants.BoothConstants;
 
 namespace OVCMOVE.Domain.Entities;
@@ -17,4 +17,6 @@ public class Booth : BaseEntity
     public string Type { get; set; } = BoothType.Other;
     public int? MaximumScore { get; set; }
     public string Status { get; set; } = BoothStatus.Free;
+    public double? MapX { get; set; }
+    public double? MapY { get; set; }
 }

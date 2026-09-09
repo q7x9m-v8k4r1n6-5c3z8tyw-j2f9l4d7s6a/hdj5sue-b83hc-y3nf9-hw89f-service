@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Application.Abstractions.Repositories;
+using OVCMOVE.Application.Abstractions.Repositories;
 using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Domain.Entities;
 using OVCMOVE.Infrastructure.Common;
@@ -249,5 +249,42 @@ public class BoothRepository : IBoothRepository
         }
 
         return true;
+    }
+
+    public async Task UpdateCoordinatesBatchAsync(
+        Guid raceId,
+        IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates,
+        DateTime modifiedAt,
+        string? modifiedBy,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (coordinates.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in coordinates)
+        {
+            var affectedRows = await _db.ExecuteAsync(
+                BoothQueries.UpdateBoothCoordinatesQuery(),
+                new
+                {
+                    BoothId = item.BoothId,
+                    RaceId = raceId,
+                    MapX = item.MapX,
+                    MapY = item.MapY,
+                    ModifiedBy = modifiedBy,
+                    ModifiedAt = modifiedAt
+                },
+                cancellationToken: cancellationToken);
+
+            if (affectedRows != 1)
+            {
+                throw new ApplicationConflictException(
+                    $"Không thể cập nhật tọa độ cho trạm '{item.BoothId}'.");
+            }
+        }
     }
 }

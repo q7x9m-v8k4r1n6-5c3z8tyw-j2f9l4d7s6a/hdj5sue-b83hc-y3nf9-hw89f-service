@@ -151,12 +151,19 @@ BEGIN TRY
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Race_Status] DEFAULT (N'draft'),
         [CoverUrl] NVARCHAR(2048) NULL,
+        [MapImageUrl] NVARCHAR(2048) NULL,
         [Rules] NVARCHAR(MAX) NOT NULL
             CONSTRAINT [DF_Race_Rules] DEFAULT (N''),
         [IsToggledLeaderboard] BIT NOT NULL
             CONSTRAINT [DF_Race_IsToggledLeaderboard] DEFAULT (0),
         [IsHiddenPoint] BIT NOT NULL
             CONSTRAINT [DF_Race_IsHiddenPoint] DEFAULT (0),
+        [IsShowHiddenBooths] BIT NOT NULL
+            CONSTRAINT [DF_Race_IsShowHiddenBooths] DEFAULT (0),
+        [IsHideBoothDescription] BIT NOT NULL
+            CONSTRAINT [DF_Race_IsHideBoothDescription] DEFAULT (0),
+        [IsDisabledBoothStatus] BIT NOT NULL
+            CONSTRAINT [DF_Race_IsDisabledBoothStatus] DEFAULT (0),
         [CreatedBy] NVARCHAR(100) NULL,
         [CreatedAt] DATETIME2(7) NOT NULL
             CONSTRAINT [DF_Race_CreatedAt] DEFAULT (SYSUTCDATETIME()),
@@ -191,6 +198,8 @@ BEGIN TRY
         [MaximumScore] INT NULL,
         [Status] NVARCHAR(50) NOT NULL
             CONSTRAINT [DF_Booth_Status] DEFAULT (N'free'),
+        [MapX] FLOAT NULL,
+        [MapY] FLOAT NULL,
         [CreatedBy] NVARCHAR(100) NULL,
         [CreatedAt] DATETIME2(7) NOT NULL
             CONSTRAINT [DF_Booth_CreatedAt] DEFAULT (SYSUTCDATETIME()),

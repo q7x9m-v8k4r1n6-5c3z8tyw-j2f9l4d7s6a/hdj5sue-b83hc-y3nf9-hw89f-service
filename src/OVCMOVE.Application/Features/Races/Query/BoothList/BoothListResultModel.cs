@@ -10,6 +10,8 @@ public record BoothListResultModel
     public bool isHidden { get; init; } = false;
     public string Type { get; init; } = "other";
     public int? MaximumScore { get; init; }
+    public double? MapX { get; init; }
+    public double? MapY { get; init; }
     public string? CurrentTeamName { get; init; }
     public string? CurrentOrganizerName { get; init; }
 }

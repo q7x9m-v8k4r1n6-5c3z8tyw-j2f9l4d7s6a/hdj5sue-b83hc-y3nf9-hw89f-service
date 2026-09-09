@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
+using OVCMOVE.Application.Features.Booths.Commands.SubmitBoothScore;
 using OVCMOVE.Domain.Entities;
 
 namespace OVCMOVE.Application.Abstractions.Repositories;
@@ -40,4 +40,14 @@ public interface IBoothRepository
     Task<bool> SubmitScoreAndReleaseAsync(
     SubmitBoothScoreModel model,
     CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cập nhật đồng loạt tọa độ MapX, MapY cho danh sách trạm.
+    /// </summary>
+    Task UpdateCoordinatesBatchAsync(
+        Guid raceId,
+        IReadOnlyCollection<OVCMOVE.Application.Features.Races.Command.UpdateBoothCoordinates.BoothCoordinateItemModel> coordinates,
+        DateTime modifiedAt,
+        string? modifiedBy,
+        CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,12 @@
-﻿namespace OVCMOVE.Application.Abstractions;
+namespace OVCMOVE.Application.Abstractions;
 
 public interface IBlobStorageService
 {
+    /// <summary>
+    /// Tên container chuyên lưu sơ đồ trận đấu.
+    /// </summary>
+    string MapContainerName { get; }
+
     /// <summary>
     /// Upload 1 file lên blob storage, trả về URL công khai của file đó.
     /// </summary>

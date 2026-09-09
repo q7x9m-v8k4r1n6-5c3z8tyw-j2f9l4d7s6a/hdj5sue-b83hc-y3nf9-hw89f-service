@@ -97,4 +97,60 @@ public class QueryContractTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void BoothQueries_IncludeCoordinatesInReadAndWriteContracts()
+    {
+        var raceBoothsSql = RaceQueries.GetRaceBoothsQuery();
+        var boothListSql = RaceQueries.GetBoothListQuery();
+        var updateBoothCoordinatesSql = BoothQueries.UpdateBoothCoordinatesQuery();
+        var getBoothByIdSql = BoothQueries.GetBoothByIdQuery();
+        var getActiveBoothSql = BoothQueries.GetActiveBoothByTeamAndRaceQuery();
+
+        Assert.Contains("[MapX]", raceBoothsSql);
+        Assert.Contains("[MapY]", raceBoothsSql);
+
+        Assert.Contains("MapX", boothListSql);
+        Assert.Contains("MapY", boothListSql);
+
+        Assert.Contains("[MapX] = @MapX", updateBoothCoordinatesSql);
+        Assert.Contains("[MapY] = @MapY", updateBoothCoordinatesSql);
+
+        Assert.Contains("MapX", getBoothByIdSql);
+        Assert.Contains("MapY", getBoothByIdSql);
+
+        Assert.Contains("[MapX]", getActiveBoothSql);
+        Assert.Contains("[MapY]", getActiveBoothSql);
+    }
+
+    [Fact]
+    public void BoothQueries_IncludeStatusInReadContracts()
+    {
+        var raceBoothsSql = RaceQueries.GetRaceBoothsQuery();
+        Assert.Contains("[Status]", raceBoothsSql);
+    }
+
+    [Fact]
+    public void RaceQueries_IncludeMapSettingsInReadAndWriteContracts()
+    {
+        var createSql = RaceQueries.CreateRaceQuery();
+        var updateSql = RaceQueries.UpdateRaceQuery();
+        var getByIdSql = RaceQueries.GetRaceByIdQuery();
+        var getDetailSql = RaceQueries.GetRaceDetailQuery();
+
+        Assert.Contains("[IsShowHiddenBooths]", createSql);
+        Assert.Contains("[IsHideBoothDescription]", createSql);
+        Assert.Contains("[IsDisabledBoothStatus]", createSql);
+
+        Assert.Contains("[IsShowHiddenBooths] = @IsShowHiddenBooths", updateSql);
+        Assert.Contains("[IsHideBoothDescription] = @IsHideBoothDescription", updateSql);
+        Assert.Contains("[IsDisabledBoothStatus] = @IsDisabledBoothStatus", updateSql);
+
+        Assert.Contains("[IsShowHiddenBooths]", getByIdSql);
+        Assert.Contains("[IsHideBoothDescription]", getByIdSql);
+        Assert.Contains("[IsDisabledBoothStatus]", getByIdSql);
+
+        Assert.Contains("[IsShowHiddenBooths]", getDetailSql);
+        Assert.Contains("[IsHideBoothDescription]", getDetailSql);
+        Assert.Contains("[IsDisabledBoothStatus]", getDetailSql);
+    }
 }

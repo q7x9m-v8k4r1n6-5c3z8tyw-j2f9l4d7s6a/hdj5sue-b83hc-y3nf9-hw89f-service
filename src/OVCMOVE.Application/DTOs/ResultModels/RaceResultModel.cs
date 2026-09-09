@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Application.DTOs.Race;
+using OVCMOVE.Application.DTOs.Race;
 
 namespace OVCMOVE.Application.DTOs.ResultModels;
 
@@ -12,6 +12,7 @@ public class RaceItemResultModel
     public string Place { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public string? CoverUrl { get; init; }
+    public string? MapImageUrl { get; init; }
     public DateTime ModifiedAt { get; init; }
 }
 
@@ -19,6 +20,9 @@ public class RaceDetailResultModel : RaceItemResultModel
 {
     public bool IsToggledLeaderboard { get; init; }
     public bool IsHiddenPoint { get; init; }
+    public bool IsShowHiddenBooths { get; init; }
+    public bool IsHideBoothDescription { get; init; }
+    public bool IsDisabledBoothStatus { get; init; }
     public IReadOnlyCollection<Guid> OrganizerId { get; init; } = Array.Empty<Guid>();
     public IReadOnlyCollection<RaceOrganizerModel> Organizers { get; init; } = [];
     public IReadOnlyCollection<RaceTeamModel> RaceTeam { get; init; } = [];

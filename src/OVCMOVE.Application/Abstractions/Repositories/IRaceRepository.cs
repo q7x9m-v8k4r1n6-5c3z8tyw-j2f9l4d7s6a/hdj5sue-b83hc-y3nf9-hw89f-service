@@ -1,4 +1,4 @@
-﻿using OVCMOVE.Application.DTOs.ResultModels;
+using OVCMOVE.Application.DTOs.ResultModels;
 using OVCMOVE.Application.DTOs.Race;
 using OVCMOVE.Application.Features.Races.Query.TeamLeaderboard;
 using OVCMOVE.Application.Features.Races.Query.BoothList;
@@ -21,6 +21,12 @@ public interface IRaceRepository
     Task<bool> UpdateAsync(
         Race race,
         DateTime expectedModifiedAt,
+        CancellationToken cancellationToken = default);
+    Task<bool> UpdateMapImageUrlAsync(
+        Guid raceId,
+        string mapImageUrl,
+        string? modifiedBy,
+        DateTime modifiedAt,
         CancellationToken cancellationToken = default);
     Task<List<TeamLeaderboardResultModel>> GetLeaderboardAsync(
         Guid? raceId, 

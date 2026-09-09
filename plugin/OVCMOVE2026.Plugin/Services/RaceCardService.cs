@@ -399,9 +399,13 @@ public sealed class RaceCardService(
                 cancellationToken))
             throw new ApplicationForbiddenException("Bạn không quản lý booth này.");
 
+        if (booth.Status != BoothConstants.BoothStatus.Occupied || booth.TeamId is null)
+            return null;
+
         var effect = await repository.GetPendingReviveAsync(
             raceId,
             boothId,
+            booth.TeamId.Value,
             cancellationToken);
         if (effect is null) return null;
         if (!Guid.TryParse(effect.OwnerTeamId, out var teamId) ||
@@ -461,6 +465,47 @@ public sealed class RaceCardService(
                 [new(RaceMessageRecipientConstants.Team, teamId,
                     "Quản trạm đã xác nhận Revive. Bạn được chơi lại booth hiện tại.")],
                 cancellationToken);
+    }
+
+    public async Task RejectReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        bool isAdmin,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(effectId))
+            throw new ApplicationValidationException("effectId là bắt buộc.");
+        var pendingEffect = await repository.GetEffectAsync(raceId, effectId, cancellationToken);
+        if (pendingEffect is null || pendingEffect.CardId != CardIds.Revive ||
+            !Guid.TryParse(pendingEffect.TargetBoothId, out var boothId) ||
+            !Guid.TryParse(pendingEffect.OwnerTeamId, out var ownerTeamId))
+            throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
+        if (pendingEffect.Status != CardEffectStatus.Active)
+            throw new ApplicationConflictException("Yêu cầu Revive đã được xử lý.");
+
+        var booth = await boothRepository.GetByIdAsync(boothId, cancellationToken);
+        if (booth is null || booth.RaceId != raceId)
+            throw new ApplicationConflictException("Không tìm thấy booth của yêu cầu Revive.");
+        if (!isAdmin && !await boothOrganizerRepository.IsAssignedAsync(
+                organizerId,
+                boothId,
+                cancellationToken))
+            throw new ApplicationForbiddenException("Bạn không quản lý booth này.");
+        if (booth.TeamId != ownerTeamId || booth.Status != BoothConstants.BoothStatus.Occupied)
+            throw new ApplicationConflictException("Booth đã kết thúc nên không thể từ chối Revive.");
+
+        var effect = await repository.RejectReviveAsync(
+            raceId, effectId, organizerId, DateTime.UtcNow, cancellationToken);
+        if (effect is null)
+            throw new ApplicationConflictException("Yêu cầu Revive không còn chờ xác nhận.");
+
+        await TrySendNotificationsAsync(
+            raceId,
+            organizerId,
+            [new(RaceMessageRecipientConstants.Team, ownerTeamId,
+                "Quản trạm đã từ chối Revive; card đã được tiêu thụ.")],
+            cancellationToken);
     }
 
     private async Task<RaceCardDocument> GetDocumentAsync(Guid raceId, CancellationToken cancellationToken)

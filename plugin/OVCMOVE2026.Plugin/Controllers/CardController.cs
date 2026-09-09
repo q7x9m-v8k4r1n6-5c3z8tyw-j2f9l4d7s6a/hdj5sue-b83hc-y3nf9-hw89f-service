@@ -144,6 +144,22 @@ public sealed class CardController(
         return Ok(PluginResponse.Success(true, "Đã xác nhận Revive."));
     }
 
+    [HttpPost("races/{raceId:guid}/revive-effects/{effectId}/reject")]
+    [Authorize(Roles = "admin,organizer")]
+    public async Task<IActionResult> RejectRevive(
+        Guid raceId,
+        string effectId,
+        CancellationToken cancellationToken)
+    {
+        await cardService.RejectReviveAsync(
+            raceId,
+            effectId,
+            GetRequiredCurrentUserId(),
+            User.IsInRole("admin"),
+            cancellationToken);
+        return Ok(PluginResponse.Success(true, "Đã từ chối Revive; card đã được tiêu thụ."));
+    }
+
     [HttpGet("races/{raceId:guid}/overclock")]
     [Authorize(Roles = "admin,organizer")]
     public async Task<IActionResult> GetOverclock(

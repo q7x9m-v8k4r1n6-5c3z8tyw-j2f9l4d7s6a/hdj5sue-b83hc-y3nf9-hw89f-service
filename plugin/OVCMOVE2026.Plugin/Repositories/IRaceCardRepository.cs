@@ -31,12 +31,19 @@ public interface IRaceCardRepository
     Task<CardEffectDocument?> GetPendingReviveAsync(
         Guid raceId,
         Guid boothId,
+        Guid teamId,
         CancellationToken cancellationToken = default);
     Task<CardEffectDocument?> ConfirmReviveAsync(
         Guid raceId,
         string effectId,
         Guid organizerId,
         DateTime confirmedAt,
+        CancellationToken cancellationToken = default);
+    Task<CardEffectDocument?> RejectReviveAsync(
+        Guid raceId,
+        string effectId,
+        Guid organizerId,
+        DateTime rejectedAt,
         CancellationToken cancellationToken = default);
     Task<CardEffectDocument?> GetEffectAsync(
         Guid raceId,

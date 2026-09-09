@@ -17,6 +17,7 @@ public interface IRaceCardService
     Task<CardUseResponse> UseAsync(Guid raceId, Guid teamId, Guid cardInstanceId, Guid cardUseId, BsonDocument inputs, CancellationToken cancellationToken = default);
     Task<PendingReviveResponse?> GetPendingReviveAsync(Guid raceId, Guid boothId, Guid organizerId, bool isAdmin, CancellationToken cancellationToken = default);
     Task ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, bool isAdmin, CancellationToken cancellationToken = default);
+    Task RejectReviveAsync(Guid raceId, string effectId, Guid organizerId, bool isAdmin, CancellationToken cancellationToken = default);
     Task<CardEffectDocument?> TriggerTrapAsync(
         Guid raceId,
         Guid boothId,

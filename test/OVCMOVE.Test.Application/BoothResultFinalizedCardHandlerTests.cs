@@ -141,7 +141,7 @@ public sealed class BoothResultFinalizedCardHandlerTests
             Guid boothId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(HasPendingRevive);
-        public Task<CardEffectDocument?> GetPendingReviveAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> GetPendingReviveAsync(Guid raceId, Guid boothId, Guid teamId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveBoothResultEffectsAsync(
             Guid raceId,
@@ -186,6 +186,7 @@ public sealed class BoothResultFinalizedCardHandlerTests
         public Task<bool> HasActiveTrapAsync(Guid raceId, Guid boothId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> TryClaimTrapAsync(Guid raceId, Guid boothId, Guid triggeringTeamId, DateTime triggeredAt, string resolvedByEventCode, string resolvedByEventId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> ConfirmReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime confirmedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CardEffectDocument?> RejectReviveAsync(Guid raceId, string effectId, Guid organizerId, DateTime rejectedAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CardEffectDocument?> GetEffectAsync(Guid raceId, string effectId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyCollection<CardEffectDocument>> GetActiveEffectsByCardAsync(Guid raceId, string cardId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }

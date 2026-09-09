@@ -43,6 +43,7 @@ public static class CardEffectEventCodes
     public const string BoothEntryRequested = "booth.entry.requested";
     public const string BoothResultFinalized = "booth.result.finalized";
     public const string ReviveOperatorConfirmation = "booth.revive.operator-confirmed";
+    public const string ReviveOperatorRejection = "booth.revive.operator-rejected";
     public const string OverclockResolution = "race.overclock.resolve";
 }
 
@@ -252,6 +253,7 @@ public static class CardEffectStatus
 public static class CardEffectResolutionCodes
 {
     public const string OperatorConfirmed = "operator_confirmed";
+    public const string OperatorRejected = "operator_rejected";
 }
 
 public sealed class CardEffectDocument

@@ -129,7 +129,7 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
             await effectCollection.InsertOneAsync(effect);
             var repository = new MongoRaceCardRepository(raceCollection, effectCollection);
 
-            var pending = await repository.GetPendingReviveAsync(raceId, boothId);
+            var pending = await repository.GetPendingReviveAsync(raceId, boothId, teamId);
 
             var resolved = await repository.ConfirmReviveAsync(
                 raceId,
@@ -145,7 +145,7 @@ public sealed class MongoRaceCardRepositoryIntegrationTests
             Assert.Equal(effect.Id, pending?.Id);
             Assert.NotNull(resolved);
             Assert.Null(duplicate);
-            Assert.Null(await repository.GetPendingReviveAsync(raceId, boothId));
+            Assert.Null(await repository.GetPendingReviveAsync(raceId, boothId, teamId));
             var storedRace = await raceCollection.Find(item => item.Id == raceId.ToString()).SingleAsync();
             var storedCard = Assert.Single(Assert.Single(storedRace.Teams).Cards);
             var storedUse = Assert.Single(storedCard.CardUses);

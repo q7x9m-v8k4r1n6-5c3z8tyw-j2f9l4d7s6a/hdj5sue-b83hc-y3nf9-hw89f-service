@@ -8,11 +8,13 @@ using OVCMOVE2026.Plugin.CQRS.Commands.DeleteMissionEvidence;
 using OVCMOVE2026.Plugin.CQRS.Commands.DeleteSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Commands.GenerateMissionQrCodes;
 using OVCMOVE2026.Plugin.CQRS.Commands.SubmitMissionEvidence;
+using OVCMOVE2026.Plugin.CQRS.Commands.SubmitTechCacheResult;
 using OVCMOVE2026.Plugin.CQRS.Commands.UpdateSecretMission;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionAdminOverview;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionDetail;
 using OVCMOVE2026.Plugin.CQRS.Queries.GetSecretMissionOverview;
+using OVCMOVE2026.Plugin.CQRS.Queries.VerifyMissionCode;
 using OVCMOVE2026.Plugin.Models.Contracts;
 
 namespace OVCMOVE2026.Plugin.Controllers;
@@ -183,5 +185,39 @@ public class SecretMissionController(IMediator mediator) : PluginBaseController(
         return result
             ? Ok(PluginResponse.Success(true, "Xóa nhiệm vụ thành công."))
             : NotFound(PluginResponse.Error(404, "Không tìm thấy nhiệm vụ bí mật."));
+    }
+
+    [HttpPost("{id:guid}/verify-code")]
+    public async Task<IActionResult> VerifyCode(
+    [FromRoute] Guid id, [FromBody] VerifyMissionCodeRequest request, CancellationToken cancellationToken)
+    {
+        var isValid = await _mediator.Send(new VerifyMissionCodeQuery(id, request.Code), cancellationToken);
+        return Ok(PluginResponse.Success(isValid, isValid ? "Mã hợp lệ." : "Mã không đúng."));
+    }
+
+    [HttpPost("{id:guid}/submit-result")]
+    public async Task<IActionResult> SubmitTechCacheResult(
+        [FromRoute] Guid id, [FromForm] SubmitTechCacheResultRequest request, CancellationToken cancellationToken)
+    {
+        var teamId = GetRequiredCurrentUserId();
+
+        if (request.Video == null)
+            return BadRequest(PluginResponse.Error(400, "Vui lòng quay video minh chứng."));
+
+        var error = await MediaFileValidator.ValidateVideoAsync(request.Video, cancellationToken);
+        if (error != null) return BadRequest(PluginResponse.Error(400, error));
+
+        if (!Enum.TryParse<TechCacheResultType>(request.Result, true, out var resultType))
+            return BadRequest(PluginResponse.Error(400, "Kết quả không hợp lệ."));
+
+        var videoModel = new FileUploadModel(request.Video.OpenReadStream(), request.Video.FileName, request.Video.ContentType);
+        var command = new SubmitTechCacheResultCommand(id, teamId, request.Code, resultType, videoModel);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsNotFound) return NotFound(PluginResponse.Error(404, result.Message));
+        if (result.IsForbidden) return StatusCode(403, PluginResponse.Error(403, result.Message));
+        if (result.IsInvalidCode) return BadRequest(PluginResponse.Error(400, result.Message));
+
+        return Ok(PluginResponse.Success(new { result.ScoreDelta, result.IsMapPieceReward }, result.Message));
     }
 }

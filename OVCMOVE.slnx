@@ -5,10 +5,8 @@
     <Project Path="src/OVCMOVE.Domain/OVCMOVE.Domain.csproj" />
     <Project Path="src/OVCMOVE.Infrastructure/OVCMOVE.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/plugin/">
-    <Project Path="plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" />
-  </Folder>
   <Folder Name="/test/">
     <Project Path="test/OVCMOVE.Test.Application/OVCMOVE.Test.Application.csproj" Id="363ae9ef-e621-4d9e-9420-0f427c2dff01" />
   </Folder>
+  <Project Path="plugin/OVCMOVE2026.Plugin/OVCMOVE2026.Plugin.csproj" />
 </Solution>

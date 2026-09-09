@@ -124,4 +124,30 @@ public static class SecretMissionQueries
         [ModifiedBy] = 'admin-delete-mission',
         [ModifiedAt] = SYSUTCDATETIME()
     WHERE [Id] = @Id;";
+
+    public static string GetTeamScoreQuery() => @"
+    SELECT [TotalScore]
+    FROM [dbo].[RaceTeam]
+    WHERE [RaceID] = @RaceId AND [TeamID] = @TeamId AND [IsDeleted] = 0;";
+
+    public static string UpdateTeamScoreQuery() => @"
+    UPDATE [dbo].[RaceTeam]
+    SET [TotalScore] = @TotalScore, [ModifiedBy] = @ModifiedBy, [ModifiedAt] = @ModifiedAt
+    WHERE [RaceID] = @RaceId AND [TeamID] = @TeamId AND [IsDeleted] = 0;";
+
+    public static string InsertTechCacheScoringLogQuery() => @"
+    INSERT INTO [dbo].[ScoringLog]
+    (
+        [Id], [EventCode], [EventName], [RaceId], [TeamId],
+        [ActorId], [BoothId], [Delta], [ScoreBefore], [ScoreAfter],
+        [ReasonCode], [Reason], [CreatedBy], [CreatedAt],
+        [ModifiedBy], [ModifiedAt], [IsDeleted]
+    )
+    VALUES
+    (
+        @Id, @EventCode, @EventName, @RaceId, @TeamId,
+        @ActorId, NULL, @Delta, @ScoreBefore, @ScoreAfter,
+        @ReasonCode, @Reason, @CreatedBy, @CreatedAt,
+        @CreatedBy, @CreatedAt, 0
+    );";
 }

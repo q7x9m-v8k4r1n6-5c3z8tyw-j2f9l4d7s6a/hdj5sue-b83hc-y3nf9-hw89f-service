@@ -20,4 +20,7 @@ public class SecretMission : BaseEntity
     public Guid? SubmittedBy { get; set; }
     public string? QrCodeUrl { get; set; }
     public List<EvidenceFile> Evidences { get; set; } = new();
+    public string? AccessCode { get; set; }
+    public int SuccessPoints { get; set; }
+    public int FailPoints { get; set; }
 }
